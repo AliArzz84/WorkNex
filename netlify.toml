@@ -1,0 +1,10 @@
+# Netlify configuration for this Vite + React app
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Single-page app: send every path to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

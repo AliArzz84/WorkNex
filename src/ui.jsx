@@ -1,0 +1,146 @@
+import { useEffect, useState } from 'react'
+import { motion, animate } from 'framer-motion'
+import { colorFor, initials } from './data.js'
+import { useStore } from './store.jsx'
+
+/* ---------- Line icons (SF-Symbols-like) ---------- */
+const ICONS = {
+  dashboard: <><rect x="3" y="3" width="7" height="7" rx="1.6" /><rect x="14" y="3" width="7" height="7" rx="1.6" /><rect x="14" y="14" width="7" height="7" rx="1.6" /><rect x="3" y="14" width="7" height="7" rx="1.6" /></>,
+  employees: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
+  projects: <path d="M4 20a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2z" />,
+  meetings: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
+  payroll: <><rect x="2" y="5" width="20" height="14" rx="2.5" /><path d="M2 10h20" /></>,
+  teams: <><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" /><circle cx="7.5" cy="7.5" r="1.3" /></>,
+  download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></>,
+  upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></>,
+  refresh: <><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></>,
+  search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
+  plus: <path d="M12 5v14M5 12h14" />,
+  edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></>,
+  trash: <><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></>,
+  check: <path d="M20 6 9 17l-5-5" />,
+  undo: <><path d="M3 7v6h6" /><path d="M3 13a9 9 0 1 0 3-7.7L3 8" /></>,
+  arrow: <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>,
+  bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>,
+  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
+  moon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+  executive: <><path d="M3 3v18h18" /><rect x="7" y="10" width="3" height="7" rx="1" /><rect x="12" y="6" width="3" height="11" rx="1" /><rect x="17" y="13" width="3" height="4" rx="1" /></>,
+  print: <><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="7" rx="1" /></>,
+  trending: <><path d="M22 7 13.5 15.5 8.5 10.5 2 17" /><path d="M16 7h6v6" /></>,
+  tasks: <><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4.5 6l.8.8 1.7-1.7M4.5 12l.8.8 1.7-1.7M4.5 18l.8.8 1.7-1.7" /></>,
+  finance: <><rect x="2" y="6" width="20" height="12" rx="2.5" /><circle cx="12" cy="12" r="2.5" /><path d="M6 12h.01M18 12h.01" /></>,
+  diagram: <><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="18" cy="18" r="2.5" /><path d="M8.2 11 15.8 7M8.2 13l7.6 4" /></>,
+  business: <><path d="M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 21V9h4a1 1 0 0 1 1 1v11" /><path d="M8 7h2M8 11h2M8 15h2" /></>,
+  arrowUp: <path d="M12 19V5M5 12l7-7 7 7" />,
+  arrowDown: <path d="M12 5v14M19 12l-7 7-7-7" />,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  alert: <><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></>,
+  wallet: <><rect x="2" y="5" width="20" height="14" rx="2.5" /><path d="M2 10h20" /></>,
+}
+export function Icon({ name, size = 18, strokeWidth = 1.7, className }) {
+  const p = ICONS[name]
+  if (!p) return null
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {p}
+    </svg>
+  )
+}
+
+/* ---------- World clocks (Iran + UK) ---------- */
+export function Clocks() {
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const time = (tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now)
+  const date = (locale, tz) => new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: "short", day: "numeric", month: "short" }).format(now)
+  return (
+    <div className="clocks">
+      <div className="clock"><span className="flag">🇮🇷</span><div className="ct"><b>{time("Asia/Tehran")}</b><small>Tehran · {date("fa-IR", "Asia/Tehran")}</small></div></div>
+      <div className="sep" />
+      <div className="clock"><span className="flag">🇬🇧</span><div className="ct"><b>{time("Europe/London")}</b><small>London · {date("en-GB", "Europe/London")}</small></div></div>
+    </div>
+  )
+}
+
+/* ---------- Money: GBP by default, small button toggles to Toman ---------- */
+export function Money({ value }) {
+  const { money, fmtToman } = useStore()
+  const [toman, setToman] = useState(false)
+  return (
+    <span className="money2">
+      <span className="m-gbp">{toman ? fmtToman(value) : money(value)}</span>
+      <button className="m-toggle" title="Switch currency"
+        onClick={(e) => { e.stopPropagation(); setToman(t => !t) }}>
+        {toman ? "£" : "﷼"}
+      </button>
+    </span>
+  )
+}
+
+/* live GBP→Toman rate chip */
+export function RateBadge() {
+  const { fmtToman } = useStore()
+  return <span className="rate-badge" title="Live GBP → Toman rate">£1 ≈ {fmtToman(1)}</span>
+}
+
+/* ---------- Animated number count-up ---------- */
+export function Counter({ value }) {
+  const [d, setD] = useState(0)
+  useEffect(() => {
+    const controls = animate(0, value, { duration: 0.9, ease: "easeOut", onUpdate: v => setD(v) })
+    return () => controls.stop()
+  }, [value])
+  return <>{Math.round(d).toLocaleString("en-US")}</>
+}
+
+export function Avatar({ emp, cls = "" }) {
+  if (!emp) return null
+  return <span className={`avatar ${cls}`} style={{ background: colorFor(emp.id) }} title={emp.name}>{initials(emp.name)}</span>
+}
+
+export function Tag({ color, children }) {
+  return <span className={`tag ${color}`}>{children}</span>
+}
+
+export function StatusTag({ status }) {
+  const { t } = useStore()
+  const map = { active: ["green", "statusActive"], leave: ["amber", "statusLeave"], inactive: ["gray", "statusInactive"] }
+  const m = map[status] || map.inactive
+  return <Tag color={m[0]}>{t(m[1])}</Tag>
+}
+
+export function ProjStatusTag({ status }) {
+  const { t } = useStore()
+  const map = { planning: ["blue", "psPlanning"], active: ["green", "psActive"], paused: ["amber", "psPaused"], done: ["gray", "psDone"] }
+  const m = map[status] || map.planning
+  return <Tag color={m[0]}>{t(m[1])}</Tag>
+}
+
+export function ProgressBar({ value }) {
+  return (
+    <div className="prog">
+      <motion.i initial={{ width: 0 }} animate={{ width: value + "%" }} transition={{ duration: 0.8, ease: "easeOut" }} style={{ display: "block", height: "100%" }} />
+    </div>
+  )
+}
+
+export function EmptyState({ icon = "dashboard", text }) {
+  return <div className="empty"><div className="big"><Icon name={icon} size={34} strokeWidth={1.4} /></div>{text}</div>
+}
+
+/* animation presets */
+export const fadeSlide = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { duration: 0.26, ease: "easeOut" },
+}
+export const stagger = { animate: { transition: { staggerChildren: 0.045 } } }
+export const item = {
+  initial: { opacity: 0, y: 12, scale: 0.99 },
+  animate: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 320, damping: 26 } },
+}
