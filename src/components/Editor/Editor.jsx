@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from './store.jsx'
+import { useStore } from '../../lib/store.jsx'
+import { CURRENCIES } from '../../lib/data.js'
 
 const pad = n => String(n).padStart(2, "0")
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
@@ -69,9 +70,10 @@ function Footer({ onSave, close }) {
 
 function EmployeeForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", payDay: 1, hireDate: todayISO(), status: "active" })
+  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", currency: "GBP", payDay: 1, hireDate: todayISO(), status: "active", notes: "" })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const submit = () => { if (!f.name.trim()) return; onSave("employee", { ...f, id, salary: Number(f.salary || 0), payDay: Number(f.payDay || 1) }); close() }
+  const curSym = (CURRENCIES.find(c => c.code === (f.currency || "GBP")) || {}).symbol || "£"
   return (
     <>
       <div className="modal-b">
@@ -85,15 +87,19 @@ function EmployeeForm({ existing, id, onSave, close }) {
           <Field label={t("phone")}><input value={f.phone} onChange={e => set("phone", e.target.value)} /></Field>
         </div>
         <div className="two">
-          <Field label={`${t("salary")} (${db.currency})`}><input type="number" value={f.salary} onChange={e => set("salary", e.target.value)} /></Field>
-          <Field label={t("payDay")}><input type="number" min="1" max="31" value={f.payDay} onChange={e => set("payDay", e.target.value)} /></Field>
+          <Field label={`${t("salary")} (${curSym})`}><input type="number" value={f.salary} onChange={e => set("salary", e.target.value)} /></Field>
+          <Field label="Paid in"><select value={f.currency || "GBP"} onChange={e => set("currency", e.target.value)}>
+            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+          </select></Field>
         </div>
         <div className="two">
-          <Field label={t("hireDate")}><input type="date" value={f.hireDate} onChange={e => set("hireDate", e.target.value)} /></Field>
+          <Field label={t("payDay")}><input type="number" min="1" max="31" value={f.payDay} onChange={e => set("payDay", e.target.value)} /></Field>
           <Field label={t("status")}><select value={f.status} onChange={e => set("status", e.target.value)}>
             <option value="active">{t("statusActive")}</option><option value="leave">{t("statusLeave")}</option><option value="inactive">{t("statusInactive")}</option>
           </select></Field>
         </div>
+        <Field label={t("hireDate")}><input type="date" value={f.hireDate} onChange={e => set("hireDate", e.target.value)} /></Field>
+        <Field label={t("notes")}><textarea value={f.notes || ""} onChange={e => set("notes", e.target.value)} placeholder="Any extra info about this employee…" /></Field>
       </div>
       <Footer onSave={submit} close={close} />
     </>

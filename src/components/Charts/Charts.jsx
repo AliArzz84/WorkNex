@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Icon } from './ui.jsx'
+import { Icon } from '../ui/ui.jsx'
 
 /* Donut chart with legend */
 export function Donut({ data, size = 150, thickness = 18, centerLabel, centerSub, centerIcon, centerColor = "var(--txt)", fmt = v => v }) {

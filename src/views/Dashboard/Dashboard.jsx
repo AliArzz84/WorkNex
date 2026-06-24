@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store.jsx'
-import { Counter, Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, TodayRow, stagger, item } from '../ui.jsx'
-import { daysBetween, nextPayday, periodKey } from '../data.js'
+import { useStore } from '../../lib/store.jsx'
+import { Counter, Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, TodayRow, stagger, item } from '../../components/ui/ui.jsx'
+import { daysBetween, nextPayday, periodKey } from '../../lib/data.js'
 
 function ProjectCard({ p }) {
   const { t, teamById, teamMembers, relDay } = useStore()

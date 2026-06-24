@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion'
-import { useStore } from '../store.jsx'
-import { Avatar, Counter, Tag, Icon, Money, stagger, item } from '../ui.jsx'
-import { daysBetween, nextPayday, periodKey } from '../data.js'
+import { useStore } from '../../lib/store.jsx'
+import { Avatar, Counter, Tag, Icon, Money, stagger, item } from '../../components/ui/ui.jsx'
+import { daysBetween, nextPayday, periodKey } from '../../lib/data.js'
 
 export default function Payroll() {
-  const { db, t, money, fmtDate, relDay, isPaid, setPaid, ask } = useStore()
+  const { db, t, money, toGbp, fmtDate, relDay, isPaid, setPaid, ask } = useStore()
   const active = db.employees.filter(e => e.status !== "inactive")
-  const total = db.employees.filter(e => e.status === "active").reduce((s, e) => s + Number(e.salary || 0), 0)
+  // mixed currencies → sum the GBP equivalent of each salary
+  const total = db.employees.filter(e => e.status === "active").reduce((s, e) => s + toGbp(e.salary, e.currency), 0)
   const rows = active.map(e => {
     const pd = nextPayday(e); const per = periodKey(pd)
     return { e, pd, dd: daysBetween(pd.toISOString()), per, paid: isPaid(e.id, per) }
@@ -38,7 +39,7 @@ export default function Payroll() {
             {rows.map(r => (
               <motion.tr key={r.e.id} variants={item} initial="initial" animate="animate" layout>
                 <td><div className="person"><Avatar emp={r.e} /><div><b>{r.e.name}</b><small>{r.e.role}</small></div></div></td>
-                <td><Money value={r.e.salary} /></td>
+                <td><Money value={r.e.salary} currency={r.e.currency} /></td>
                 <td>{fmtDate(r.pd.toISOString())}<br /><small className="muted">{r.paid ? "" : relDay(r.dd)}</small></td>
                 <td>
                   {r.paid ? <Tag color="green">✓ {t("paid")}</Tag>

@@ -4,9 +4,10 @@ import {
   applyNodeChanges, applyEdgeChanges, MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useStore } from '../store.jsx'
-import { Icon } from '../ui.jsx'
-import { dfdStyle } from '../data.js'
+import { useStore } from '../../lib/store.jsx'
+import { Icon } from '../../components/ui/ui.jsx'
+import { dfdStyle } from '../../lib/data.js'
+import styles from './Diagram.module.css'
 
 let counter = 1
 const newId = () => "node_" + Date.now() + "_" + (counter++)
@@ -59,13 +60,13 @@ export default function Diagram() {
 
   return (
     <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
-      <div className="dfd-toolbar">
+      <div className={styles.toolbar}>
         <button className="btn sm add-btn" onClick={() => addNode("process", "Process")}><Icon name="plus" size={14} /> Process</button>
         <button className="btn ghost sm add-btn" onClick={() => addNode("entity", "External entity")}><Icon name="plus" size={14} /> Entity</button>
         <button className="btn ghost sm add-btn" onClick={() => addNode("store", "Data store")}><Icon name="plus" size={14} /> Data store</button>
-        <span className="muted dfd-hint">Drag to move • drag dot → dot to connect • double-click to rename • Backspace to delete</span>
+        <span className={`muted ${styles.hint}`}>Drag to move • drag dot → dot to connect • double-click to rename • Backspace to delete</span>
       </div>
-      <div className="dfd-canvas">
+      <div className={styles.canvas}>
         <ReactFlow
           nodes={nodes}
           edges={edges}

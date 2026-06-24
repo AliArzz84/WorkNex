@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store.jsx'
-import { Counter, Tag, EmptyState, Icon, Money, stagger, item } from '../ui.jsx'
-import { Donut } from '../Charts.jsx'
-import { colorFor } from '../data.js'
+import { useStore } from '../../lib/store.jsx'
+import { Counter, Tag, EmptyState, Icon, Money, stagger, item } from '../../components/ui/ui.jsx'
+import { Donut } from '../../components/Charts/Charts.jsx'
+import { colorFor } from '../../lib/data.js'
+import styles from './Finance.module.css'
 
 export default function Finance() {
   const { db, money, fmtDate, search, openEditor, removeItem, ask } = useStore()
@@ -68,9 +69,9 @@ export default function Finance() {
                   <div style={{ flex: 1 }}><b>{b.name}</b></div>
                   <span className="avatar" style={{ background: colorFor(b.id), width: 26, height: 26 }}><Icon name="business" size={14} /></span>
                 </div>
-                <div className="fin-line"><span className="muted">Income</span><span style={{ color: "var(--green-ink)" }}><Money value={income} align="flex-end" /></span></div>
-                <div className="fin-line"><span className="muted">Outgoing</span><span style={{ color: "var(--red-ink)" }}><Money value={expense} align="flex-end" /></span></div>
-                <div className="fin-line" style={{ borderTop: "1px dashed var(--line-strong)", paddingTop: 8 }}>
+                <div className={styles.finLine}><span className="muted">Income</span><span style={{ color: "var(--green-ink)" }}><Money value={income} align="flex-end" /></span></div>
+                <div className={styles.finLine}><span className="muted">Outgoing</span><span style={{ color: "var(--red-ink)" }}><Money value={expense} align="flex-end" /></span></div>
+                <div className={styles.finLine} style={{ borderTop: "1px dashed var(--line-strong)", paddingTop: 8 }}>
                   <span>Net</span><span style={{ color: net < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={net} align="flex-end" /></span>
                 </div>
                 <div className="row-actions" style={{ marginTop: "auto" }}>

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store.jsx'
-import { Avatar, StatusTag, Tag, EmptyState, Icon, Money, item } from '../ui.jsx'
+import { useStore } from '../../lib/store.jsx'
+import { Avatar, StatusTag, Tag, EmptyState, Icon, Money, item } from '../../components/ui/ui.jsx'
+import styles from './Employees.module.css'
 
 export default function Employees() {
   const { db, t, L, lang, money, search, openEditor, removeItem, ask } = useStore()
@@ -34,12 +35,13 @@ export default function Employees() {
                   <td><div className="person"><Avatar emp={e} /><div>
                     <b>{e.name}</b>
                     <small>{e.role} • {e.email}</small>
-                    <div className="emp-teams">{empTeams.length
+                    <div className={styles.empTeams}>{empTeams.length
                       ? empTeams.map(tm => <Tag key={tm.id} color="amber">{tm.name}</Tag>)
                       : <Tag color="gray">{t("noTeam")}</Tag>}</div>
+                    {e.notes && <small className={styles.empNote}>📝 {e.notes}</small>}
                   </div></div></td>
                   <td>{e.country ? <Tag color="blue">{e.country}</Tag> : L.none}</td>
-                  <td><Money value={e.salary} /></td>
+                  <td><Money value={e.salary} currency={e.currency} /></td>
                   <td>{lang === "fa" ? "روز " + e.payDay : "Day " + e.payDay}</td>
                   <td><StatusTag status={e.status} /></td>
                   <td className="right">

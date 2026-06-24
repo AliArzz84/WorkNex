@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, animate, AnimatePresence } from 'framer-motion'
-import { colorFor, initials } from './data.js'
-import { useStore } from './store.jsx'
+import { colorFor, initials, CURRENCIES } from '../../lib/data.js'
+import { useStore } from '../../lib/store.jsx'
+import styles from './ui.module.css'
 
 /* ---------- Line icons (SF-Symbols-like) ---------- */
 const ICONS = {
@@ -58,25 +59,29 @@ export function Clocks() {
   const time = (tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now)
   const date = (locale, tz) => new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: "short", day: "numeric", month: "short" }).format(now)
   return (
-    <div className="clocks">
-      <div className="clock"><span className="flag">🇮🇷</span><div className="ct"><b>{time("Asia/Tehran")}</b><small>Tehran · {date("fa-IR", "Asia/Tehran")}</small></div></div>
-      <div className="sep" />
-      <div className="clock"><span className="flag">🇬🇧</span><div className="ct"><b>{time("Europe/London")}</b><small>London · {date("en-GB", "Europe/London")}</small></div></div>
+    <div className={styles.clocks}>
+      <div className={styles.clock}><span className={styles.flag}>🇮🇷</span><div className={styles.ct}><b>{time("Asia/Tehran")}</b><small>Tehran · {date("fa-IR", "Asia/Tehran")}</small></div></div>
+      <div className={styles.sep} />
+      <div className={styles.clock}><span className={styles.flag}>🇬🇧</span><div className={styles.ct}><b>{time("Europe/London")}</b><small>London · {date("en-GB", "Europe/London")}</small></div></div>
     </div>
   )
 }
 
 /* ---------- Money: GBP by default, small button toggles to Toman ---------- */
-export function Money({ value }) {
+export function Money({ value, currency = "GBP" }) {
   const { money, fmtToman } = useStore()
   const [toman, setToman] = useState(false)
+  const sym = (CURRENCIES.find(c => c.code === currency) || {}).symbol || "£"
+  const isToman = currency === "IRR"
   return (
-    <span className="money2">
-      <span className="m-gbp">{toman ? fmtToman(value) : money(value)}</span>
-      <button className="m-toggle" title="Switch currency"
-        onClick={(e) => { e.stopPropagation(); setToman(t => !t) }}>
-        {toman ? "£" : "﷼"}
-      </button>
+    <span className={styles.money2}>
+      <span className={styles.mGbp}>{(toman && !isToman) ? fmtToman(value, currency) : money(value, currency)}</span>
+      {!isToman && (
+        <button className={styles.mToggle} title="Switch currency"
+          onClick={(e) => { e.stopPropagation(); setToman(t => !t) }}>
+          {toman ? sym : "﷼"}
+        </button>
+      )}
     </span>
   )
 }
@@ -84,7 +89,7 @@ export function Money({ value }) {
 /* live GBP→Toman rate chip */
 export function RateBadge() {
   const { fmtToman } = useStore()
-  return <span className="rate-badge" title="Live GBP → Toman rate">£1 ≈ {fmtToman(1)}</span>
+  return <span className={styles.rateBadge} title="Live GBP → Toman rate">£1 ≈ {fmtToman(1)}</span>
 }
 
 /* one compact chip that expands to all live rates (Toman) */
@@ -102,24 +107,24 @@ export function RatesMenu() {
   const rows = [["USD", "$"], ["EUR", "€"], ["GBP", "£"], ["AED", "د.إ"], ["TRY", "₺"]].filter(([k]) => r[k])
   const teaser = r.USD ? `$ ${fmt(r.USD)}` : "Rates"
   return (
-    <div className="rates" ref={ref}>
-      <button className="rate-badge rates-trigger" onClick={() => setOpen(o => !o)} title="Live currency rates">
+    <div className={styles.rates} ref={ref}>
+      <button className={`${styles.rateBadge} ${styles.ratesTrigger}`} onClick={() => setOpen(o => !o)} title="Live currency rates">
         <Icon name="trending" size={14} />
         <span>{teaser}</span>
-        <Icon name="arrow" size={12} className={`chev ${open ? "up" : ""}`} />
+        <Icon name="arrow" size={12} className={`${styles.chev} ${open ? styles.up : ""}`} />
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div className="rates-menu" initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+          <motion.div className={styles.ratesMenu} initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.16 }}>
-            <div className="rm-head">Live prices · تومان</div>
+            <div className={styles.rmHead}>Live prices · تومان</div>
             {rows.length ? rows.map(([code, sym]) => (
-              <div className="rm-row" key={code}>
-                <span className="rm-sym">{sym}</span>
-                <span className="rm-code">{code}</span>
-                <b className="rm-val">{fmt(r[code])}</b>
+              <div className={styles.rmRow} key={code}>
+                <span className={styles.rmSym}>{sym}</span>
+                <span className={styles.rmCode}>{code}</span>
+                <b className={styles.rmVal}>{fmt(r[code])}</b>
               </div>
-            )) : <div className="rm-row"><span className="rm-code">£1 ≈ {fmtToman(1)}</span></div>}
+            )) : <div className={styles.rmRow}><span className={styles.rmCode}>£1 ≈ {fmtToman(1)}</span></div>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -139,15 +144,15 @@ export function Presence() {
   const others = (presence || []).filter(p => p.userId !== session.user.id)
   if (!others.length) return null
   return (
-    <div className="presence">
+    <div className={styles.presence}>
       {others.map(p => {
         const editing = p.editingAt && Date.now() - p.editingAt < 8000
         const roleLabel = p.role === "manager" ? "Manager" : "Boss"
         return (
-          <span key={p.userId} className={`pres-chip ${editing ? "editing" : ""}`}
+          <span key={p.userId} className={`${styles.presChip} ${editing ? styles.editing : ""}`}
             title={`${p.email} is ${editing ? "editing" : "online"}`}>
-            <i className="dot" />
-            <span className="pe">{p.email}</span>
+            <i className={styles.dot} />
+            <span className={styles.pe}>{p.email}</span>
             <small>({roleLabel}) · {editing ? "editing…" : "online"}</small>
           </span>
         )

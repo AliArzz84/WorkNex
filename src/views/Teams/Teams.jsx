@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store.jsx'
-import { Avatar, EmptyState, Icon, stagger, item } from '../ui.jsx'
+import { useStore } from '../../lib/store.jsx'
+import { Avatar, EmptyState, Icon, stagger, item } from '../../components/ui/ui.jsx'
 
 export default function Teams() {
   const { db, t, L, lang, empById, openEditor, removeItem, ask } = useStore()

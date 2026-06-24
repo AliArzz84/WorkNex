@@ -243,10 +243,29 @@ export function StoreProvider({ children }) {
 
   /* formatting helpers */
   const locale = lang === "fa" ? "fa-IR" : "en-US"
-  const money = useCallback((n) => "£" + Number(n || 0).toLocaleString("en-GB", { maximumFractionDigits: 0 }), [])
+  const CUR_SYMBOL = { GBP: "£", USD: "$", EUR: "€", AED: "د.إ ", TRY: "₺", IRR: "" }
+  const money = useCallback((n, code = "GBP") => {
+    const amt = Number(n || 0)
+    if (code === "IRR") return amt.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " تومان"
+    return (CUR_SYMBOL[code] || "£") + amt.toLocaleString("en-GB", { maximumFractionDigits: 0 })
+  }, [])
   // prefer the live nerkh GBP price; fall back to the exchangerate.host value
   const gbpToman = (currencyRates && currencyRates.GBP) || tomanPerGbp
-  const fmtToman = useCallback((n) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Math.round(Number(n || 0) * gbpToman)) + " تومان", [gbpToman])
+  const fmtToman = useCallback((n, code = "GBP") => {
+    const amt = Number(n || 0)
+    const toman = code === "IRR" ? amt
+      : (!code || code === "GBP") ? amt * gbpToman
+        : (currencyRates && currencyRates[code]) ? amt * currencyRates[code] : amt * gbpToman
+    return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Math.round(toman)) + " تومان"
+  }, [gbpToman, currencyRates])
+  // convert an amount in `code` currency to GBP (used for mixed-currency totals)
+  const toGbp = useCallback((n, code = "GBP") => {
+    const amt = Number(n || 0)
+    if (!code || code === "GBP") return amt
+    if (code === "IRR") return gbpToman ? amt / gbpToman : amt
+    const r = currencyRates && currencyRates[code]
+    return (r && gbpToman) ? amt * r / gbpToman : amt
+  }, [gbpToman, currencyRates])
   const fmtDate = useCallback((iso) => iso ? new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" }) : L.none, [locale, L])
   const fmtDateTime = useCallback((iso) => iso ? new Date(iso).toLocaleString(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : L.none, [locale, L])
   const fmtTime = useCallback((iso) => iso ? new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "", [locale])
@@ -306,7 +325,7 @@ export function StoreProvider({ children }) {
       if (isPaidPure(db, e.id, per)) return
       if (dd <= 7) {
         const overdue = dd < 0
-        out.push({ key: "p" + e.id, color: overdue ? "red" : "amber", title: overdue ? L.payOverdue(e.name) : L.payReminder(e.name), sub: money(e.salary), when: relDay(dd), sort: overdue ? -100 + dd : dd })
+        out.push({ key: "p" + e.id, color: overdue ? "red" : "amber", title: overdue ? L.payOverdue(e.name) : L.payReminder(e.name), sub: money(e.salary, e.currency), when: relDay(dd), sort: overdue ? -100 + dd : dd })
       }
     })
     db.projects.filter(p => p.status === "active").forEach(p => {
@@ -323,7 +342,7 @@ export function StoreProvider({ children }) {
       .map(m => ({ key: "m" + m.id, type: "meeting", id: m.id, color: "blue", icon: "meetings", title: m.title, sub: "Meeting" + (m.location ? " • " + m.location : ""), when: fmtTime(m.datetime), priority: m.priority }))
     const pay = db.employees.filter(e => e.status === "active")
       .filter(e => { const pd = nextPayday(e); return daysBetween(pd.toISOString()) === 0 && !isPaidPure(db, e.id, periodKey(pd)) })
-      .map(e => { const pd = nextPayday(e); return { key: "p" + e.id, type: "salary", empId: e.id, period: periodKey(pd), color: "amber", icon: "wallet", title: e.name, sub: "Salary due today", when: money(e.salary) } })
+      .map(e => { const pd = nextPayday(e); return { key: "p" + e.id, type: "salary", empId: e.id, period: periodKey(pd), color: "amber", icon: "wallet", title: e.name, sub: "Salary due today", when: money(e.salary, e.currency) } })
     const proj = db.projects.filter(p => p.status !== "done" && p.deadline && daysBetween(p.deadline) === 0)
       .map(p => ({ key: "d" + p.id, type: "project", id: p.id, color: "red", icon: "projects", title: p.name, sub: "Project deadline" + (p.client ? " • " + p.client : ""), when: "Due today" }))
     const tasks = db.tasks.filter(k => !k.done && k.due && daysBetween(k.due) === 0)
@@ -357,7 +376,7 @@ export function StoreProvider({ children }) {
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => setEditing({ type, id }), closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, resolveDialog, notify,
-    money, fmtToman, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
+    money, fmtToman, toGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
     exportData, importData, resetData, clearAll,
   }

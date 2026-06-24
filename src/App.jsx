@@ -1,19 +1,19 @@
 import { useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from './store.jsx'
-import { fadeSlide, Icon, Clocks, RatesMenu, Presence, ConfirmDialog, Toast } from './ui.jsx'
-import Dashboard from './views/Dashboard.jsx'
-import Tasks from './views/Tasks.jsx'
-import Finance from './views/Finance.jsx'
-import Diagram from './views/Diagram.jsx'
-import Employees from './views/Employees.jsx'
-import Projects from './views/Projects.jsx'
-import Meetings from './views/Meetings.jsx'
-import Payroll from './views/Payroll.jsx'
-import Teams from './views/Teams.jsx'
-import Editor from './Editor.jsx'
-import Login from './Login.jsx'
-import { daysBetween, nextPayday, periodKey } from './data.js'
+import { useStore } from './lib/store.jsx'
+import { fadeSlide, Icon, Clocks, RatesMenu, Presence, ConfirmDialog, Toast } from './components/ui/ui.jsx'
+import Dashboard from './views/Dashboard/Dashboard.jsx'
+import Tasks from './views/Tasks/Tasks.jsx'
+import Finance from './views/Finance/Finance.jsx'
+import Diagram from './views/Diagram/Diagram.jsx'
+import Employees from './views/Employees/Employees.jsx'
+import Projects from './views/Projects/Projects.jsx'
+import Meetings from './views/Meetings/Meetings.jsx'
+import Payroll from './views/Payroll/Payroll.jsx'
+import Teams from './views/Teams/Teams.jsx'
+import Editor from './components/Editor/Editor.jsx'
+import Login from './components/Login/Login.jsx'
+import { daysBetween, nextPayday, periodKey } from './lib/data.js'
 
 const NAV = [
   { key: "dashboard", icon: "dashboard" },
@@ -32,7 +32,7 @@ const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,
     cloud, session, account, authReady, signOut,
-    view, setView, search, setSearch, openEditor, exportData, importData, resetData, clearAll, isPaid } = useStore()
+    view, setView, search, setSearch, openEditor, exportData, importData, clearAll, isPaid } = useStore()
   const fileRef = useRef()
 
   // Cloud auth gates
@@ -44,7 +44,7 @@ export default function App() {
   const payBadge = db.employees.filter(e => e.status === "active").filter(e => {
     const pd = nextPayday(e); return daysBetween(pd.toISOString()) <= 7 && !isPaid(e.id, periodKey(pd))
   }).length
-  const taskBadge = db.tasks.filter(k => !k.done).length
+  const taskBadge = db.tasks.filter(k => !k.done && k.due && daysBetween(k.due) === 0).length
   const badges = { tasks: taskBadge, meetings: meetBadge, payroll: payBadge }
 
   // Toggle only switches edit mode; it stays on the current page.
@@ -68,7 +68,6 @@ export default function App() {
         <div className="side-foot">
           <button className="btn-soft" onClick={exportData}><Icon name="download" size={16} /> {L.exportData}</button>
           <button className="btn-soft" onClick={() => fileRef.current.click()}><Icon name="upload" size={16} /> {L.importData}</button>
-          <button className="btn-soft" onClick={resetData}><Icon name="refresh" size={16} /> {L.loadSample}</button>
           {!readOnly && (
             <button className="btn-soft danger" onClick={clearAll}><Icon name="trash" size={16} /> {L.clearAll}</button>
           )}
@@ -109,14 +108,14 @@ export default function App() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={L.search2} />
           </div>
 
-          <motion.button className="theme-btn" onClick={toggleTheme} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.88, rotate: -20 }} aria-label="Toggle theme" title="Toggle theme">
-            <AnimatePresence mode="wait" initial={false}>
+          <motion.button className="theme-btn" onClick={toggleTheme} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.9 }} aria-label="Toggle theme" title="Toggle theme">
+            <AnimatePresence initial={false}>
               <motion.span key={theme}
-                initial={{ rotate: -90, opacity: 0, scale: 0.4 }}
+                initial={{ rotate: -60, opacity: 0, scale: 0.5 }}
                 animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                exit={{ rotate: 90, opacity: 0, scale: 0.4 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                style={{ display: "grid", placeItems: "center" }}>
+                exit={{ rotate: 60, opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                style={{ position: "absolute", display: "grid", placeItems: "center" }}>
                 <Icon name={theme === "dark" ? "moon" : "sun"} size={18} />
               </motion.span>
             </AnimatePresence>

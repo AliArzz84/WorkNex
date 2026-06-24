@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store.jsx'
-import { Avatar, Tag, EmptyState, Icon, stagger, item } from '../ui.jsx'
-import { daysBetween } from '../data.js'
+import { useStore } from '../../lib/store.jsx'
+import { Avatar, Tag, EmptyState, Icon, stagger, item } from '../../components/ui/ui.jsx'
+import { daysBetween } from '../../lib/data.js'
 
 const PRI = { high: ["red", "High"], med: ["amber", "Medium"], low: ["gray", "Low"] }
 const PW = { high: 0, med: 1, low: 2 }

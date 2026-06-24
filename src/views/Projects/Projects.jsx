@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store.jsx'
-import { Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, Money, stagger, item } from '../ui.jsx'
-import { daysBetween } from '../data.js'
+import { useStore } from '../../lib/store.jsx'
+import { Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, Money, stagger, item } from '../../components/ui/ui.jsx'
+import { daysBetween } from '../../lib/data.js'
 
 export default function Projects() {
   const { db, t, L, money, fmtDate, relDay, teamById, teamMembers, search, openEditor, removeItem, ask } = useStore()

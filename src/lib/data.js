@@ -72,6 +72,16 @@ export const I18N = {
   }
 }
 
+/* salary currencies an employee can be paid in */
+export const CURRENCIES = [
+  { code: "GBP", symbol: "£", label: "£  GBP" },
+  { code: "USD", symbol: "$", label: "$  USD" },
+  { code: "EUR", symbol: "€", label: "€  EUR" },
+  { code: "IRR", symbol: "تومان", label: "Toman" },
+  { code: "AED", symbol: "د.إ", label: "AED" },
+  { code: "TRY", symbol: "₺", label: "₺  TRY" },
+]
+
 /* ---------- pure helpers ---------- */
 export const uid = (p) => p + "_" + Math.random().toString(36).slice(2, 9)
 const COLORS = ["#6c8cff", "#9b6cff", "#34d399", "#fbbf24", "#f87171", "#60a5fa", "#f472b6", "#22d3ee"]

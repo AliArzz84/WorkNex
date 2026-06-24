@@ -1,0 +1,37 @@
+/* World clocks */
+.clocks{display:flex;align-items:center;gap:11px;padding:5px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.clock{display:flex;align-items:center;gap:7px}
+.clock .flag{font-size:15px;line-height:1}
+.clock .ct b{font-size:12.5px;font-variant-numeric:tabular-nums;display:block;line-height:1.15;letter-spacing:.02em}
+.clock .ct small{font-size:9.5px;color:var(--muted);display:block;line-height:1}
+.clocks .sep{width:1px;height:24px;background:var(--line)}
+@media(max-width:900px){.clocks .ct small{display:none}}
+
+/* Money (£ with toman toggle) */
+.money2{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.money2 .mGbp{font-weight:600;font-variant-numeric:tabular-nums}
+.mToggle{width:18px;height:18px;border-radius:5px;border:1px solid var(--line-strong);background:var(--surface);color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;display:grid;place-items:center;line-height:1;flex:0 0 auto;padding:0}
+.mToggle:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Live rates chip + menu */
+.rateBadge{display:inline-flex;align-items:center;padding:5px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.rates{position:relative;display:inline-flex}
+.ratesTrigger{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--txt)}
+.ratesTrigger .chev{transform:rotate(90deg);transition:transform .2s;opacity:.6}
+.ratesTrigger .chev.up{transform:rotate(-90deg)}
+.ratesMenu{position:absolute;top:calc(100% + 8px);inset-inline-end:0;z-index:60;min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 38px rgba(0,0,0,.28);padding:8px}
+.rmHead{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:4px 8px 8px}
+.rmRow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;font-size:13px}
+.rmRow:hover{background:var(--hover)}
+.rmSym{width:22px;text-align:center;font-weight:700;font-size:14px}
+.rmCode{color:var(--muted);font-weight:600;font-size:12px}
+.rmVal{margin-inline-start:auto;font-weight:700}
+
+/* Live presence chips */
+.presence{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.presChip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:11.5px;color:var(--txt);font-weight:600;white-space:nowrap;max-width:230px}
+.presChip .pe{overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.presChip small{color:var(--muted);font-weight:500}
+.presChip .dot{width:7px;height:7px;border-radius:50%;background:#34c759;flex-shrink:0}
+.presChip.editing .dot{box-shadow:0 0 0 0 rgba(52,199,89,.55);animation:presPulse 1.6s infinite}
+@keyframes presPulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,.55)}70%{box-shadow:0 0 0 6px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}

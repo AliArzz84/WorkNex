@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store.jsx'
-import { Avatar, Tag, EmptyState, Icon, TodayRow, stagger, item } from '../ui.jsx'
-import { daysBetween } from '../data.js'
+import { useStore } from '../../lib/store.jsx'
+import { Avatar, Tag, EmptyState, Icon, TodayRow, stagger, item } from '../../components/ui/ui.jsx'
+import { daysBetween } from '../../lib/data.js'
+import styles from './Tasks.module.css'
 
 const PRI = { high: ["red", "High"], med: ["amber", "Medium"], low: ["gray", "Low"] }
 const PW = { high: 0, med: 1, low: 2 }
@@ -22,9 +23,9 @@ function TaskRow({ k }) {
     setTimeout(() => toggleTask(k.id), 650)
   }
   return (
-    <motion.div className="task-row" variants={item} layout
+    <motion.div className={styles.taskRow} variants={item} layout
       exit={{ opacity: 0, x: 26, transition: { duration: 0.25 } }}>
-      <button className={`check ${showDone ? "on" : ""}`} onClick={onCheck} title="Toggle done">
+      <button className={`${styles.check} ${showDone ? styles.on : ""}`} onClick={onCheck} title="Toggle done">
         <AnimatePresence>
           {showDone && (
             <motion.span key="c" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
@@ -34,12 +35,12 @@ function TaskRow({ k }) {
           )}
         </AnimatePresence>
       </button>
-      <div className="t-main">
-        <b className={showDone ? "t-done" : ""}>{k.title}</b>
+      <div className={styles.tMain}>
+        <b className={showDone ? styles.tDone : ""}>{k.title}</b>
         <small>{a ? a.name : "Unassigned"}{proj ? " • " + proj.name : ""}{k.notes ? " • " + k.notes : ""}</small>
       </div>
-      <div className="t-meta">
-        {k.due && <span className="due" style={{ color: overdue ? "var(--red-ink)" : "var(--muted)" }}>{relDay(dd)}</span>}
+      <div className={styles.tMeta}>
+        {k.due && <span className={styles.due} style={{ color: overdue ? "var(--red-ink)" : "var(--muted)" }}>{relDay(dd)}</span>}
         <Tag color={PRI[k.priority]?.[0] || "gray"}>{PRI[k.priority]?.[1] || k.priority}</Tag>
         {a && <Avatar emp={a} />}
       </div>
@@ -54,9 +55,9 @@ function TaskRow({ k }) {
 function MiniTile({ date }) {
   const d = new Date(date)
   return (
-    <div className="mini-tile">
-      <span className="mm">{d.toLocaleString("en-US", { month: "short" })}</span>
-      <span className="nn">{d.getDate()}</span>
+    <div className={styles.miniTile}>
+      <span className={styles.mm}>{d.toLocaleString("en-US", { month: "short" })}</span>
+      <span className={styles.nn}>{d.getDate()}</span>
     </div>
   )
 }
@@ -125,11 +126,11 @@ export default function Tasks() {
             <div className="panel">
               <div className="panel-h"><span className="hicon"><Icon name="meetings" size={16} /></span><h2>Upcoming</h2><span className="count">{future.length}</span></div>
               {futureDates.map(date => (
-                <div className="task-group" key={date}>
-                  <div className="task-group-h">
+                <div className={styles.taskGroup} key={date}>
+                  <div className={styles.taskGroupH}>
                     <MiniTile date={date} />
                     <span>{relDay(daysBetween(date))} · {fmtDate(date)}</span>
-                    <span className="gcount">{groups[date].length} task{groups[date].length > 1 ? "s" : ""}</span>
+                    <span className={styles.gcount}>{groups[date].length} task{groups[date].length > 1 ? "s" : ""}</span>
                   </div>
                   <motion.div variants={stagger} initial="initial" animate="animate">
                     <AnimatePresence>{groups[date].sort(byPri).map(k => <TaskRow key={k.id} k={k} />)}</AnimatePresence>
