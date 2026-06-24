@@ -101,6 +101,9 @@ export function StoreProvider({ children }) {
       const acct = prof?.role || "boss"
       if (cancelled) return
       setAccount(acct)
+      // Each account opens in its own view by default (boss → Boss view).
+      // They can still flip it from the top toggle during the session.
+      setRole(acct)
 
       const { data: ws } = await supabase.from("workspaces").select("data").eq("id", "default").single()
       let raw = ws?.data
