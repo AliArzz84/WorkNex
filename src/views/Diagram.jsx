@@ -26,6 +26,17 @@ export default function Diagram() {
     return () => saveTimer.current && clearTimeout(saveTimer.current)
   }, [nodes, edges])
 
+  // pull in external changes (realtime from the other user, or Clear all)
+  useEffect(() => {
+    const incoming = db.diagram || { nodes: [], edges: [] }
+    const localStr = JSON.stringify({ nodes, edges })
+    const incomingStr = JSON.stringify({ nodes: incoming.nodes || [], edges: incoming.edges || [] })
+    if (incomingStr !== localStr) {
+      setNodes(incoming.nodes || [])
+      setEdges(incoming.edges || [])
+    }
+  }, [db.diagram])
+
   const onNodesChange = useCallback((ch) => setNodes(ns => applyNodeChanges(ch, ns)), [])
   const onEdgesChange = useCallback((ch) => setEdges(es => applyEdgeChanges(ch, es)), [])
   const onConnect = useCallback((c) => setEdges(es => addEdge({ ...c, label: "", markerEnd: { type: MarkerType.ArrowClosed } }, es)), [])

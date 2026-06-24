@@ -5,7 +5,7 @@ import {
 import { supabase, isSupabaseConfigured } from './supabaseClient.js'
 
 const KEY = "bm_react_v2"
-const EMPTY = { teams: [], employees: [], projects: [], meetings: [], businesses: [], transactions: [], tasks: [], diagram: { nodes: [], edges: [] }, payments: {}, currency: "Toman" }
+const EMPTY = { teams: [], employees: [], projects: [], meetings: [], businesses: [], transactions: [], tasks: [], diagram: { nodes: [], edges: [] }, payments: {}, currency: "£" }
 // Always guarantee the collections exist so views never crash on missing arrays.
 const norm = (d) => ({
   ...EMPTY, ...(d || {}),
