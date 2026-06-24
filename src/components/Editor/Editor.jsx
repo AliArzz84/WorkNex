@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
 import { CURRENCIES } from '../../lib/data.js'
+import { Icon, Avatar } from '../ui/ui.jsx'
+import styles from './Editor.module.css'
 
 const pad = n => String(n).padStart(2, "0")
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
@@ -15,6 +17,46 @@ function MemberPicker({ value, onChange }) {
       {db.employees.map(e => (
         <span key={e.id} className={`chip ${value.includes(e.id) ? "on" : ""}`} onClick={() => toggle(e.id)}>{e.name}</span>
       ))}
+    </div>
+  )
+}
+
+/* small searchable list to pick team members (with an inline "lead" toggle) */
+function MemberList({ value, onChange, lead, onLead }) {
+  const { db } = useStore()
+  const [q, setQ] = useState("")
+  const sel = value || []
+  const toggle = (id) => onChange(sel.includes(id) ? sel.filter(x => x !== id) : [...sel, id])
+  const ql = q.trim().toLowerCase()
+  const list = db.employees.filter(e => !ql || e.name.toLowerCase().includes(ql) || (e.role || "").toLowerCase().includes(ql))
+  return (
+    <div className={styles.picker}>
+      <div className={styles.search}>
+        <Icon name="search" size={14} />
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search people…" />
+        {sel.length > 0 && <span className={styles.count}>{sel.length}</span>}
+      </div>
+      <div className={styles.list}>
+        {list.length === 0
+          ? <div className={styles.empty}>{db.employees.length ? "No one matches" : "Add employees first"}</div>
+          : list.map(e => {
+            const on = sel.includes(e.id)
+            return (
+              <div key={e.id} className={`${styles.row} ${on ? styles.on : ""}`} onClick={() => toggle(e.id)}>
+                <span className={styles.check}>{on && <Icon name="check" size={12} />}</span>
+                <Avatar emp={e} />
+                <div className={styles.main}><b>{e.name}</b><small>{e.role || "—"}</small></div>
+                {on && lead !== undefined && (
+                  <button type="button" className={`${styles.leadBtn} ${lead === e.id ? styles.leadOn : ""}`}
+                    onClick={(ev) => { ev.stopPropagation(); onLead(lead === e.id ? "" : e.id) }}
+                    title="Set as team lead">
+                    {lead === e.id ? "★ Lead" : "Set lead"}
+                  </button>
+                )}
+              </div>
+            )
+          })}
+      </div>
     </div>
   )
 }
@@ -169,8 +211,8 @@ function MeetingForm({ existing, id, onSave, close }) {
 }
 
 function TeamForm({ existing, id, onSave, close }) {
-  const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", lead: "", members: [] })
+  const { t } = useStore()
+  const [f, setF] = useState(existing || { name: "", country: "", lead: "", members: [] })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   // keep the lead valid: it must stay one of the chosen members
   const setMembers = (v) => setF(s => ({ ...s, members: v, lead: v.includes(s.lead) ? s.lead : "" }))
@@ -179,12 +221,13 @@ function TeamForm({ existing, id, onSave, close }) {
   return (
     <>
       <div className="modal-b">
-        <Field label={t("teamName") + " *"}><input value={f.name} onChange={e => set("name", e.target.value)} autoFocus /></Field>
-        <Field label={t("members")}><MemberPicker value={members} onChange={setMembers} /></Field>
-        <Field label={t("teamLead")}><select value={f.lead} onChange={e => set("lead", e.target.value)}>
-          <option value="">{t("none")}</option>
-          {members.map(mid => { const e = db.employees.find(x => x.id === mid); return e ? <option key={mid} value={mid}>{e.name}</option> : null })}
-        </select></Field>
+        <div className="two">
+          <Field label={t("teamName") + " *"}><input value={f.name} onChange={e => set("name", e.target.value)} autoFocus /></Field>
+          <Field label={t("basedIn")}><input value={f.country || ""} onChange={e => set("country", e.target.value)} placeholder="e.g. United Kingdom" /></Field>
+        </div>
+        <Field label={`${t("members")} (${members.length})`}>
+          <MemberList value={members} onChange={setMembers} lead={f.lead} onLead={(v) => set("lead", v)} />
+        </Field>
       </div>
       <Footer onSave={submit} close={close} />
     </>

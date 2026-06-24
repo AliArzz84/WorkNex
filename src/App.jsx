@@ -30,8 +30,8 @@ const NAV = [
 ]
 const VIEWS = { dashboard: Dashboard, tasks: Tasks, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
 const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting", teams: "team", tasks: "task", finance: "transaction" }
-// only the views that actually filter by it get the search box
-const SEARCHABLE = new Set(["tasks", "employees", "finance", "projects", "meetings", "activity"])
+// only the views that use the *topbar* search box (Projects has its own in-section search)
+const SEARCHABLE = new Set(["tasks", "employees", "finance", "meetings", "activity"])
 
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,

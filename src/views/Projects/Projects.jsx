@@ -5,10 +5,18 @@ import { Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, Money, stagger, i
 import { daysBetween } from '../../lib/data.js'
 
 export default function Projects() {
-  const { db, t, L, money, fmtDate, relDay, teamById, teamMembers, search, openEditor, removeItem, ask } = useStore()
+  const { db, t, L, money, fmtDate, relDay, teamById, teamMembers, openEditor, removeItem, ask } = useStore()
   const [filter, setFilter] = useState("all")
+  const [q, setQ] = useState("")
 
-  let rows = db.projects.filter(p => JSON.stringify(p).toLowerCase().includes(search.toLowerCase()))
+  const ql = q.trim().toLowerCase()
+  const match = (p) => {
+    if (!ql) return true
+    const team = teamById(p.team)?.name || ""
+    const mems = teamMembers(p.team).map(e => e.name).join(" ")
+    return [p.name, p.client, p.status, p.notes, team, mems].join(" ").toLowerCase().includes(ql)
+  }
+  let rows = db.projects.filter(match)
   if (filter !== "all") rows = rows.filter(p => p.status === filter)
 
   const filters = [["all", L.all], ["active", t("psActive")], ["planning", t("psPlanning")], ["paused", t("psPaused")], ["done", t("psDone")]]
@@ -19,6 +27,10 @@ export default function Projects() {
         {filters.map(([k, lbl]) => (
           <span key={k} className={`pill ${filter === k ? "on" : ""}`} onClick={() => setFilter(k)}>{lbl}</span>
         ))}
+        <div className="search" style={{ maxWidth: 300 }}>
+          <span className="si"><Icon name="search" size={15} /></span>
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search projects, team, people…" />
+        </div>
       </div>
       <motion.div className="grid3" variants={stagger} initial="initial" animate="animate" key={filter}>
         <AnimatePresence>

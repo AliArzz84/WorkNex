@@ -18,6 +18,7 @@ export default function Teams() {
                   <b>{tm.name}</b><br />
                   <small>{lead ? (lang === "fa" ? "سرپرست: " : "Lead: ") + lead.name : L.none}</small>
                 </div>
+                {tm.country && <span className="tag gray"><Icon name="pin" size={11} /> {tm.country}</span>}
               </div>
               <div className="members">{members.length ? members.map(e => <Avatar key={e.id} emp={e} />) : <small className="muted">{L.none}</small>}</div>
               <div className="meta"><span>{members.length} {L.membersCount}</span><span>{projs.length} {L.projectsCount}</span></div>
