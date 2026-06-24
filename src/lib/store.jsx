@@ -1,15 +1,18 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
-  I18N, sampleData, uid, daysBetween, nextPayday, periodKey, isPaid as isPaidPure
+  I18N, sampleData, uid, daysBetween, nextPayday, periodKey, isPaid as isPaidPure, timeAgo
 } from './data.js'
 import { supabase, isSupabaseConfigured } from './supabaseClient.js'
 
 const KEY = "bm_react_v2"
-const EMPTY = { teams: [], employees: [], projects: [], meetings: [], businesses: [], transactions: [], tasks: [], diagram: { nodes: [], edges: [] }, payments: {}, currency: "£" }
+const MAX_LOG = 250   // how many activity entries we keep in the shared workspace
+const EMPTY = { teams: [], employees: [], projects: [], meetings: [], businesses: [], transactions: [], tasks: [], diagram: { nodes: [], edges: [] }, payments: {}, activity: [], seen: {}, currency: "£" }
 // Always guarantee the collections exist so views never crash on missing arrays.
 const norm = (d) => ({
   ...EMPTY, ...(d || {}),
   payments: (d && d.payments) || {},
+  activity: (d && Array.isArray(d.activity)) ? d.activity : [],
+  seen: (d && d.seen) || {},
   diagram: { nodes: [], edges: [], ...((d && d.diagram) || {}) },
 })
 const StoreContext = createContext(null)
@@ -60,6 +63,8 @@ export function StoreProvider({ children }) {
   const lastSynced = useRef("")
   const writeTimer = useRef(null)
   const presenceCh = useRef(null)
+  // who is acting right now — kept in a ref so the CRUD callbacks stay dependency-free
+  const actorRef = useRef({ userId: "local", email: "local", role: "manager" })
 
   /* theme + document */
   useEffect(() => { document.documentElement.lang = "en"; document.documentElement.dir = "ltr" }, [])
@@ -168,6 +173,12 @@ export function StoreProvider({ children }) {
       lastSynced.current = JSON.stringify(data)
       setDb(data)
       setDataReady(true)
+
+      // record that this account just came in (drives "last seen" in the Activity view)
+      setDb(prev => ({
+        ...prev,
+        seen: { ...(prev.seen || {}), [session.user.id]: { email: session.user.email, role: acct, lastSeen: Date.now() } },
+      }))
 
       channel = supabase.channel("ws-default")
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "workspaces", filter: "id=eq.default" }, (payload) => {
@@ -279,38 +290,83 @@ export function StoreProvider({ children }) {
   }, [db.teams, db.employees])
   const isPaid = useCallback((empId, period) => isPaidPure(db, empId, period), [db])
 
+  /* === activity log helpers === */
+  // keep the current actor fresh; CRUD reads this ref so its callbacks never go stale
+  useEffect(() => {
+    actorRef.current = {
+      userId: session?.user?.id || "local",
+      email: session?.user?.email || (cloud ? "unknown" : "local"),
+      role: account || role,
+    }
+  }, [session?.user?.id, session?.user?.email, account, role, cloud])
+  const logEntry = (action, entity, name, detail = "") => {
+    const a = actorRef.current
+    return { id: uid("log"), ts: Date.now(), userId: a.userId, email: a.email, role: a.role, action, entity, name: name || "", detail }
+  }
+  // append `entry` to the shared log (newest first, capped) on top of a mutated db
+  const withLog = (prev, next, entry) => ({ ...next, activity: [entry, ...(prev.activity || [])].slice(0, MAX_LOG) })
+
   /* CRUD */
   const collKey = { employee: "employees", project: "projects", meeting: "meetings", team: "teams", task: "tasks", transaction: "transactions", business: "businesses" }
+  const nameOf = (o) => o ? (o.name || o.title || o.client || "") : ""
   const saveItem = useCallback((type, obj) => {
     const col = collKey[type]
     setDb(prev => {
       const list = prev[col]
-      if (obj.id && list.some(x => x.id === obj.id)) {
-        return { ...prev, [col]: list.map(x => x.id === obj.id ? { ...x, ...obj } : x) }
+      const existing = obj.id && list.find(x => x.id === obj.id)
+      if (existing) {
+        const merged = { ...existing, ...obj }
+        // saved without actually changing anything → no write, no log
+        if (JSON.stringify(merged) === JSON.stringify(existing)) return prev
+        const next = { ...prev, [col]: list.map(x => x.id === obj.id ? merged : x) }
+        return withLog(prev, next, logEntry("update", type, nameOf(merged)))
       }
-      return { ...prev, [col]: [...list, { ...obj, id: uid(type[0]) }] }
+      const next = { ...prev, [col]: [...list, { ...obj, id: uid(type[0]) }] }
+      return withLog(prev, next, logEntry("create", type, nameOf(obj)))
     })
   }, [])
   const removeItem = useCallback((type, id) => {
     const col = collKey[type]
-    setDb(prev => ({ ...prev, [col]: prev[col].filter(x => x.id !== id) }))
+    setDb(prev => {
+      const it = prev[col].find(x => x.id === id)
+      const next = { ...prev, [col]: prev[col].filter(x => x.id !== id) }
+      return withLog(prev, next, logEntry("delete", type, nameOf(it)))
+    })
   }, [])
   const setPaid = useCallback((empId, period, val) => {
     setDb(prev => {
       const payments = { ...prev.payments, [empId]: { ...(prev.payments[empId] || {}) } }
       if (val) payments[empId][period] = new Date().toISOString()
       else delete payments[empId][period]
-      return { ...prev, payments }
+      const emp = prev.employees.find(e => e.id === empId)
+      return withLog(prev, { ...prev, payments }, logEntry(val ? "pay" : "unpay", "salary", emp?.name || "", period))
     })
   }, [])
   const toggleMeetDone = useCallback((id) => {
-    setDb(prev => ({ ...prev, meetings: prev.meetings.map(m => m.id === id ? { ...m, done: !m.done } : m) }))
+    setDb(prev => {
+      const m = prev.meetings.find(x => x.id === id)
+      const next = { ...prev, meetings: prev.meetings.map(x => x.id === id ? { ...x, done: !x.done } : x) }
+      return withLog(prev, next, logEntry("update", "meeting", m?.title, m && !m.done ? "completed" : "reopened"))
+    })
   }, [])
   const toggleTask = useCallback((id) => {
-    setDb(prev => ({ ...prev, tasks: prev.tasks.map(k => k.id === id ? { ...k, done: !k.done } : k) }))
+    setDb(prev => {
+      const k = prev.tasks.find(x => x.id === id)
+      const next = { ...prev, tasks: prev.tasks.map(x => x.id === id ? { ...x, done: !x.done } : x) }
+      return withLog(prev, next, logEntry("update", "task", k?.title, k && !k.done ? "completed" : "reopened"))
+    })
   }, [])
   const saveDiagram = useCallback((diagram) => {
-    setDb(prev => ({ ...prev, diagram }))
+    setDb(prev => {
+      // the diagram autosaves on every drag — coalesce rapid edits into one log line
+      const a = actorRef.current
+      const last = (prev.activity || [])[0]
+      const merge = last && last.entity === "diagram" && last.userId === a.userId && (Date.now() - last.ts) < 5 * 60 * 1000
+      const activity = merge
+        ? [{ ...last, ts: Date.now() }, ...prev.activity.slice(1)]
+        : [logEntry("update", "diagram", "Workflow diagram"), ...(prev.activity || [])].slice(0, MAX_LOG)
+      return { ...prev, diagram, activity }
+    })
   }, [])
 
   /* reminders */
@@ -360,14 +416,23 @@ export function StoreProvider({ children }) {
   }, [db])
   const importData = useCallback((file) => {
     const r = new FileReader()
-    r.onload = () => { try { const d = JSON.parse(r.result); if (!d.payments) d.payments = {}; setDb(d) } catch (e) { notify(L.invalidFile, "error") } }
+    r.onload = () => {
+      try {
+        const d = JSON.parse(r.result)
+        // keep this account's access history + the running log, and record the import
+        setDb(prev => withLog(prev, { ...norm(d), seen: prev.seen }, logEntry("update", "workspace", "Imported data", "replaced everything from a file")))
+      } catch (e) { notify(L.invalidFile, "error") }
+    }
     r.readAsText(file)
   }, [L, notify])
   const resetData = useCallback(async () => {
     if (await ask({ title: "Load sample data", message: L.replaceSample, confirmText: "Replace", danger: false })) setDb(sampleData(lang))
   }, [L, lang, ask])
   const clearAll = useCallback(async () => {
-    if (await ask({ title: L.clearAll, message: L.confirmClear, confirmText: L.clearAll, danger: true })) setDb({ ...EMPTY, seeded: true })
+    if (await ask({ title: L.clearAll, message: L.confirmClear, confirmText: L.clearAll, danger: true })) {
+      // wipe the data but keep the access history + log the wipe itself
+      setDb(prev => withLog(prev, { ...EMPTY, seeded: true, seen: prev.seen }, logEntry("delete", "workspace", "All data", "cleared the workspace")))
+    }
   }, [L, ask])
 
   const value = {
@@ -376,7 +441,7 @@ export function StoreProvider({ children }) {
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => setEditing({ type, id }), closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, resolveDialog, notify,
-    money, fmtToman, toGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
+    money, fmtToman, toGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
     exportData, importData, resetData, clearAll,
   }

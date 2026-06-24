@@ -1,10 +1,29 @@
-*{box-sizing:border-box}
-html,body,#root{margin:0;height:100%}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  background:var(--bg);color:var(--txt);font-size:14px;line-height:1.55;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-  transition:background .35s ease,color .35s ease;
+* {
+  box-sizing: border-box
 }
-button{font-family:inherit}
-svg{display:block}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background .35s ease, color .35s ease;
+}
+
+button {
+  font-family: inherit
+}
+
+svg {
+  display: block
+}

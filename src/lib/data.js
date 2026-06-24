@@ -2,12 +2,12 @@
 export const I18N = {
   fa: {
     appName: "داشبورد مدیریت", appSub: "دستیار مدیر",
-    nav: { dashboard: "داشبورد", tasks: "کارها", finance: "مالی", diagram: "دیاگرام", employees: "کارمندان", projects: "پروژه‌ها", meetings: "جلسات", payroll: "حقوق و دستمزد", teams: "تیم‌ها" },
+    nav: { dashboard: "داشبورد", tasks: "کارها", finance: "مالی", diagram: "دیاگرام", employees: "کارمندان", projects: "پروژه‌ها", meetings: "جلسات", payroll: "حقوق و دستمزد", teams: "تیم‌ها", activity: "فعالیت‌ها" },
     exportData: "خروجی گرفتن", importData: "ورود اطلاعات", loadSample: "داده نمونه",
     add: "افزودن", save: "ذخیره", cancel: "انصراف", confirmDel: "حذف شود؟",
     print: "پرینت / PDF", roleManager: "مدیر", roleBoss: "نمای رئیس",
-    titles: { dashboard: "داشبورد", tasks: "کارها", finance: "مالی", diagram: "دیاگرام جریان داده", employees: "کارمندان", projects: "پروژه‌ها", meetings: "جلسات", payroll: "حقوق و دستمزد", teams: "تیم‌ها" },
-    subs: { dashboard: "نمای کلی کسب‌وکار شما", tasks: "کارهایی که باید انجام بدی", finance: "درآمد و هزینه‌ی هر کسب‌وکار", diagram: "دیاگرام DFD رو بکش", employees: "مدیریت تیم و اطلاعات کارکنان", projects: "پروژه‌های جاری و وضعیتشان", meetings: "جلسات پیش‌رو", payroll: "پرداخت حقوق و یادآوری‌ها", teams: "دسته‌بندی تیم‌ها" },
+    titles: { dashboard: "داشبورد", tasks: "کارها", finance: "مالی", diagram: "دیاگرام جریان داده", employees: "کارمندان", projects: "پروژه‌ها", meetings: "جلسات", payroll: "حقوق و دستمزد", teams: "تیم‌ها", activity: "فعالیت و دسترسی" },
+    subs: { dashboard: "نمای کلی کسب‌وکار شما", tasks: "کارهایی که باید انجام بدی", finance: "درآمد و هزینه‌ی هر کسب‌وکار", diagram: "دیاگرام DFD رو بکش", employees: "مدیریت تیم و اطلاعات کارکنان", projects: "پروژه‌های جاری و وضعیتشان", meetings: "جلسات پیش‌رو", payroll: "پرداخت حقوق و یادآوری‌ها", teams: "دسته‌بندی تیم‌ها", activity: "چه کسی آنلاین است و چه چیزی تغییر کرده" },
     kpi: { employees: "کارمند", projects: "پروژه فعال", meetings: "جلسه این هفته", duePay: "حقوق در راه" },
     reminders: "یادآوری‌ها و هشدارها", todayMeetings: "جلسات امروز و پیش‌رو", activeProjects: "پروژه‌های فعال",
     noReminders: "الان چیز فوری‌ای نیست ✅", noData: "هنوز چیزی ثبت نشده",
@@ -36,12 +36,12 @@ export const I18N = {
   },
   en: {
     appName: "Manager Dashboard", appSub: "Your manager assistant",
-    nav: { dashboard: "Dashboard", tasks: "Tasks", finance: "Finance", diagram: "Diagram", employees: "Employees", projects: "Projects", meetings: "Meetings", payroll: "Payroll", teams: "Teams" },
+    nav: { dashboard: "Dashboard", tasks: "Tasks", finance: "Finance", diagram: "Diagram", employees: "Employees", projects: "Projects", meetings: "Meetings", payroll: "Payroll", teams: "Teams", activity: "Activity" },
     exportData: "Export", importData: "Import", loadSample: "Sample data",
     add: "Add", save: "Save", cancel: "Cancel", confirmDel: "Delete this?",
     print: "Print / PDF", roleManager: "Manager", roleBoss: "Boss view",
-    titles: { dashboard: "Dashboard", tasks: "Tasks", finance: "Finance", diagram: "Data Flow Diagram", employees: "Employees", projects: "Projects", meetings: "Meetings", payroll: "Payroll", teams: "Teams" },
-    subs: { dashboard: "Overview of your business", tasks: "Things to do", finance: "Income & outgoing per business", diagram: "Draw your DFD", employees: "Manage your team & staff info", projects: "Ongoing projects & status", meetings: "Upcoming meetings", payroll: "Salary payments & reminders", teams: "Team grouping" },
+    titles: { dashboard: "Dashboard", tasks: "Tasks", finance: "Finance", diagram: "Data Flow Diagram", employees: "Employees", projects: "Projects", meetings: "Meetings", payroll: "Payroll", teams: "Teams", activity: "Activity & Access" },
+    subs: { dashboard: "Overview of your business", tasks: "Things to do", finance: "Income & outgoing per business", diagram: "Draw your DFD", employees: "Manage your team & staff info", projects: "Ongoing projects & status", meetings: "Upcoming meetings", payroll: "Salary payments & reminders", teams: "Team grouping", activity: "Who's online and what changed" },
     kpi: { employees: "Employees", projects: "Active projects", meetings: "Meetings this week", duePay: "Salaries due" },
     reminders: "Reminders & alerts", todayMeetings: "Today & upcoming meetings", activeProjects: "Active projects",
     noReminders: "Nothing urgent right now ✅", noData: "Nothing here yet",
@@ -103,6 +103,16 @@ export function nextPayday(emp) {
   return d
 }
 export function periodKey(date) { return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") }
+// short relative time for the activity log ("just now", "5m ago", "3h ago", "2d ago", then a date)
+export function timeAgo(ts) {
+  if (!ts) return "—"
+  const s = Math.floor((Date.now() - ts) / 1000)
+  if (s < 45) return "just now"
+  const m = Math.floor(s / 60); if (m < 60) return m + "m ago"
+  const h = Math.floor(m / 60); if (h < 24) return h + "h ago"
+  const d = Math.floor(h / 24); if (d < 7) return d + "d ago"
+  return new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+}
 export function isPaid(db, empId, period) { return !!(db.payments[empId] && db.payments[empId][period]) }
 
 /* ---------- sample data ---------- */

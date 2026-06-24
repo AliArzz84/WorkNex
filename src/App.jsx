@@ -11,6 +11,7 @@ import Projects from './views/Projects/Projects.jsx'
 import Meetings from './views/Meetings/Meetings.jsx'
 import Payroll from './views/Payroll/Payroll.jsx'
 import Teams from './views/Teams/Teams.jsx'
+import Activity from './views/Activity/Activity.jsx'
 import Editor from './components/Editor/Editor.jsx'
 import Login from './components/Login/Login.jsx'
 import { daysBetween, nextPayday, periodKey } from './lib/data.js'
@@ -25,9 +26,12 @@ const NAV = [
   { key: "payroll", icon: "payroll" },
   { key: "finance", icon: "finance" },
   { key: "diagram", icon: "diagram" },
+  { key: "activity", icon: "history" },
 ]
-const VIEWS = { dashboard: Dashboard, tasks: Tasks, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams }
+const VIEWS = { dashboard: Dashboard, tasks: Tasks, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
 const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting", teams: "team", tasks: "task", finance: "transaction" }
+// only the views that actually filter by it get the search box
+const SEARCHABLE = new Set(["tasks", "employees", "finance", "projects", "meetings", "activity"])
 
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,
@@ -103,10 +107,14 @@ export default function App() {
             <button className="btn ghost print-btn" onClick={() => window.print()}><Icon name="print" size={15} /> {L.print}</button>
           )}
 
-          <div className="search">
-            <span className="si"><Icon name="search" size={15} /></span>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={L.search2} />
-          </div>
+          {SEARCHABLE.has(view) ? (
+            <div className="search">
+              <span className="si"><Icon name="search" size={15} /></span>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={L.search2} />
+            </div>
+          ) : (
+            <div style={{ marginInlineStart: "auto" }} />  /* keep the right-side controls pushed right */
+          )}
 
           <motion.button className="theme-btn" onClick={toggleTheme} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.9 }} aria-label="Toggle theme" title="Toggle theme">
             <AnimatePresence initial={false}>

@@ -37,6 +37,11 @@ const ICONS = {
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   alert: <><path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></>,
   wallet: <><rect x="2" y="5" width="20" height="14" rx="2.5" /><path d="M2 10h20" /></>,
+  history: <><path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" /></>,
+  signal: <><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 20V4" /></>,
+  copy: <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>,
+  expand: <><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" /></>,
+  flow: <><circle cx="6" cy="6" r="2.4" /><circle cx="18" cy="18" r="2.4" /><path d="M8 7.7 16 16.3M6 8.4V14a4 4 0 0 0 4 4h4" /></>,
 }
 export function Icon({ name, size = 18, strokeWidth = 1.7, className }) {
   const p = ICONS[name]
@@ -132,9 +137,9 @@ export function RatesMenu() {
   )
 }
 
-/* live presence — shows the other person when they're online / editing */
+/* live presence — shows who else is online / editing, plus a total count */
 export function Presence() {
-  const { presence, session } = useStore()
+  const { presence, session, setView } = useStore()
   const [, tick] = useState(0)
   useEffect(() => {
     const t = setInterval(() => tick(n => n + 1), 3000)  // refresh editing→online label
@@ -142,10 +147,16 @@ export function Presence() {
   }, [])
   if (!session) return null
   const others = (presence || []).filter(p => p.userId !== session.user.id)
-  if (!others.length) return null
+  const total = (presence || []).length || 1   // everyone connected, including me
+  // when several accounts are on, keep the bar tidy — show a count + first two chips
+  const shown = others.slice(0, 2)
+  const extra = others.length - shown.length
   return (
     <div className={styles.presence}>
-      {others.map(p => {
+      <button className={styles.presCount} onClick={() => setView("activity")} title="Open activity & access">
+        <i className={styles.dot} />{total} online
+      </button>
+      {shown.map(p => {
         const editing = p.editingAt && Date.now() - p.editingAt < 8000
         const roleLabel = p.role === "manager" ? "Manager" : "Boss"
         return (
@@ -157,6 +168,9 @@ export function Presence() {
           </span>
         )
       })}
+      {extra > 0 && (
+        <button className={styles.presMore} onClick={() => setView("activity")} title="See everyone">+{extra}</button>
+      )}
     </div>
   )
 }
