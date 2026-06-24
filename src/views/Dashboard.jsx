@@ -1,6 +1,6 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../store.jsx'
-import { Counter, Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, stagger, item } from '../ui.jsx'
+import { Counter, Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, TodayRow, stagger, item } from '../ui.jsx'
 import { daysBetween, nextPayday, periodKey } from '../data.js'
 
 function ProjectCard({ p }) {
@@ -25,10 +25,8 @@ function ProjectCard({ p }) {
   )
 }
 
-const PRI_COLOR = { high: "red", med: "amber", low: "gray" }
-
 export default function Dashboard() {
-  const { db, t, reminders, empById, relDay, fmtTime, setView, isPaid, money } = useStore()
+  const { db, t, reminders, empById, relDay, fmtTime, setView, isPaid, todayExtras } = useStore()
   const empN = db.employees.filter(e => e.status === "active").length
   const projN = db.projects.filter(p => p.status === "active").length
   const weekMeet = db.meetings.filter(m => !m.done && daysBetween(m.datetime) >= 0 && daysBetween(m.datetime) <= 7).length
@@ -39,18 +37,6 @@ export default function Dashboard() {
     .sort((a, b) => new Date(a.datetime) - new Date(b.datetime)).slice(0, 5)
   const actProj = db.projects.filter(p => p.status === "active")
     .sort((a, b) => daysBetween(a.deadline) - daysBetween(b.deadline)).slice(0, 4)
-
-  // everything happening today (tasks due, meetings, salaries due)
-  const todayMeet = db.meetings.filter(m => !m.done && daysBetween(m.datetime) === 0)
-  const todayTasks = db.tasks.filter(k => !k.done && k.due && daysBetween(k.due) === 0)
-  const todayPay = db.employees.filter(e => e.status === "active").filter(e => {
-    const pd = nextPayday(e); return daysBetween(pd.toISOString()) === 0 && !isPaid(e.id, periodKey(pd))
-  })
-  const todayItems = [
-    ...todayTasks.map(k => ({ key: "t" + k.id, color: PRI_COLOR[k.priority] || "blue", title: k.title, sub: "Task" + (empById(k.assignee) ? " • " + empById(k.assignee).name : ""), when: "To-do" })),
-    ...todayMeet.map(m => ({ key: "m" + m.id, color: "blue", title: m.title, sub: "Meeting" + (m.location ? " • " + m.location : ""), when: fmtTime(m.datetime) })),
-    ...todayPay.map(e => ({ key: "p" + e.id, color: "amber", title: e.name, sub: "Salary due", when: money(e.salary) })),
-  ]
 
   const kpis = [
     { icon: "employees", n: empN, p: t("kpi.employees"), cls: "k1" },
@@ -71,20 +57,14 @@ export default function Dashboard() {
         ))}
       </motion.div>
 
-      {todayItems.length > 0 && (
-        <div className="panel today-panel">
-          <div className="panel-h"><span className="hicon"><Icon name="clock" size={16} /></span><h2>Today</h2><span className="count">{todayItems.length}</span></div>
+      <div className="panel today-panel">
+        <div className="panel-h"><span className="hicon"><Icon name="clock" size={16} /></span><h2>Today</h2><span className="count">{todayExtras.length}</span></div>
+        {todayExtras.length ? (
           <motion.div variants={stagger} initial="initial" animate="animate">
-            {todayItems.map(it => (
-              <motion.div key={it.key} className={`alert ${it.color}`} variants={item}>
-                <div className="dot" />
-                <div style={{ flex: 1 }}><b>{it.title}</b><p>{it.sub}</p></div>
-                <div className="when">{it.when}</div>
-              </motion.div>
-            ))}
+            <AnimatePresence>{todayExtras.map(it => <TodayRow key={it.key} it={it} />)}</AnimatePresence>
           </motion.div>
-        </div>
-      )}
+        ) : <EmptyState icon="check" text="Nothing scheduled for today ✅" />}
+      </div>
 
       <div className="grid2">
         <div className="panel">

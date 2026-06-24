@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion, animate, AnimatePresence } from 'framer-motion'
 import { colorFor, initials } from './data.js'
 import { useStore } from './store.jsx'
@@ -87,6 +87,46 @@ export function RateBadge() {
   return <span className="rate-badge" title="Live GBP → Toman rate">£1 ≈ {fmtToman(1)}</span>
 }
 
+/* one compact chip that expands to all live rates (Toman) */
+export function RatesMenu() {
+  const { currencyRates, fmtToman } = useStore()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener("mousedown", onDoc)
+    return () => document.removeEventListener("mousedown", onDoc)
+  }, [])
+  const r = currencyRates || {}
+  const fmt = (n) => new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(n)
+  const rows = [["USD", "$"], ["EUR", "€"], ["GBP", "£"], ["AED", "د.إ"], ["TRY", "₺"]].filter(([k]) => r[k])
+  const teaser = r.USD ? `$ ${fmt(r.USD)}` : "Rates"
+  return (
+    <div className="rates" ref={ref}>
+      <button className="rate-badge rates-trigger" onClick={() => setOpen(o => !o)} title="Live currency rates">
+        <Icon name="trending" size={14} />
+        <span>{teaser}</span>
+        <Icon name="arrow" size={12} className={`chev ${open ? "up" : ""}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div className="rates-menu" initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.16 }}>
+            <div className="rm-head">Live prices · تومان</div>
+            {rows.length ? rows.map(([code, sym]) => (
+              <div className="rm-row" key={code}>
+                <span className="rm-sym">{sym}</span>
+                <span className="rm-code">{code}</span>
+                <b className="rm-val">{fmt(r[code])}</b>
+              </div>
+            )) : <div className="rm-row"><span className="rm-code">£1 ≈ {fmtToman(1)}</span></div>}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 /* live presence — shows the other person when they're online / editing */
 export function Presence() {
   const { presence, session } = useStore()
@@ -159,6 +199,28 @@ export function ProgressBar({ value }) {
 
 export function EmptyState({ icon = "dashboard", text }) {
   return <div className="empty"><div className="big"><Icon name={icon} size={34} strokeWidth={1.4} /></div>{text}</div>
+}
+
+/* a single "Today" agenda row — checkbox marks it done, shows its priority */
+const PRI_TAG = { high: ["red", "High"], med: ["amber", "Medium"], low: ["gray", "Low"] }
+export function TodayRow({ it }) {
+  const { toggleMeetDone, toggleTask, setPaid, saveItem } = useStore()
+  const check = () => {
+    if (it.type === "meeting") toggleMeetDone(it.id)
+    else if (it.type === "task") toggleTask(it.id)
+    else if (it.type === "salary") setPaid(it.empId, it.period, true)
+    else if (it.type === "project") saveItem("project", { id: it.id, status: "done" })
+  }
+  const label = it.priority && PRI_TAG[it.priority]
+  return (
+    <motion.div className={`alert ${it.color} today-row`} variants={item} layout exit={{ opacity: 0, x: 24 }}>
+      <button className="tcheck" onClick={check} title="Mark done"><Icon name="check" size={13} /></button>
+      <span className="ticon"><Icon name={it.icon} size={15} /></span>
+      <div style={{ flex: 1, minWidth: 0 }}><b>{it.title}</b><p>{it.sub}</p></div>
+      {label && <Tag color={label[0]}>{label[1]}</Tag>}
+      <div className="when">{it.when}</div>
+    </motion.div>
+  )
 }
 
 /* nice confirm / prompt modal (replaces window.confirm & prompt) */

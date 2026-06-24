@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../store.jsx'
-import { Avatar, Tag, EmptyState, Icon, stagger, item } from '../ui.jsx'
+import { Avatar, Tag, EmptyState, Icon, TodayRow, stagger, item } from '../ui.jsx'
 import { daysBetween } from '../data.js'
 
 const PRI = { high: ["red", "High"], med: ["amber", "Medium"], low: ["gray", "Low"] }
@@ -62,7 +62,7 @@ function MiniTile({ date }) {
 }
 
 export default function Tasks() {
-  const { db, fmtDate, relDay, search } = useStore()
+  const { db, fmtDate, relDay, search, todayExtras } = useStore()
   const [filter, setFilter] = useState("todo")
 
   const match = (k) => JSON.stringify(k).toLowerCase().includes(search.toLowerCase())
@@ -110,14 +110,14 @@ export default function Tasks() {
             </div>
           )}
 
-          {/* TODAY */}
+          {/* TODAY — meetings, salaries, project deadlines, and tasks due today (all checkable) */}
           <div className="panel today">
-            <div className="panel-h accent"><span className="hicon"><Icon name="tasks" size={16} /></span><h2>Today</h2><span className="count">{today.length}</span></div>
-            {today.length ? (
+            <div className="panel-h accent"><span className="hicon"><Icon name="clock" size={16} /></span><h2>Today</h2><span className="count">{todayExtras.length}</span></div>
+            {todayExtras.length ? (
               <motion.div variants={stagger} initial="initial" animate="animate">
-                <AnimatePresence>{today.map(k => <TaskRow key={k.id} k={k} />)}</AnimatePresence>
+                <AnimatePresence>{todayExtras.map(it => <TodayRow key={it.key} it={it} />)}</AnimatePresence>
               </motion.div>
-            ) : <div className="empty" style={{ padding: "22px 10px" }}>Nothing due today 🎉</div>}
+            ) : <div className="empty" style={{ padding: "22px 10px" }}>Nothing scheduled for today 🎉</div>}
           </div>
 
           {/* UPCOMING — grouped by day */}

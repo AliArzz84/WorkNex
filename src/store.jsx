@@ -101,6 +101,32 @@ export function StoreProvider({ children }) {
     return () => { cancelled = true }
   }, [])
 
+  // Live USD / EUR (and more) prices in Toman from nerkh.io, cached 30 min
+  const [currencyRates, setCurrencyRates] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("bm_nerkh")).value } catch (e) { return {} }
+  })
+  useEffect(() => {
+    let cached; try { cached = JSON.parse(localStorage.getItem("bm_nerkh")) } catch (e) {}
+    if (cached && Date.now() - cached.ts < 30 * 60 * 1000) return
+    const key = import.meta.env.VITE_NERKH_KEY
+    if (!key) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const d = await (await fetch("https://api.nerkh.io/v1/prices/json/currency", {
+          headers: { Authorization: "Bearer " + key },
+        })).json()
+        const p = d?.data?.prices
+        if (!p || cancelled) return
+        const out = {}
+        for (const c of ["USD", "EUR", "GBP", "AED", "TRY"]) if (p[c]?.current) out[c] = Number(p[c].current)
+        setCurrencyRates(out)
+        localStorage.setItem("bm_nerkh", JSON.stringify({ value: out, ts: Date.now() }))
+      } catch (e) {}
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   /* local persistence */
   useEffect(() => { if (!cloud) localStorage.setItem(KEY, JSON.stringify(db)) }, [db, cloud])
 
@@ -218,7 +244,9 @@ export function StoreProvider({ children }) {
   /* formatting helpers */
   const locale = lang === "fa" ? "fa-IR" : "en-US"
   const money = useCallback((n) => "£" + Number(n || 0).toLocaleString("en-GB", { maximumFractionDigits: 0 }), [])
-  const fmtToman = useCallback((n) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Math.round(Number(n || 0) * tomanPerGbp)) + " تومان", [tomanPerGbp])
+  // prefer the live nerkh GBP price; fall back to the exchangerate.host value
+  const gbpToman = (currencyRates && currencyRates.GBP) || tomanPerGbp
+  const fmtToman = useCallback((n) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Math.round(Number(n || 0) * gbpToman)) + " تومان", [gbpToman])
   const fmtDate = useCallback((iso) => iso ? new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" }) : L.none, [locale, L])
   const fmtDateTime = useCallback((iso) => iso ? new Date(iso).toLocaleString(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : L.none, [locale, L])
   const fmtTime = useCallback((iso) => iso ? new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "", [locale])
@@ -288,6 +316,21 @@ export function StoreProvider({ children }) {
     return out.sort((a, b) => a.sort - b.sort)
   }, [db, L, money, fmtDateTime, relDay])
 
+  /* everything happening TODAY (checkable): meetings, salaries, project deadlines, tasks */
+  const todayExtras = useMemo(() => {
+    const PC = { high: "red", med: "amber", low: "gray" }
+    const meet = db.meetings.filter(m => !m.done && daysBetween(m.datetime) === 0)
+      .map(m => ({ key: "m" + m.id, type: "meeting", id: m.id, color: "blue", icon: "meetings", title: m.title, sub: "Meeting" + (m.location ? " • " + m.location : ""), when: fmtTime(m.datetime), priority: m.priority }))
+    const pay = db.employees.filter(e => e.status === "active")
+      .filter(e => { const pd = nextPayday(e); return daysBetween(pd.toISOString()) === 0 && !isPaidPure(db, e.id, periodKey(pd)) })
+      .map(e => { const pd = nextPayday(e); return { key: "p" + e.id, type: "salary", empId: e.id, period: periodKey(pd), color: "amber", icon: "wallet", title: e.name, sub: "Salary due today", when: money(e.salary) } })
+    const proj = db.projects.filter(p => p.status !== "done" && p.deadline && daysBetween(p.deadline) === 0)
+      .map(p => ({ key: "d" + p.id, type: "project", id: p.id, color: "red", icon: "projects", title: p.name, sub: "Project deadline" + (p.client ? " • " + p.client : ""), when: "Due today" }))
+    const tasks = db.tasks.filter(k => !k.done && k.due && daysBetween(k.due) === 0)
+      .map(k => { const a = db.employees.find(e => e.id === k.assignee); return { key: "t" + k.id, type: "task", id: k.id, color: PC[k.priority] || "gray", icon: "tasks", title: k.title, sub: "Task" + (a ? " • " + a.name : ""), when: "To-do", priority: k.priority } })
+    return [...meet, ...pay, ...proj, ...tasks]
+  }, [db, money, fmtTime])
+
   /* import / export / reset */
   const exportData = useCallback(() => {
     const blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" })
@@ -314,8 +357,8 @@ export function StoreProvider({ children }) {
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => setEditing({ type, id }), closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, resolveDialog, notify,
-    money, fmtToman, tomanPerGbp, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
-    empById, teamById, teamMembers, reminders, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
+    money, fmtToman, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
+    empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
     exportData, importData, resetData, clearAll,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
