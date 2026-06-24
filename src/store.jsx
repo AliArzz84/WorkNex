@@ -131,7 +131,7 @@ export function StoreProvider({ children }) {
           setDb(nd)
         })
         .subscribe()
-    })()
+    })().catch(e => console.error("Workspace load failed:", e))
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
     // Key on the user id only — a token refresh keeps the same id, so we don't
     // reload (and wipe unsaved local edits) every time the session object changes.
@@ -143,9 +143,10 @@ export function StoreProvider({ children }) {
     const str = JSON.stringify(db)
     if (str === lastSynced.current) return
     if (writeTimer.current) clearTimeout(writeTimer.current)
-    writeTimer.current = setTimeout(() => {
+    writeTimer.current = setTimeout(async () => {
       lastSynced.current = str
-      supabase.from("workspaces").update({ data: db, updated_at: new Date().toISOString() }).eq("id", "default")
+      const { error } = await supabase.from("workspaces").update({ data: db, updated_at: new Date().toISOString() }).eq("id", "default")
+      if (error) console.error("Save failed:", error.message)
     }, 600)
     return () => { if (writeTimer.current) clearTimeout(writeTimer.current) }
     // Same here: don't let a token refresh cancel a pending write.
