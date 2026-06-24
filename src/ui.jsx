@@ -87,6 +87,35 @@ export function RateBadge() {
   return <span className="rate-badge" title="Live GBP → Toman rate">£1 ≈ {fmtToman(1)}</span>
 }
 
+/* live presence — shows the other person when they're online / editing */
+export function Presence() {
+  const { presence, session } = useStore()
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => tick(n => n + 1), 3000)  // refresh editing→online label
+    return () => clearInterval(t)
+  }, [])
+  if (!session) return null
+  const others = (presence || []).filter(p => p.userId !== session.user.id)
+  if (!others.length) return null
+  return (
+    <div className="presence">
+      {others.map(p => {
+        const editing = p.editingAt && Date.now() - p.editingAt < 8000
+        const roleLabel = p.role === "manager" ? "Manager" : "Boss"
+        return (
+          <span key={p.userId} className={`pres-chip ${editing ? "editing" : ""}`}
+            title={`${p.email} is ${editing ? "editing" : "online"}`}>
+            <i className="dot" />
+            <span className="pe">{p.email}</span>
+            <small>({roleLabel}) · {editing ? "editing…" : "online"}</small>
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 /* ---------- Animated number count-up ---------- */
 export function Counter({ value }) {
   const [d, setD] = useState(0)

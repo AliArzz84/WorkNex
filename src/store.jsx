@@ -37,8 +37,10 @@ export function StoreProvider({ children }) {
   const [account, setAccount] = useState(null)        // 'manager' | 'boss'
   const [authReady, setAuthReady] = useState(!cloud)  // local mode: ready immediately
   const [dataReady, setDataReady] = useState(!cloud)
+  const [presence, setPresence] = useState([])        // who else is online/editing
   const lastSynced = useRef("")
   const writeTimer = useRef(null)
+  const presenceCh = useRef(null)
 
   /* theme + document */
   useEffect(() => { document.documentElement.lang = "en"; document.documentElement.dir = "ltr" }, [])
@@ -137,6 +139,29 @@ export function StoreProvider({ children }) {
     // reload (and wipe unsaved local edits) every time the session object changes.
   }, [cloud, session?.user?.id])
 
+  /* === cloud: live presence — who else is online / editing right now === */
+  useEffect(() => {
+    if (!cloud || !session) { setPresence([]); return }
+    const me = session.user.id
+    const ch = supabase.channel("presence-default", { config: { presence: { key: me } } })
+    presenceCh.current = ch
+    const sync = () => {
+      const state = ch.presenceState()
+      const list = Object.entries(state).map(([userId, metas]) => {
+        const m = metas[metas.length - 1] || {}
+        return { userId, email: m.email, role: m.role, editingAt: m.editingAt || 0 }
+      })
+      setPresence(list)
+    }
+    ch.on("presence", { event: "sync" }, sync)
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await ch.track({ email: session.user.email, role: account || "boss", editingAt: 0 })
+        }
+      })
+    return () => { presenceCh.current = null; supabase.removeChannel(ch) }
+  }, [cloud, session?.user?.id, account])
+
   /* === cloud: write (debounced) when the manager changes data === */
   useEffect(() => {
     if (!cloud || !session || !dataReady) return
@@ -147,6 +172,8 @@ export function StoreProvider({ children }) {
       lastSynced.current = str
       const { error } = await supabase.from("workspaces").update({ data: db, updated_at: new Date().toISOString() }).eq("id", "default")
       if (error) console.error("Save failed:", error.message)
+      // this write only runs for *local* edits, so flag myself as actively editing
+      presenceCh.current?.track({ email: session.user.email, role: account || "boss", editingAt: Date.now() })
     }, 600)
     return () => { if (writeTimer.current) clearTimeout(writeTimer.current) }
     // Same here: don't let a token refresh cancel a pending write.
@@ -256,7 +283,7 @@ export function StoreProvider({ children }) {
 
   const value = {
     db, lang, setLang, theme, toggleTheme, role: effectiveRole, setRole, readOnly, canPreview,
-    cloud, session, account, authReady, dataReady, signIn, signUp, signOut,
+    cloud, session, account, authReady, dataReady, presence, signIn, signUp, signOut,
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => setEditing({ type, id }), closeEditor: () => setEditing(null),
     money, fmtToman, tomanPerGbp, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
