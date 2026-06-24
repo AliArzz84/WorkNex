@@ -8,8 +8,8 @@ export default function Teams() {
     <motion.div className="grid3" variants={stagger} initial="initial" animate="animate">
       <AnimatePresence>
         {db.teams.map(tm => {
-          const members = db.employees.filter(e => e.team === tm.id)
-          const projs = db.projects.filter(p => p.members.some(id => members.find(m => m.id === id)))
+          const members = (tm.members || []).map(id => empById(id)).filter(Boolean)
+          const projs = db.projects.filter(p => p.team === tm.id)
           const lead = empById(tm.lead)
           return (
             <motion.div key={tm.id} className="pcard" variants={item} whileHover={{ y: -4 }} layout exit={{ opacity: 0, scale: 0.95 }}>

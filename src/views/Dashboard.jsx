@@ -4,7 +4,7 @@ import { Counter, Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, stagger,
 import { daysBetween, nextPayday, periodKey } from '../data.js'
 
 function ProjectCard({ p }) {
-  const { t, empById, relDay } = useStore()
+  const { t, teamById, teamMembers, relDay } = useStore()
   const dd = daysBetween(p.deadline)
   return (
     <motion.div className="pcard" variants={item} whileHover={{ y: -3 }}>
@@ -17,13 +17,18 @@ function ProjectCard({ p }) {
         <span>{t("progress")}: {p.progress}%</span>
         <span style={{ color: dd < 0 ? "var(--red-ink)" : dd <= 5 ? "var(--amber-ink)" : "var(--muted)" }}>{t("deadlineIn")}: {relDay(dd)}</span>
       </div>
-      <div className="members">{p.members.map(id => <Avatar key={id} emp={empById(id)} />)}</div>
+      <div className="meta">
+        <span className="muted">{teamById(p.team)?.name || t("noTeam")}</span>
+        <div className="members">{teamMembers(p.team).map(e => <Avatar key={e.id} emp={e} />)}</div>
+      </div>
     </motion.div>
   )
 }
 
+const PRI_COLOR = { high: "red", med: "amber", low: "gray" }
+
 export default function Dashboard() {
-  const { db, t, reminders, empById, relDay, fmtTime, setView, isPaid } = useStore()
+  const { db, t, reminders, empById, relDay, fmtTime, setView, isPaid, money } = useStore()
   const empN = db.employees.filter(e => e.status === "active").length
   const projN = db.projects.filter(p => p.status === "active").length
   const weekMeet = db.meetings.filter(m => !m.done && daysBetween(m.datetime) >= 0 && daysBetween(m.datetime) <= 7).length
@@ -34,6 +39,18 @@ export default function Dashboard() {
     .sort((a, b) => new Date(a.datetime) - new Date(b.datetime)).slice(0, 5)
   const actProj = db.projects.filter(p => p.status === "active")
     .sort((a, b) => daysBetween(a.deadline) - daysBetween(b.deadline)).slice(0, 4)
+
+  // everything happening today (tasks due, meetings, salaries due)
+  const todayMeet = db.meetings.filter(m => !m.done && daysBetween(m.datetime) === 0)
+  const todayTasks = db.tasks.filter(k => !k.done && k.due && daysBetween(k.due) === 0)
+  const todayPay = db.employees.filter(e => e.status === "active").filter(e => {
+    const pd = nextPayday(e); return daysBetween(pd.toISOString()) === 0 && !isPaid(e.id, periodKey(pd))
+  })
+  const todayItems = [
+    ...todayTasks.map(k => ({ key: "t" + k.id, color: PRI_COLOR[k.priority] || "blue", title: k.title, sub: "Task" + (empById(k.assignee) ? " • " + empById(k.assignee).name : ""), when: "To-do" })),
+    ...todayMeet.map(m => ({ key: "m" + m.id, color: "blue", title: m.title, sub: "Meeting" + (m.location ? " • " + m.location : ""), when: fmtTime(m.datetime) })),
+    ...todayPay.map(e => ({ key: "p" + e.id, color: "amber", title: e.name, sub: "Salary due", when: money(e.salary) })),
+  ]
 
   const kpis = [
     { icon: "employees", n: empN, p: t("kpi.employees"), cls: "k1" },
@@ -53,6 +70,21 @@ export default function Dashboard() {
           </motion.div>
         ))}
       </motion.div>
+
+      {todayItems.length > 0 && (
+        <div className="panel today-panel">
+          <div className="panel-h"><span className="hicon"><Icon name="clock" size={16} /></span><h2>Today</h2><span className="count">{todayItems.length}</span></div>
+          <motion.div variants={stagger} initial="initial" animate="animate">
+            {todayItems.map(it => (
+              <motion.div key={it.key} className={`alert ${it.color}`} variants={item}>
+                <div className="dot" />
+                <div style={{ flex: 1 }}><b>{it.title}</b><p>{it.sub}</p></div>
+                <div className="when">{it.when}</div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      )}
 
       <div className="grid2">
         <div className="panel">

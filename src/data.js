@@ -45,7 +45,8 @@ export const I18N = {
     kpi: { employees: "Employees", projects: "Active projects", meetings: "Meetings this week", duePay: "Salaries due" },
     reminders: "Reminders & alerts", todayMeetings: "Today & upcoming meetings", activeProjects: "Active projects",
     noReminders: "Nothing urgent right now ✅", noData: "Nothing here yet",
-    name: "Name", role: "Role", team: "Team", email: "Email", phone: "Phone", salary: "Monthly salary",
+    name: "Name", role: "Role", team: "Team", country: "Nationality", email: "Email", phone: "Phone", salary: "Monthly salary",
+    noTeam: "No team", selectMembers: "Pick members for this team", teamMembersLabel: "Members",
     payDay: "Pay day (each month)", hireDate: "Hire date", status: "Status", actions: "Actions",
     statusActive: "Active", statusLeave: "On leave", statusInactive: "Inactive",
     newEmployee: "New employee", editEmployee: "Edit employee",
@@ -77,7 +78,14 @@ const COLORS = ["#6c8cff", "#9b6cff", "#34d399", "#fbbf24", "#f87171", "#60a5fa"
 export function colorFor(id) { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) % COLORS.length; return COLORS[h] }
 export function initials(n) { return String(n || "?").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("") }
 export function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
-export function daysBetween(iso) { if (!iso) return 0; const d = new Date(iso); d.setHours(0, 0, 0, 0); return Math.round((d - startOfToday()) / 86400000) }
+export function daysBetween(iso) {
+  if (!iso) return 0
+  // treat a plain YYYY-MM-DD as a LOCAL calendar date (not UTC) so "today" lines up
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(iso)
+  d.setHours(0, 0, 0, 0)
+  return Math.round((d - startOfToday()) / 86400000)
+}
 export function nextPayday(emp) {
   const now = new Date(); const today = startOfToday()
   let d = new Date(now.getFullYear(), now.getMonth(), emp.payDay || 1)
@@ -94,32 +102,32 @@ export function sampleData(lang = "fa") {
   const d = (off) => { const x = new Date(today); x.setDate(x.getDate() + off); return x.toISOString().slice(0, 10) }
   const dt = (off, h) => { const x = new Date(today); x.setDate(x.getDate() + off); x.setHours(h, 0, 0, 0); return x.toISOString().slice(0, 16) }
   const teams = [
-    { id: "t_dev", name: fa ? "توسعه نرم‌افزار" : "Engineering", lead: "e1" },
-    { id: "t_design", name: fa ? "طراحی" : "Design", lead: "e3" },
-    { id: "t_sales", name: fa ? "فروش و بازاریابی" : "Sales & Marketing", lead: "e4" },
-    { id: "t_ops", name: fa ? "عملیات" : "Operations", lead: "e7" },
+    { id: "t_dev", name: fa ? "توسعه نرم‌افزار" : "Engineering", lead: "e1", members: ["e1", "e2", "e6"] },
+    { id: "t_design", name: fa ? "طراحی" : "Design", lead: "e3", members: ["e3"] },
+    { id: "t_sales", name: fa ? "فروش و بازاریابی" : "Sales & Marketing", lead: "e4", members: ["e4", "e5"] },
+    { id: "t_ops", name: fa ? "عملیات" : "Operations", lead: "e7", members: ["e7"] },
   ]
   const employees = [
-    { id: "e1", name: fa ? "سارا محمدی" : "Sara Mohammadi", role: fa ? "مدیر فنی" : "Tech Lead", team: "t_dev", email: "sara@company.com", phone: "0912-000-0001", salary: 3500, payDay: 1, hireDate: "2022-03-01", status: "active" },
-    { id: "e2", name: fa ? "علی رضایی" : "Ali Rezaei", role: fa ? "برنامه‌نویس ارشد" : "Senior Developer", team: "t_dev", email: "ali@company.com", phone: "0912-000-0002", salary: 3000, payDay: 1, hireDate: "2022-09-15", status: "active" },
-    { id: "e3", name: fa ? "نگار کریمی" : "Negar Karimi", role: fa ? "طراح محصول" : "Product Designer", team: "t_design", email: "negar@company.com", phone: "0912-000-0003", salary: 2600, payDay: 5, hireDate: "2023-01-10", status: "active" },
-    { id: "e4", name: fa ? "رضا قاسمی" : "Reza Ghasemi", role: fa ? "مدیر فروش" : "Sales Manager", team: "t_sales", email: "reza@company.com", phone: "0912-000-0004", salary: 2900, payDay: 1, hireDate: "2021-06-20", status: "active" },
-    { id: "e5", name: fa ? "مریم احمدی" : "Maryam Ahmadi", role: fa ? "کارشناس بازاریابی" : "Marketing Specialist", team: "t_sales", email: "maryam@company.com", phone: "0912-000-0005", salary: 2200, payDay: 5, hireDate: "2023-08-01", status: "leave" },
-    { id: "e6", name: fa ? "حسین موسوی" : "Hossein Mousavi", role: "DevOps", team: "t_dev", email: "hossein@company.com", phone: "0912-000-0006", salary: 3200, payDay: 1, hireDate: "2022-11-05", status: "active" },
-    { id: "e7", name: fa ? "فاطمه نوری" : "Fatemeh Nouri", role: fa ? "مدیر عملیات" : "Operations Manager", team: "t_ops", email: "fatemeh@company.com", phone: "0912-000-0007", salary: 2800, payDay: 10, hireDate: "2021-02-14", status: "active" },
+    { id: "e1", name: fa ? "سارا محمدی" : "Sara Mohammadi", role: fa ? "مدیر فنی" : "Tech Lead", country: "Iran", email: "sara@company.com", phone: "0912-000-0001", salary: 3500, payDay: 1, hireDate: "2022-03-01", status: "active" },
+    { id: "e2", name: fa ? "علی رضایی" : "Ali Rezaei", role: fa ? "برنامه‌نویس ارشد" : "Senior Developer", country: "Iran", email: "ali@company.com", phone: "0912-000-0002", salary: 3000, payDay: 1, hireDate: "2022-09-15", status: "active" },
+    { id: "e3", name: fa ? "نگار کریمی" : "Negar Karimi", role: fa ? "طراح محصول" : "Product Designer", country: "United Kingdom", email: "negar@company.com", phone: "0912-000-0003", salary: 2600, payDay: 5, hireDate: "2023-01-10", status: "active" },
+    { id: "e4", name: fa ? "رضا قاسمی" : "Reza Ghasemi", role: fa ? "مدیر فروش" : "Sales Manager", country: "Iran", email: "reza@company.com", phone: "0912-000-0004", salary: 2900, payDay: 1, hireDate: "2021-06-20", status: "active" },
+    { id: "e5", name: fa ? "مریم احمدی" : "Maryam Ahmadi", role: fa ? "کارشناس بازاریابی" : "Marketing Specialist", country: "Turkey", email: "maryam@company.com", phone: "0912-000-0005", salary: 2200, payDay: 5, hireDate: "2023-08-01", status: "leave" },
+    { id: "e6", name: fa ? "حسین موسوی" : "Hossein Mousavi", role: "DevOps", country: "Germany", email: "hossein@company.com", phone: "0912-000-0006", salary: 3200, payDay: 1, hireDate: "2022-11-05", status: "active" },
+    { id: "e7", name: fa ? "فاطمه نوری" : "Fatemeh Nouri", role: fa ? "مدیر عملیات" : "Operations Manager", country: "United Kingdom", email: "fatemeh@company.com", phone: "0912-000-0007", salary: 2800, payDay: 10, hireDate: "2021-02-14", status: "active" },
   ]
   const projects = [
-    { id: "p1", name: fa ? "اپلیکیشن موبایل فروشگاه" : "Shop Mobile App", client: fa ? "دیجی‌کالا" : "Acme Retail", status: "active", progress: 65, startDate: d(-40), deadline: d(8), budget: 45000, members: ["e1", "e2", "e3"], notes: fa ? "نسخه‌ی iOS در مرحله‌ی تست" : "iOS build in testing" },
-    { id: "p2", name: fa ? "بازطراحی سایت شرکتی" : "Corporate Website Redesign", client: fa ? "بانک ملت" : "Globex", status: "active", progress: 40, startDate: d(-20), deadline: d(25), budget: 18000, members: ["e3", "e2"], notes: "" },
-    { id: "p3", name: fa ? "کمپین تبلیغاتی بهار" : "Spring Marketing Campaign", client: fa ? "داخلی" : "Internal", status: "active", progress: 80, startDate: d(-15), deadline: d(3), budget: 9000, members: ["e4", "e5"], notes: fa ? "محتوای شبکه‌های اجتماعی آماده‌ست" : "Social content ready" },
-    { id: "p4", name: fa ? "مهاجرت زیرساخت به ابر" : "Cloud Infra Migration", client: fa ? "داخلی" : "Internal", status: "planning", progress: 10, startDate: d(2), deadline: d(60), budget: 12000, members: ["e6", "e1"], notes: "" },
-    { id: "p5", name: fa ? "داشبورد گزارش‌گیری" : "Analytics Dashboard", client: fa ? "اسنپ" : "Initech", status: "done", progress: 100, startDate: d(-90), deadline: d(-5), budget: 7500, members: ["e2", "e6"], notes: fa ? "تحویل داده شد" : "Delivered" },
+    { id: "p1", name: fa ? "اپلیکیشن موبایل فروشگاه" : "Shop Mobile App", client: fa ? "دیجی‌کالا" : "Acme Retail", status: "active", progress: 65, startDate: d(-40), deadline: d(8), budget: 45000, team: "t_dev", notes: fa ? "نسخه‌ی iOS در مرحله‌ی تست" : "iOS build in testing" },
+    { id: "p2", name: fa ? "بازطراحی سایت شرکتی" : "Corporate Website Redesign", client: fa ? "بانک ملت" : "Globex", status: "active", progress: 40, startDate: d(-20), deadline: d(25), budget: 18000, team: "t_design", notes: "" },
+    { id: "p3", name: fa ? "کمپین تبلیغاتی بهار" : "Spring Marketing Campaign", client: fa ? "داخلی" : "Internal", status: "active", progress: 80, startDate: d(-15), deadline: d(3), budget: 9000, team: "t_sales", notes: fa ? "محتوای شبکه‌های اجتماعی آماده‌ست" : "Social content ready" },
+    { id: "p4", name: fa ? "مهاجرت زیرساخت به ابر" : "Cloud Infra Migration", client: fa ? "داخلی" : "Internal", status: "planning", progress: 10, startDate: d(2), deadline: d(60), budget: 12000, team: "t_dev", notes: "" },
+    { id: "p5", name: fa ? "داشبورد گزارش‌گیری" : "Analytics Dashboard", client: fa ? "اسنپ" : "Initech", status: "done", progress: 100, startDate: d(-90), deadline: d(-5), budget: 7500, team: "t_dev", notes: fa ? "تحویل داده شد" : "Delivered" },
   ]
   const meetings = [
-    { id: "m1", title: fa ? "جلسه‌ی هفتگی تیم فنی" : "Weekly engineering sync", datetime: dt(0, 10), attendees: ["e1", "e2", "e6"], location: fa ? "اتاق جلسات A" : "Room A", projectId: "p1", notes: "", done: false },
-    { id: "m2", title: fa ? "بازبینی طرح با کارفرما" : "Design review with client", datetime: dt(1, 14), attendees: ["e3", "e4"], location: "Google Meet", projectId: "p2", notes: "", done: false },
-    { id: "m3", title: fa ? "جلسه‌ی فروش ماهانه" : "Monthly sales meeting", datetime: dt(3, 11), attendees: ["e4", "e5", "e7"], location: fa ? "اتاق جلسات B" : "Room B", projectId: "", notes: "", done: false },
-    { id: "m4", title: fa ? "برنامه‌ریزی مهاجرت ابری" : "Cloud migration planning", datetime: dt(5, 9), attendees: ["e6", "e1"], location: "Zoom", projectId: "p4", notes: "", done: false },
+    { id: "m1", title: fa ? "جلسه‌ی هفتگی تیم فنی" : "Weekly engineering sync", datetime: dt(0, 10), priority: "high", attendees: ["e1", "e2", "e6"], location: fa ? "اتاق جلسات A" : "Room A", projectId: "p1", notes: "", done: false },
+    { id: "m2", title: fa ? "بازبینی طرح با کارفرما" : "Design review with client", datetime: dt(1, 14), priority: "med", attendees: ["e3", "e4"], location: "Google Meet", projectId: "p2", notes: "", done: false },
+    { id: "m3", title: fa ? "جلسه‌ی فروش ماهانه" : "Monthly sales meeting", datetime: dt(3, 11), priority: "low", attendees: ["e4", "e5", "e7"], location: fa ? "اتاق جلسات B" : "Room B", projectId: "", notes: "", done: false },
+    { id: "m4", title: fa ? "برنامه‌ریزی مهاجرت ابری" : "Cloud migration planning", datetime: dt(5, 9), priority: "high", attendees: ["e6", "e1"], location: "Zoom", projectId: "p4", notes: "", done: false },
   ]
   const businesses = [
     { id: "b1", name: fa ? "استودیو آکمی" : "Acme Studio" },

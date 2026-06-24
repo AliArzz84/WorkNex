@@ -226,6 +226,10 @@ export function StoreProvider({ children }) {
 
   const empById = useCallback((id) => db.employees.find(e => e.id === id), [db.employees])
   const teamById = useCallback((id) => db.teams.find(tm => tm.id === id), [db.teams])
+  const teamMembers = useCallback((teamId) => {
+    const tm = db.teams.find(t => t.id === teamId)
+    return (tm?.members || []).map(id => db.employees.find(e => e.id === id)).filter(Boolean)
+  }, [db.teams, db.employees])
   const isPaid = useCallback((empId, period) => isPaidPure(db, empId, period), [db])
 
   /* CRUD */
@@ -311,7 +315,7 @@ export function StoreProvider({ children }) {
     editing, openEditor: (type, id) => setEditing({ type, id }), closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, resolveDialog, notify,
     money, fmtToman, tomanPerGbp, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
-    empById, teamById, reminders, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
+    empById, teamById, teamMembers, reminders, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
     exportData, importData, resetData, clearAll,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

@@ -1,13 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../store.jsx'
-import { Avatar, EmptyState, Icon, stagger, item } from '../ui.jsx'
+import { Avatar, Tag, EmptyState, Icon, stagger, item } from '../ui.jsx'
 import { daysBetween } from '../data.js'
+
+const PRI = { high: ["red", "High"], med: ["amber", "Medium"], low: ["gray", "Low"] }
+const PW = { high: 0, med: 1, low: 2 }
 
 export default function Meetings() {
   const { db, t, fmtDateTime, relDay, empById, search, openEditor, removeItem, toggleMeetDone, ask } = useStore()
   const rows = db.meetings
     .filter(m => JSON.stringify(m).toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
+    .sort((a, b) => (new Date(a.datetime) - new Date(b.datetime)) || ((PW[a.priority] ?? 1) - (PW[b.priority] ?? 1)))
 
   return (
     <div className="panel">
@@ -23,7 +26,11 @@ export default function Meetings() {
                 <motion.div key={m.id} className={`alert ${m.done ? "green" : dd <= 2 ? "blue" : "gray"}`} style={{ opacity: past ? 0.6 : 1 }} variants={item} layout exit={{ opacity: 0 }}>
                   <div className="dot" />
                   <div style={{ flex: 1 }}>
-                    <b>{m.title} {m.done && <span style={{ color: "var(--green-ink)" }}>✓</span>}</b>
+                    <b style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {m.title}
+                      {m.priority && <Tag color={PRI[m.priority]?.[0] || "gray"}>{PRI[m.priority]?.[1]}</Tag>}
+                      {m.done && <span style={{ color: "var(--green-ink)" }}>✓</span>}
+                    </b>
                     <p>{m.location} {proj ? "• " + proj.name : ""}</p>
                     <div style={{ display: "flex", marginTop: 5 }}>{m.attendees.map(id => <Avatar key={id} emp={empById(id)} />)}</div>
                   </div>

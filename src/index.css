@@ -161,6 +161,8 @@ tr:hover td{background:var(--hover)}
 .pcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow-sm)}
 .pcard .ph{display:flex;align-items:flex-start;gap:8px}
 .pcard .ph b{font-size:14px;font-weight:600} .pcard .ph small{color:var(--muted);font-size:12px}
+.emp-teams{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.emp-teams .tag{font-size:10.5px}
 .pcard .members{display:flex}
 .pcard .members .avatar{width:26px;height:26px;font-size:10px;margin-inline-start:-7px;border:2px solid var(--panel)}
 .pcard .members .avatar:first-child{margin-inline-start:0}

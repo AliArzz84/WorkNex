@@ -4,32 +4,41 @@ import { useStore } from '../store.jsx'
 import { Avatar, StatusTag, Tag, EmptyState, Icon, Money, item } from '../ui.jsx'
 
 export default function Employees() {
-  const { db, t, L, lang, money, teamById, search, openEditor, removeItem, ask } = useStore()
-  const [teamFilter, setTeamFilter] = useState("all")
+  const { db, t, L, lang, money, search, openEditor, removeItem, ask } = useStore()
+  const [countryFilter, setCountryFilter] = useState("all")
 
+  const countries = [...new Set(db.employees.map(e => e.country).filter(Boolean))]
   let rows = db.employees.filter(e => JSON.stringify(e).toLowerCase().includes(search.toLowerCase()))
-  if (teamFilter !== "all") rows = rows.filter(e => e.team === teamFilter)
+  if (countryFilter !== "all") rows = rows.filter(e => (e.country || "") === countryFilter)
 
   return (
     <div>
       <div className="pill-row">
-        <span className={`pill ${teamFilter === "all" ? "on" : ""}`} onClick={() => setTeamFilter("all")}>{L.all}</span>
-        {db.teams.map(tm => (
-          <span key={tm.id} className={`pill ${teamFilter === tm.id ? "on" : ""}`} onClick={() => setTeamFilter(tm.id)}>{tm.name}</span>
+        <span className={`pill ${countryFilter === "all" ? "on" : ""}`} onClick={() => setCountryFilter("all")}>{L.all}</span>
+        {countries.map(c => (
+          <span key={c} className={`pill ${countryFilter === c ? "on" : ""}`} onClick={() => setCountryFilter(c)}>{c}</span>
         ))}
       </div>
       <div className="panel">
         <div className="panel-h"><h2>{t("nav.employees")}<span className="count">{rows.length}</span></h2></div>
         <table>
           <thead><tr>
-            <th>{t("name")}</th><th>{t("team")}</th><th>{t("salary")}</th><th>{t("payDay")}</th><th>{t("status")}</th><th className="right">{t("actions")}</th>
+            <th>{t("name")}</th><th>{t("country")}</th><th>{t("salary")}</th><th>{t("payDay")}</th><th>{t("status")}</th><th className="right">{t("actions")}</th>
           </tr></thead>
           <tbody>
             <AnimatePresence>
-              {rows.map(e => (
+              {rows.map(e => {
+                const empTeams = db.teams.filter(tm => (tm.members || []).includes(e.id))
+                return (
                 <motion.tr key={e.id} variants={item} initial="initial" animate="animate" exit={{ opacity: 0 }} layout>
-                  <td><div className="person"><Avatar emp={e} /><div><b>{e.name}</b><small>{e.role} • {e.email}</small></div></div></td>
-                  <td>{teamById(e.team) ? <Tag color="blue">{teamById(e.team).name}</Tag> : L.none}</td>
+                  <td><div className="person"><Avatar emp={e} /><div>
+                    <b>{e.name}</b>
+                    <small>{e.role} • {e.email}</small>
+                    <div className="emp-teams">{empTeams.length
+                      ? empTeams.map(tm => <Tag key={tm.id} color="amber">{tm.name}</Tag>)
+                      : <Tag color="gray">{t("noTeam")}</Tag>}</div>
+                  </div></div></td>
+                  <td>{e.country ? <Tag color="blue">{e.country}</Tag> : L.none}</td>
                   <td><Money value={e.salary} /></td>
                   <td>{lang === "fa" ? "روز " + e.payDay : "Day " + e.payDay}</td>
                   <td><StatusTag status={e.status} /></td>
@@ -40,7 +49,8 @@ export default function Employees() {
                     </div>
                   </td>
                 </motion.tr>
-              ))}
+                )
+              })}
             </AnimatePresence>
           </tbody>
         </table>

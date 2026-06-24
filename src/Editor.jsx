@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from './store.jsx'
 
-const todayISO = () => new Date().toISOString().slice(0, 10)
-const nowISO = () => new Date().toISOString().slice(0, 16)
+const pad = n => String(n).padStart(2, "0")
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
+const nowISO = () => { const d = new Date(); return `${todayISO()}T${pad(d.getHours())}:${pad(d.getMinutes())}` }
 
 function MemberPicker({ value, onChange }) {
   const { db } = useStore()
@@ -68,7 +69,7 @@ function Footer({ onSave, close }) {
 
 function EmployeeForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", role: "", team: db.teams[0]?.id || "", email: "", phone: "", salary: "", payDay: 1, hireDate: todayISO(), status: "active" })
+  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", payDay: 1, hireDate: todayISO(), status: "active" })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const submit = () => { if (!f.name.trim()) return; onSave("employee", { ...f, id, salary: Number(f.salary || 0), payDay: Number(f.payDay || 1) }); close() }
   return (
@@ -77,7 +78,7 @@ function EmployeeForm({ existing, id, onSave, close }) {
         <Field label={t("name") + " *"}><input value={f.name} onChange={e => set("name", e.target.value)} autoFocus /></Field>
         <div className="two">
           <Field label={t("role")}><input value={f.role} onChange={e => set("role", e.target.value)} /></Field>
-          <Field label={t("team")}><select value={f.team} onChange={e => set("team", e.target.value)}>{db.teams.map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}</select></Field>
+          <Field label={t("country")}><input value={f.country || ""} onChange={e => set("country", e.target.value)} placeholder="e.g. Iran" /></Field>
         </div>
         <div className="two">
           <Field label={t("email")}><input value={f.email} onChange={e => set("email", e.target.value)} /></Field>
@@ -101,7 +102,7 @@ function EmployeeForm({ existing, id, onSave, close }) {
 
 function ProjectForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", client: "", status: "planning", progress: 0, startDate: todayISO(), deadline: "", budget: "", members: [], notes: "" })
+  const [f, setF] = useState(existing || { name: "", client: "", status: "planning", progress: 0, startDate: todayISO(), deadline: "", budget: "", team: "", notes: "" })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const submit = () => { if (!f.name.trim()) return; onSave("project", { ...f, id, budget: Number(f.budget || 0), progress: Number(f.progress || 0) }); close() }
   return (
@@ -122,7 +123,9 @@ function ProjectForm({ existing, id, onSave, close }) {
           <Field label={`${t("budget")} (${db.currency})`}><input type="number" value={f.budget} onChange={e => set("budget", e.target.value)} /></Field>
           <Field label={`${t("progress")} (%)`}><input type="number" min="0" max="100" value={f.progress} onChange={e => set("progress", e.target.value)} /></Field>
         </div>
-        <Field label={t("members")}><MemberPicker value={f.members} onChange={v => set("members", v)} /></Field>
+        <Field label={t("team")}><select value={f.team || ""} onChange={e => set("team", e.target.value)}>
+          <option value="">{t("noTeam")}</option>{db.teams.map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
+        </select></Field>
         <Field label={t("notes")}><textarea value={f.notes} onChange={e => set("notes", e.target.value)} /></Field>
       </div>
       <Footer onSave={submit} close={close} />
@@ -132,7 +135,7 @@ function ProjectForm({ existing, id, onSave, close }) {
 
 function MeetingForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { title: "", datetime: nowISO(), attendees: [], location: "", projectId: "", notes: "", done: false })
+  const [f, setF] = useState(existing || { title: "", datetime: nowISO(), priority: "med", attendees: [], location: "", projectId: "", notes: "", done: false })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const submit = () => { if (!f.title.trim()) return; onSave("meeting", { ...f, id }); close() }
   return (
@@ -143,9 +146,14 @@ function MeetingForm({ existing, id, onSave, close }) {
           <Field label={t("dateTime")}><input type="datetime-local" value={f.datetime} onChange={e => set("datetime", e.target.value)} /></Field>
           <Field label={t("location")}><input value={f.location} onChange={e => set("location", e.target.value)} /></Field>
         </div>
-        <Field label={t("relProject")}><select value={f.projectId} onChange={e => set("projectId", e.target.value)}>
-          <option value="">{t("none")}</option>{db.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select></Field>
+        <div className="two">
+          <Field label="Priority"><select value={f.priority || "med"} onChange={e => set("priority", e.target.value)}>
+            <option value="high">High</option><option value="med">Medium</option><option value="low">Low</option>
+          </select></Field>
+          <Field label={t("relProject")}><select value={f.projectId} onChange={e => set("projectId", e.target.value)}>
+            <option value="">{t("none")}</option>{db.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select></Field>
+        </div>
         <Field label={t("attendees")}><MemberPicker value={f.attendees} onChange={v => set("attendees", v)} /></Field>
         <Field label={t("notes")}><textarea value={f.notes} onChange={e => set("notes", e.target.value)} /></Field>
       </div>
@@ -156,15 +164,20 @@ function MeetingForm({ existing, id, onSave, close }) {
 
 function TeamForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", lead: "" })
+  const [f, setF] = useState(existing || { name: "", lead: "", members: [] })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
-  const submit = () => { if (!f.name.trim()) return; onSave("team", { ...f, id }); close() }
+  // keep the lead valid: it must stay one of the chosen members
+  const setMembers = (v) => setF(s => ({ ...s, members: v, lead: v.includes(s.lead) ? s.lead : "" }))
+  const submit = () => { if (!f.name.trim()) return; onSave("team", { ...f, id, members: f.members || [] }); close() }
+  const members = f.members || []
   return (
     <>
       <div className="modal-b">
         <Field label={t("teamName") + " *"}><input value={f.name} onChange={e => set("name", e.target.value)} autoFocus /></Field>
+        <Field label={t("members")}><MemberPicker value={members} onChange={setMembers} /></Field>
         <Field label={t("teamLead")}><select value={f.lead} onChange={e => set("lead", e.target.value)}>
-          <option value="">{t("none")}</option>{db.employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+          <option value="">{t("none")}</option>
+          {members.map(mid => { const e = db.employees.find(x => x.id === mid); return e ? <option key={mid} value={mid}>{e.name}</option> : null })}
         </select></Field>
       </div>
       <Footer onSave={submit} close={close} />
