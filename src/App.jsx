@@ -32,7 +32,7 @@ const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,
     cloud, session, account, authReady, signOut,
-    view, setView, search, setSearch, openEditor, exportData, importData, resetData, isPaid } = useStore()
+    view, setView, search, setSearch, openEditor, exportData, importData, resetData, clearAll, isPaid } = useStore()
   const fileRef = useRef()
 
   // Cloud auth gates
@@ -69,6 +69,9 @@ export default function App() {
           <button className="btn-soft" onClick={exportData}><Icon name="download" size={16} /> {L.exportData}</button>
           <button className="btn-soft" onClick={() => fileRef.current.click()}><Icon name="upload" size={16} /> {L.importData}</button>
           <button className="btn-soft" onClick={resetData}><Icon name="refresh" size={16} /> {L.loadSample}</button>
+          {!readOnly && (
+            <button className="btn-soft danger" onClick={clearAll}><Icon name="trash" size={16} /> {L.clearAll}</button>
+          )}
           <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
             onChange={e => e.target.files[0] && importData(e.target.files[0])} />
           {cloud && session && (

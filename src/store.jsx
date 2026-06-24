@@ -104,10 +104,12 @@ export function StoreProvider({ children }) {
 
       const { data: ws } = await supabase.from("workspaces").select("data").eq("id", "default").single()
       let raw = ws?.data
-      const isEmpty = !raw || !Array.isArray(raw.employees) || raw.employees.length === 0
+      // Only seed sample data the very first time. Once seeded (or cleared), respect what's there.
+      const alreadySetup = raw && (raw.seeded === true || (Array.isArray(raw.employees) && raw.employees.length > 0))
       let data
-      if (isEmpty) {
+      if (!alreadySetup) {
         data = norm(sampleData("en"))
+        data.seeded = true
         await supabase.from("workspaces").update({ data, updated_at: new Date().toISOString() }).eq("id", "default")
       } else {
         data = norm(raw)
@@ -243,6 +245,7 @@ export function StoreProvider({ children }) {
     r.readAsText(file)
   }, [L])
   const resetData = useCallback(() => { if (confirm(L.replaceSample)) setDb(sampleData(lang)) }, [L, lang])
+  const clearAll = useCallback(() => { if (confirm(L.confirmClear)) setDb({ ...EMPTY, seeded: true }) }, [L])
 
   const value = {
     db, lang, setLang, theme, toggleTheme, role: effectiveRole, setRole, readOnly, canPreview,
@@ -251,7 +254,7 @@ export function StoreProvider({ children }) {
     editing, openEditor: (type, id) => setEditing({ type, id }), closeEditor: () => setEditing(null),
     money, fmtToman, tomanPerGbp, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, reminders, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
-    exportData, importData, resetData,
+    exportData, importData, resetData, clearAll,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

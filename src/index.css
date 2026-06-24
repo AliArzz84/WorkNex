@@ -77,6 +77,8 @@ svg{display:block}
 .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:5px;padding-top:12px;border-top:1px solid var(--line)}
 .btn-soft{display:flex;align-items:center;gap:9px;background:transparent;border:0;color:var(--muted);border-radius:8px;padding:8px 10px;cursor:pointer;font-weight:500;font-size:13px}
 .btn-soft:hover{background:var(--hover);color:var(--txt)}
+.btn-soft.danger{color:#e5484d}
+.btn-soft.danger:hover{background:rgba(229,72,77,.12);color:#e5484d}
 
 /* Main */
 .main{padding:24px 30px;width:100%;max-width:1700px}

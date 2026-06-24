@@ -32,6 +32,7 @@ export const I18N = {
     search2: "جستجو در همه‌جا…", all: "همه",
     daysAgo: n => `${n} روز پیش`, inDays: n => `${n} روز دیگر`,
     replaceSample: "داده‌های فعلی با نمونه جایگزین شوند؟", invalidFile: "فایل نامعتبر است",
+    clearAll: "پاک‌کردن همه", confirmClear: "همه‌ی داده‌ها برای همیشه پاک شوند؟ این کار قابل بازگشت نیست.",
   },
   en: {
     appName: "Manager Dashboard", appSub: "Your manager assistant",
@@ -65,6 +66,7 @@ export const I18N = {
     search2: "Search everywhere…", all: "All",
     daysAgo: n => `${n} days ago`, inDays: n => `in ${n} days`,
     replaceSample: "Replace current data with sample?", invalidFile: "Invalid file",
+    clearAll: "Clear all", confirmClear: "Delete ALL data permanently? This cannot be undone.",
   }
 }
 
