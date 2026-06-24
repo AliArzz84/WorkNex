@@ -12,7 +12,7 @@ let counter = 1
 const newId = () => "node_" + Date.now() + "_" + (counter++)
 
 export default function Diagram() {
-  const { db, saveDiagram, theme } = useStore()
+  const { db, saveDiagram, theme, askText } = useStore()
   const [nodes, setNodes] = useState(db.diagram?.nodes || [])
   const [edges, setEdges] = useState(db.diagram?.edges || [])
   const firstRun = useRef(true)
@@ -48,14 +48,14 @@ export default function Diagram() {
       data: { label }, style: dfdStyle(kind),
     }])
   }
-  const onNodeDoubleClick = useCallback((_, node) => {
-    const label = prompt("Rename:", node.data.label)
+  const onNodeDoubleClick = useCallback(async (_, node) => {
+    const label = await askText({ title: "Rename node", value: node.data.label, confirmText: "Rename" })
     if (label != null) setNodes(ns => ns.map(n => n.id === node.id ? { ...n, data: { ...n.data, label } } : n))
-  }, [])
-  const onEdgeDoubleClick = useCallback((_, edge) => {
-    const label = prompt("Edge label:", edge.label || "")
+  }, [askText])
+  const onEdgeDoubleClick = useCallback(async (_, edge) => {
+    const label = await askText({ title: "Edge label", value: edge.label || "", confirmText: "Save" })
     if (label != null) setEdges(es => es.map(e => e.id === edge.id ? { ...e, label } : e))
-  }, [])
+  }, [askText])
 
   return (
     <div className="panel" style={{ padding: 0, overflow: "hidden" }}>

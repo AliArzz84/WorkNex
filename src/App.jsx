@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from './store.jsx'
-import { fadeSlide, Icon, Clocks, RateBadge, Presence } from './ui.jsx'
+import { fadeSlide, Icon, Clocks, RateBadge, Presence, ConfirmDialog, Toast } from './ui.jsx'
 import Dashboard from './views/Dashboard.jsx'
 import Tasks from './views/Tasks.jsx'
 import Finance from './views/Finance.jsx'
@@ -141,6 +141,8 @@ export default function App() {
       </main>
 
       <Editor />
+      <ConfirmDialog />
+      <Toast />
     </div>
   )
 }

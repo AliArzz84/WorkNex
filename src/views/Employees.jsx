@@ -4,7 +4,7 @@ import { useStore } from '../store.jsx'
 import { Avatar, StatusTag, Tag, EmptyState, Icon, Money, item } from '../ui.jsx'
 
 export default function Employees() {
-  const { db, t, L, lang, money, teamById, search, openEditor, removeItem } = useStore()
+  const { db, t, L, lang, money, teamById, search, openEditor, removeItem, ask } = useStore()
   const [teamFilter, setTeamFilter] = useState("all")
 
   let rows = db.employees.filter(e => JSON.stringify(e).toLowerCase().includes(search.toLowerCase()))
@@ -36,7 +36,7 @@ export default function Employees() {
                   <td className="right">
                     <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                       <button className="iconbtn" onClick={() => openEditor("employee", e.id)}><Icon name="edit" size={16} /></button>
-                      <button className="iconbtn del" onClick={() => confirm(t("confirmDel")) && removeItem("employee", e.id)}><Icon name="trash" size={16} /></button>
+                      <button className="iconbtn del" onClick={async () => { if (await ask(t("confirmDel"))) removeItem("employee", e.id) }}><Icon name="trash" size={16} /></button>
                     </div>
                   </td>
                 </motion.tr>

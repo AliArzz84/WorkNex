@@ -4,7 +4,7 @@ import { Avatar, EmptyState, Icon, stagger, item } from '../ui.jsx'
 import { daysBetween } from '../data.js'
 
 export default function Meetings() {
-  const { db, t, fmtDateTime, relDay, empById, search, openEditor, removeItem, toggleMeetDone } = useStore()
+  const { db, t, fmtDateTime, relDay, empById, search, openEditor, removeItem, toggleMeetDone, ask } = useStore()
   const rows = db.meetings
     .filter(m => JSON.stringify(m).toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
@@ -33,7 +33,7 @@ export default function Meetings() {
                     <div className="row-actions" style={{ justifyContent: "flex-end", marginTop: 6 }}>
                       <button className="iconbtn" title={t("done")} onClick={() => toggleMeetDone(m.id)}><Icon name={m.done ? "undo" : "check"} size={16} /></button>
                       <button className="iconbtn" onClick={() => openEditor("meeting", m.id)}><Icon name="edit" size={16} /></button>
-                      <button className="iconbtn del" onClick={() => confirm(t("confirmDel")) && removeItem("meeting", m.id)}><Icon name="trash" size={16} /></button>
+                      <button className="iconbtn del" onClick={async () => { if (await ask(t("confirmDel"))) removeItem("meeting", m.id) }}><Icon name="trash" size={16} /></button>
                     </div>
                   </div>
                 </motion.div>

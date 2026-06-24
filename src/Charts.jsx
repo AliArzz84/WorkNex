@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
+import { Icon } from './ui.jsx'
 
 /* Donut chart with legend */
-export function Donut({ data, size = 150, thickness = 18, centerLabel, centerSub, fmt = v => v }) {
+export function Donut({ data, size = 150, thickness = 18, centerLabel, centerSub, centerIcon, centerColor = "var(--txt)", fmt = v => v }) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1
   const r = (size - thickness) / 2
   const circ = 2 * Math.PI * r
@@ -14,19 +15,29 @@ export function Donut({ data, size = 150, thickness = 18, centerLabel, centerSub
   })
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-      <motion.svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
-        initial={{ opacity: 0, rotate: -12 }} animate={{ opacity: 1, rotate: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}>
-        <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--track)" strokeWidth={thickness} />
-          {segs.map((s, i) => (
-            <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none"
-              stroke={s.color} strokeWidth={thickness}
-              strokeDasharray={`${s.len} ${circ - s.len}`} strokeDashoffset={s.offset} />
-          ))}
-        </g>
-        {centerLabel != null && <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 24, fontWeight: 700, fill: "var(--txt)" }}>{centerLabel}</text>}
-        {centerSub && <text x="50%" y="63%" textAnchor="middle" style={{ fontSize: 11, fill: "var(--muted)" }}>{centerSub}</text>}
-      </motion.svg>
+      <div style={{ position: "relative", width: size, height: size }}>
+        <motion.svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
+          initial={{ opacity: 0, rotate: -12 }} animate={{ opacity: 1, rotate: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}>
+          <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--track)" strokeWidth={thickness} />
+            {segs.map((s, i) => (
+              <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none"
+                stroke={s.color} strokeWidth={thickness}
+                strokeDasharray={`${s.len} ${circ - s.len}`} strokeDashoffset={s.offset} />
+            ))}
+          </g>
+          {centerLabel != null && <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 24, fontWeight: 700, fill: "var(--txt)" }}>{centerLabel}</text>}
+          {centerSub && !centerIcon && <text x="50%" y="63%" textAnchor="middle" style={{ fontSize: 11, fill: "var(--muted)" }}>{centerSub}</text>}
+        </motion.svg>
+        {centerIcon && (
+          <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", pointerEvents: "none" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+              <span style={{ color: centerColor, display: "grid", placeItems: "center" }}><Icon name={centerIcon} size={24} /></span>
+              {centerSub && <small style={{ fontSize: 11, color: "var(--muted)" }}>{centerSub}</small>}
+            </div>
+          </div>
+        )}
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 120 }}>
         {data.map((d, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 12.5 }}>

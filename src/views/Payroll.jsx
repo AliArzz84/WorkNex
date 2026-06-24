@@ -4,7 +4,7 @@ import { Avatar, Counter, Tag, Icon, Money, stagger, item } from '../ui.jsx'
 import { daysBetween, nextPayday, periodKey } from '../data.js'
 
 export default function Payroll() {
-  const { db, t, money, fmtDate, relDay, isPaid, setPaid } = useStore()
+  const { db, t, money, fmtDate, relDay, isPaid, setPaid, ask } = useStore()
   const active = db.employees.filter(e => e.status !== "inactive")
   const total = db.employees.filter(e => e.status === "active").reduce((s, e) => s + Number(e.salary || 0), 0)
   const rows = active.map(e => {
@@ -47,9 +47,16 @@ export default function Payroll() {
                         : <Tag color="amber">{r.dd} {t("daysLeft")}</Tag>}
                 </td>
                 <td className="right">
-                  <button className={`btn sm pay-action ${r.paid ? "ghost" : ""}`} onClick={() => setPaid(r.e.id, r.per, !r.paid)}>
-                    <Icon name={r.paid ? "undo" : "check"} size={14} /> {r.paid ? t("markUnpaid") : t("markPaid")}
-                  </button>
+                  {r.paid ? (
+                    <button className="btn sm ghost danger pay-action"
+                      onClick={async () => { if (await ask({ title: t("deletePayment"), message: t("confirmDelPay"), confirmText: t("deletePayment") })) setPaid(r.e.id, r.per, false) }}>
+                      <Icon name="trash" size={14} /> {t("deletePayment")}
+                    </button>
+                  ) : (
+                    <button className="btn sm pay-action" onClick={() => setPaid(r.e.id, r.per, true)}>
+                      <Icon name="check" size={14} /> {t("markPaid")}
+                    </button>
+                  )}
                 </td>
               </motion.tr>
             ))}

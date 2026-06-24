@@ -106,6 +106,8 @@ svg{display:block}
 .btn.ghost{background:var(--surface);border:1px solid var(--line-strong);color:var(--txt);box-shadow:none}
 .btn.ghost:hover{background:var(--hover)}
 .btn.sm{padding:6px 11px;font-size:12px}
+.btn.ghost.danger{color:#e5484d;border-color:rgba(229,72,77,.4)}
+.btn.ghost.danger:hover{background:rgba(229,72,77,.1)}
 
 /* KPI */
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
@@ -175,6 +177,21 @@ tr:hover td{background:var(--hover)}
 .modal-h .x:hover{background:var(--hover);color:var(--txt)}
 .modal-b{padding:18px}
 .modal-f{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;background:var(--panel)}
+/* confirm / prompt dialog */
+.confirm-card{max-width:420px}
+.confirm-card .cf-body{padding:24px 22px 6px;text-align:center}
+.confirm-card h2{margin:4px 0 6px;font-size:18px}
+.confirm-card p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.6}
+.cf-ic{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px;background:var(--hover);color:var(--muted)}
+.cf-ic.danger{background:rgba(229,72,77,.12);color:#e5484d}
+.cf-input{width:100%;margin-top:14px;background:var(--input-bg);border:1px solid var(--line-strong);border-radius:9px;padding:10px 12px;color:var(--txt);font-size:14px}
+.confirm-card .modal-f{justify-content:center}
+.btn.danger-solid{background:#e5484d}.btn.danger-solid:hover{background:#d13b40}
+/* toast */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:60;display:inline-flex;align-items:center;gap:9px;
+  background:var(--panel);border:1px solid var(--line);box-shadow:0 12px 34px rgba(0,0,0,.3);border-radius:11px;padding:11px 16px;font-size:13.5px;font-weight:600;color:var(--txt)}
+.toast.error{border-color:rgba(229,72,77,.5);color:#e5484d}
+.toast.success{border-color:rgba(52,199,89,.5);color:#1a7f37}
 .field{margin-bottom:14px}
 .field label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px;font-weight:500}
 .field input,.field select,.field textarea{width:100%;background:var(--input-bg);border:1px solid var(--line-strong);border-radius:8px;padding:9px 11px;color:var(--txt);font-family:inherit;font-size:13px}
@@ -212,8 +229,8 @@ tr:hover td{background:var(--hover)}
 .pres-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:11.5px;color:var(--txt);font-weight:600;white-space:nowrap;max-width:230px}
 .pres-chip .pe{overflow:hidden;text-overflow:ellipsis;max-width:120px}
 .pres-chip small{color:var(--muted);font-weight:500}
-.pres-chip .dot{width:7px;height:7px;border-radius:50%;background:#9aa0a6;flex-shrink:0}
-.pres-chip.editing .dot{background:#34c759;box-shadow:0 0 0 0 rgba(52,199,89,.55);animation:presPulse 1.6s infinite}
+.pres-chip .dot{width:7px;height:7px;border-radius:50%;background:#34c759;flex-shrink:0}
+.pres-chip.editing .dot{box-shadow:0 0 0 0 rgba(52,199,89,.55);animation:presPulse 1.6s infinite}
 @keyframes presPulse{0%{box-shadow:0 0 0 0 rgba(52,199,89,.55)}70%{box-shadow:0 0 0 6px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}
 .muted{color:var(--muted)} .center{text-align:center} .right{text-align:end}
 .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}

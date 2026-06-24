@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion, animate } from 'framer-motion'
+import { motion, animate, AnimatePresence } from 'framer-motion'
 import { colorFor, initials } from './data.js'
 import { useStore } from './store.jsx'
 
@@ -159,6 +159,62 @@ export function ProgressBar({ value }) {
 
 export function EmptyState({ icon = "dashboard", text }) {
   return <div className="empty"><div className="big"><Icon name={icon} size={34} strokeWidth={1.4} /></div>{text}</div>
+}
+
+/* nice confirm / prompt modal (replaces window.confirm & prompt) */
+export function ConfirmDialog() {
+  const { dialog, resolveDialog } = useStore()
+  const [text, setText] = useState("")
+  useEffect(() => { setText(dialog?.value || "") }, [dialog])
+  const isPrompt = dialog?.kind === "prompt"
+  const cancel = () => resolveDialog(isPrompt ? null : false)
+  const ok = () => resolveDialog(isPrompt ? text : true)
+  return (
+    <AnimatePresence>
+      {dialog && (
+        <motion.div className="modal-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onMouseDown={e => { if (e.target === e.currentTarget) cancel() }}>
+          <motion.div className="modal confirm-card" initial={{ opacity: 0, scale: 0.92, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "spring", stiffness: 320, damping: 28 }}
+            onKeyDown={e => { if (e.key === "Escape") cancel(); if (e.key === "Enter" && isPrompt) ok() }}>
+            <div className="cf-body">
+              {!isPrompt && (
+                <div className={`cf-ic ${dialog.danger ? "danger" : ""}`}>
+                  <Icon name={dialog.danger ? "trash" : "alert"} size={22} />
+                </div>
+              )}
+              {dialog.title && <h2>{dialog.title}</h2>}
+              {dialog.message && <p>{dialog.message}</p>}
+              {isPrompt && (
+                <input className="cf-input" autoFocus value={text} onChange={e => setText(e.target.value)} />
+              )}
+            </div>
+            <div className="modal-f">
+              <button className="btn ghost" onClick={cancel}>{dialog.cancelText}</button>
+              <button className={`btn ${dialog.danger ? "danger-solid" : ""}`} onClick={ok}>{dialog.confirmText}</button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+/* small toast notification (replaces window.alert) */
+export function Toast() {
+  const { toast } = useStore()
+  return (
+    <AnimatePresence>
+      {toast && (
+        <motion.div className={`toast ${toast.type}`} initial={{ opacity: 0, y: 22, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}>
+          <Icon name={toast.type === "error" ? "alert" : toast.type === "success" ? "check" : "bell"} size={16} />
+          <span>{toast.message}</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
 }
 
 /* animation presets */

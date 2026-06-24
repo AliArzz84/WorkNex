@@ -6,7 +6,7 @@ import { Donut } from '../Charts.jsx'
 import { colorFor } from '../data.js'
 
 export default function Finance() {
-  const { db, money, fmtDate, search, openEditor, removeItem } = useStore()
+  const { db, money, fmtDate, search, openEditor, removeItem, ask } = useStore()
   const [biz, setBiz] = useState("all")
 
   const txAll = db.transactions
@@ -75,7 +75,7 @@ export default function Finance() {
                 </div>
                 <div className="row-actions" style={{ marginTop: "auto" }}>
                   <button className="iconbtn" onClick={() => openEditor("business", b.id)}><Icon name="edit" size={16} /></button>
-                  <button className="iconbtn del" onClick={() => confirm("Delete this business?") && removeItem("business", b.id)}><Icon name="trash" size={16} /></button>
+                  <button className="iconbtn del" onClick={async () => { if (await ask({ title: "Delete business", message: "Delete this business?" })) removeItem("business", b.id) }}><Icon name="trash" size={16} /></button>
                 </div>
               </motion.div>
             ))}
@@ -87,11 +87,11 @@ export default function Finance() {
         <div className="grid2">
           <div className="panel">
             <div className="panel-h"><span className="hicon"><Icon name="arrowUp" size={16} /></span><h2>Income by business</h2></div>
-            {incomeDonut.length ? <Donut data={incomeDonut} fmt={money} centerSub="income" /> : <p className="muted">No income yet</p>}
+            {incomeDonut.length ? <Donut data={incomeDonut} fmt={money} centerSub="income" centerIcon="arrowUp" centerColor="var(--green-ink)" /> : <p className="muted">No income yet</p>}
           </div>
           <div className="panel">
             <div className="panel-h"><span className="hicon"><Icon name="arrowDown" size={16} /></span><h2>Outgoing by business</h2></div>
-            {expenseDonut.length ? <Donut data={expenseDonut} fmt={money} centerSub="outgoing" /> : <p className="muted">No outgoing yet</p>}
+            {expenseDonut.length ? <Donut data={expenseDonut} fmt={money} centerSub="outgoing" centerIcon="arrowDown" centerColor="var(--red-ink)" /> : <p className="muted">No outgoing yet</p>}
           </div>
         </div>
       )}
@@ -120,7 +120,7 @@ export default function Finance() {
                   <td className="right">
                     <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                       <button className="iconbtn" onClick={() => openEditor("transaction", x.id)}><Icon name="edit" size={16} /></button>
-                      <button className="iconbtn del" onClick={() => confirm("Delete this?") && removeItem("transaction", x.id)}><Icon name="trash" size={16} /></button>
+                      <button className="iconbtn del" onClick={async () => { if (await ask({ title: "Delete transaction", message: "Delete this transaction?" })) removeItem("transaction", x.id) }}><Icon name="trash" size={16} /></button>
                     </div>
                   </td>
                 </motion.tr>

@@ -31,6 +31,25 @@ export function StoreProvider({ children }) {
   const [view, setView] = useState("dashboard")
   const [search, setSearch] = useState("")
   const [editing, setEditing] = useState(null) // {type, id}
+  const [dialog, setDialog] = useState(null)   // custom confirm / prompt modal
+  const [toast, setToast] = useState(null)     // little notification
+
+  /* nice replacements for window.confirm / prompt / alert */
+  const ask = useCallback((opts) => new Promise(resolve => {
+    const o = typeof opts === "string" ? { message: opts } : (opts || {})
+    setDialog({ kind: "confirm", confirmText: "Delete", cancelText: "Cancel", danger: true, ...o, resolve })
+  }), [])
+  const askText = useCallback((opts) => new Promise(resolve => {
+    const o = typeof opts === "string" ? { message: opts } : (opts || {})
+    setDialog({ kind: "prompt", confirmText: "Save", cancelText: "Cancel", value: "", danger: false, ...o, resolve })
+  }), [])
+  const resolveDialog = useCallback((result) => {
+    setDialog(d => { d?.resolve?.(result); return null })
+  }, [])
+  const notify = useCallback((message, type = "info") => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3200)
+  }, [])
 
   /* auth (cloud only) */
   const [session, setSession] = useState(null)
@@ -275,17 +294,22 @@ export function StoreProvider({ children }) {
   }, [db])
   const importData = useCallback((file) => {
     const r = new FileReader()
-    r.onload = () => { try { const d = JSON.parse(r.result); if (!d.payments) d.payments = {}; setDb(d) } catch (e) { alert(L.invalidFile) } }
+    r.onload = () => { try { const d = JSON.parse(r.result); if (!d.payments) d.payments = {}; setDb(d) } catch (e) { notify(L.invalidFile, "error") } }
     r.readAsText(file)
-  }, [L])
-  const resetData = useCallback(() => { if (confirm(L.replaceSample)) setDb(sampleData(lang)) }, [L, lang])
-  const clearAll = useCallback(() => { if (confirm(L.confirmClear)) setDb({ ...EMPTY, seeded: true }) }, [L])
+  }, [L, notify])
+  const resetData = useCallback(async () => {
+    if (await ask({ title: "Load sample data", message: L.replaceSample, confirmText: "Replace", danger: false })) setDb(sampleData(lang))
+  }, [L, lang, ask])
+  const clearAll = useCallback(async () => {
+    if (await ask({ title: L.clearAll, message: L.confirmClear, confirmText: L.clearAll, danger: true })) setDb({ ...EMPTY, seeded: true })
+  }, [L, ask])
 
   const value = {
     db, lang, setLang, theme, toggleTheme, role: effectiveRole, setRole, readOnly, canPreview,
     cloud, session, account, authReady, dataReady, presence, signIn, signUp, signOut,
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => setEditing({ type, id }), closeEditor: () => setEditing(null),
+    dialog, toast, ask, askText, resolveDialog, notify,
     money, fmtToman, tomanPerGbp, fmtDate, fmtDateTime, fmtTime, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, reminders, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
     exportData, importData, resetData, clearAll,

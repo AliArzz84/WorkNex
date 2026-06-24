@@ -5,7 +5,7 @@ import { Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, Money, stagger, i
 import { daysBetween } from '../data.js'
 
 export default function Projects() {
-  const { db, t, L, money, fmtDate, relDay, empById, search, openEditor, removeItem } = useStore()
+  const { db, t, L, money, fmtDate, relDay, empById, search, openEditor, removeItem, ask } = useStore()
   const [filter, setFilter] = useState("all")
 
   let rows = db.projects.filter(p => JSON.stringify(p).toLowerCase().includes(search.toLowerCase()))
@@ -39,7 +39,7 @@ export default function Projects() {
                 <div className="members">{p.members.length ? p.members.map(id => <Avatar key={id} emp={empById(id)} />) : <small className="muted">{L.none}</small>}</div>
                 <div className="row-actions" style={{ marginTop: "auto" }}>
                   <button className="iconbtn" onClick={() => openEditor("project", p.id)}><Icon name="edit" size={16} /></button>
-                  <button className="iconbtn del" onClick={() => confirm(t("confirmDel")) && removeItem("project", p.id)}><Icon name="trash" size={16} /></button>
+                  <button className="iconbtn del" onClick={async () => { if (await ask(t("confirmDel"))) removeItem("project", p.id) }}><Icon name="trash" size={16} /></button>
                 </div>
               </motion.div>
             )

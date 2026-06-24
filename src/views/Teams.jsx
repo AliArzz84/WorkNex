@@ -3,7 +3,7 @@ import { useStore } from '../store.jsx'
 import { Avatar, EmptyState, Icon, stagger, item } from '../ui.jsx'
 
 export default function Teams() {
-  const { db, t, L, lang, empById, openEditor, removeItem } = useStore()
+  const { db, t, L, lang, empById, openEditor, removeItem, ask } = useStore()
   return (
     <motion.div className="grid3" variants={stagger} initial="initial" animate="animate">
       <AnimatePresence>
@@ -23,7 +23,7 @@ export default function Teams() {
               <div className="meta"><span>{members.length} {L.membersCount}</span><span>{projs.length} {L.projectsCount}</span></div>
               <div className="row-actions" style={{ marginTop: "auto" }}>
                 <button className="iconbtn" onClick={() => openEditor("team", tm.id)}><Icon name="edit" size={16} /></button>
-                <button className="iconbtn del" onClick={() => confirm(t("confirmDel")) && removeItem("team", tm.id)}><Icon name="trash" size={16} /></button>
+                <button className="iconbtn del" onClick={async () => { if (await ask(t("confirmDel"))) removeItem("team", tm.id) }}><Icon name="trash" size={16} /></button>
               </div>
             </motion.div>
           )

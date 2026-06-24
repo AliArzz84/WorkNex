@@ -9,7 +9,7 @@ const PW = { high: 0, med: 1, low: 2 }
 const byPri = (a, b) => (PW[a.priority] - PW[b.priority]) || ((a.title || "").localeCompare(b.title || ""))
 
 function TaskRow({ k }) {
-  const { db, relDay, empById, openEditor, removeItem, toggleTask } = useStore()
+  const { db, relDay, empById, openEditor, removeItem, toggleTask, ask } = useStore()
   const [completing, setCompleting] = useState(false)
   const showDone = k.done || completing
   const dd = k.due ? daysBetween(k.due) : null
@@ -45,7 +45,7 @@ function TaskRow({ k }) {
       </div>
       <div className="row-actions">
         <button className="iconbtn" onClick={() => openEditor("task", k.id)}><Icon name="edit" size={16} /></button>
-        <button className="iconbtn del" onClick={() => confirm("Delete this?") && removeItem("task", k.id)}><Icon name="trash" size={16} /></button>
+        <button className="iconbtn del" onClick={async () => { if (await ask({ title: "Delete task", message: "Delete this task?" })) removeItem("task", k.id) }}><Icon name="trash" size={16} /></button>
       </div>
     </motion.div>
   )
