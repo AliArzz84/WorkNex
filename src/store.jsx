@@ -133,7 +133,9 @@ export function StoreProvider({ children }) {
         .subscribe()
     })()
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
-  }, [cloud, session])
+    // Key on the user id only — a token refresh keeps the same id, so we don't
+    // reload (and wipe unsaved local edits) every time the session object changes.
+  }, [cloud, session?.user?.id])
 
   /* === cloud: write (debounced) when the manager changes data === */
   useEffect(() => {
@@ -146,7 +148,8 @@ export function StoreProvider({ children }) {
       supabase.from("workspaces").update({ data: db, updated_at: new Date().toISOString() }).eq("id", "default")
     }, 600)
     return () => { if (writeTimer.current) clearTimeout(writeTimer.current) }
-  }, [db, cloud, session, account, dataReady])
+    // Same here: don't let a token refresh cancel a pending write.
+  }, [db, cloud, session?.user?.id, account, dataReady])
 
   const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password })
   const signUp = (email, password) => supabase.auth.signUp({ email, password })
