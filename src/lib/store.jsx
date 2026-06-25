@@ -20,7 +20,8 @@ export const useStore = () => useContext(StoreContext)
 
 function loadLocalDB() {
   const raw = localStorage.getItem(KEY)
-  if (raw) { try { const d = JSON.parse(raw); if (!d.payments) d.payments = {}; return d } catch (e) {} }
+  // norm() guarantees every collection exists, so older/partial blobs can't crash the views
+  if (raw) { try { return norm(JSON.parse(raw)) } catch (e) {} }
   return sampleData("en")
 }
 
@@ -63,6 +64,9 @@ export function StoreProvider({ children }) {
   const lastSynced = useRef("")
   const writeTimer = useRef(null)
   const presenceCh = useRef(null)
+  // true while this client has a local edit waiting to be saved — so an incoming
+  // realtime snapshot doesn't overwrite work the user is still in the middle of
+  const dirty = useRef(false)
   // who is acting right now — kept in a ref so the CRUD callbacks stay dependency-free
   const actorRef = useRef({ userId: "local", email: "local", role: "manager" })
 
@@ -173,6 +177,7 @@ export function StoreProvider({ children }) {
       lastSynced.current = JSON.stringify(data)
       setDb(data)
       setDataReady(true)
+      dirty.current = false   // fresh load — nothing pending
 
       // record that this account just came in (drives "last seen" in the Activity view)
       setDb(prev => ({
@@ -185,6 +190,7 @@ export function StoreProvider({ children }) {
           const nd = norm(payload.new?.data)
           const str = JSON.stringify(nd)
           if (str === lastSynced.current) return   // ignore our own echo
+          if (dirty.current) return                // we have an unsaved edit in flight — our save will win; don't clobber it
           lastSynced.current = str
           setDb(nd)
         })
@@ -223,11 +229,13 @@ export function StoreProvider({ children }) {
     if (!cloud || !session || !dataReady) return
     const str = JSON.stringify(db)
     if (str === lastSynced.current) return
+    dirty.current = true   // a local edit is now waiting to be saved
     if (writeTimer.current) clearTimeout(writeTimer.current)
     writeTimer.current = setTimeout(async () => {
       lastSynced.current = str
       const { error } = await supabase.from("workspaces").update({ data: db, updated_at: new Date().toISOString() }).eq("id", "default")
       if (error) console.error("Save failed:", error.message)
+      dirty.current = false   // saved — safe to accept remote snapshots again
       // this write only runs for *local* edits, so flag myself as actively editing
       presenceCh.current?.track({ email: session.user.email, role: account || "boss", editingAt: Date.now() })
     }, 600)

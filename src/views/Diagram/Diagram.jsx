@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow, ReactFlowProvider, Background, BackgroundVariant, Controls, MiniMap,
   Handle, Position, ConnectionMode, ConnectionLineType, MarkerType,
@@ -48,6 +48,10 @@ function DfdNode({ data }) {
 const nodeTypes = { dfd: DfdNode }
 
 const EDGE_OPTS = { type: "smoothstep", markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 }, style: { strokeWidth: 1.6 } }
+/* stable references — passing fresh arrays/objects inline makes React Flow re-init on every render */
+const SNAP_GRID = [16, 16]
+const DELETE_KEYS = ["Backspace", "Delete"]
+const PRO_OPTIONS = { hideAttribution: true }
 
 function DiagramCanvas() {
   const { db, saveDiagram, theme, askText, ask } = useStore()
@@ -60,15 +64,18 @@ function DiagramCanvas() {
   const firstRun = useRef(true)
   const saveTimer = useRef(null)
   const lastSavedSig = useRef("")
+  const dragging = useRef(false)   // true while a node is being dragged — pauses autosave hashing
 
-  /* only the meaningful parts — ignore ReactFlow's selected/dragging/measured churn */
+  /* only the meaningful parts — ignore ReactFlow's selected/dragging/measured churn.
+     style is derived from kind (dfdStyle), so `k` already captures any visual change — no need to serialize the whole style object */
   const sig = (ns, es) => JSON.stringify({
-    n: (ns || []).map(n => ({ id: n.id, x: Math.round(n.position?.x || 0), y: Math.round(n.position?.y || 0), l: n.data?.label, k: n.data?.kind, s: n.style })),
+    n: (ns || []).map(n => ({ id: n.id, x: Math.round(n.position?.x || 0), y: Math.round(n.position?.y || 0), l: n.data?.label, k: n.data?.kind })),
     e: (es || []).map(e => ({ id: e.id, s: e.source, t: e.target, sh: e.sourceHandle, th: e.targetHandle, l: e.label, a: !!e.animated, ty: e.type })),
   })
 
   /* debounced autosave — only when the signature truly changes */
   useEffect(() => {
+    if (dragging.current) return   // mid-drag: skip hashing + saving entirely so the drag stays smooth (the final, dragging:false change runs this and saves)
     const cur = sig(nodes, edges)
     if (firstRun.current) { firstRun.current = false; lastSavedSig.current = cur; return }
     if (cur === lastSavedSig.current) return
@@ -98,7 +105,12 @@ function DiagramCanvas() {
     return () => { window.removeEventListener("mousedown", onDown); window.removeEventListener("keydown", onKey) }
   }, [menu])
 
-  const onNodesChange = useCallback((ch) => setNodes(ns => applyNodeChanges(ch, ns)), [])
+  const onNodesChange = useCallback((ch) => {
+    // track drag state from the change stream; the final change of a drag carries dragging:false → autosave resumes and saves once
+    const pos = ch.find(c => c.type === "position" && "dragging" in c)
+    if (pos) dragging.current = !!pos.dragging
+    setNodes(ns => applyNodeChanges(ch, ns))
+  }, [])
   const onEdgesChange = useCallback((ch) => setEdges(es => applyEdgeChanges(ch, es)), [])
   const onConnect = useCallback((c) => setEdges(es => addEdge({ ...c, ...EDGE_OPTS }, es)), [])
 
@@ -148,6 +160,10 @@ function DiagramCanvas() {
   const node = menu?.kind === "node" ? nodes.find(n => n.id === menu.id) : null
   const edge = menu?.kind === "edge" ? edges.find(e => e.id === menu.id) : null
 
+  // stable MiniMap props so it doesn't re-render on every parent render
+  const miniMapColor = useCallback((n) => n.style?.background || "#94a3b8", [])
+  const maskColor = useMemo(() => theme === "dark" ? "rgba(0,0,0,.55)" : "rgba(0,0,0,.06)", [theme])
+
   return (
     <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
       <div className={styles.toolbar}>
@@ -176,6 +192,7 @@ function DiagramCanvas() {
           onConnect={onConnect}
           onNodeDoubleClick={(_, n) => renameNode(n.id)}
           onEdgeDoubleClick={(_, e) => editEdgeLabel(e.id)}
+          onNodeDragStop={() => { dragging.current = false }}
           onPaneContextMenu={(e) => openMenu(e, { kind: "pane" })}
           onNodeContextMenu={(e, n) => openMenu(e, { kind: "node", id: n.id })}
           onEdgeContextMenu={(e, ed) => openMenu(e, { kind: "edge", id: ed.id })}
@@ -184,16 +201,16 @@ function DiagramCanvas() {
           connectionLineType={ConnectionLineType.SmoothStep}
           defaultEdgeOptions={EDGE_OPTS}
           colorMode={theme === "dark" ? "dark" : "light"}
-          snapToGrid snapGrid={[16, 16]}
+          snapToGrid snapGrid={SNAP_GRID}
           zoomOnDoubleClick={false}
-          deleteKeyCode={["Backspace", "Delete"]}
+          deleteKeyCode={DELETE_KEYS}
           minZoom={0.3} maxZoom={2}
-          proOptions={{ hideAttribution: true }}
+          proOptions={PRO_OPTIONS}
           fitView
         >
           <Background variant={BackgroundVariant.Dots} gap={18} size={1.4} />
           <Controls showInteractive={false} />
-          <MiniMap pannable zoomable nodeColor={(n) => n.style?.background || "#94a3b8"} nodeStrokeWidth={2} maskColor={theme === "dark" ? "rgba(0,0,0,.55)" : "rgba(0,0,0,.06)"} />
+          <MiniMap pannable zoomable nodeColor={miniMapColor} nodeStrokeWidth={2} maskColor={maskColor} />
         </ReactFlow>
 
         <AnimatePresence>

@@ -94,7 +94,7 @@ export default function Dashboard() {
                   <div className="dot" />
                   <div>
                     <b>{m.title}</b>
-                    <p>{m.attendees.map(id => empById(id)?.name).filter(Boolean).join(", ")}</p>
+                    <p>{(m.attendees || []).map(id => empById(id)?.name).filter(Boolean).join(", ")}</p>
                   </div>
                   <div className="when">{relDay(daysBetween(m.datetime))} • {fmtTime(m.datetime)}</div>
                 </motion.div>

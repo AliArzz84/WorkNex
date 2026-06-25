@@ -32,7 +32,7 @@ export default function Meetings() {
                       {m.done && <span style={{ color: "var(--green-ink)" }}>✓</span>}
                     </b>
                     <p>{m.location} {proj ? "• " + proj.name : ""}</p>
-                    <div style={{ display: "flex", marginTop: 5 }}>{m.attendees.map(id => <Avatar key={id} emp={empById(id)} />)}</div>
+                    <div style={{ display: "flex", marginTop: 5 }}>{(m.attendees || []).map(id => <Avatar key={id} emp={empById(id)} />)}</div>
                   </div>
                   <div style={{ textAlign: "end" }}>
                     <div className="when">{fmtDateTime(m.datetime)}</div>

@@ -11,11 +11,12 @@ const nowISO = () => { const d = new Date(); return `${todayISO()}T${pad(d.getHo
 
 function MemberPicker({ value, onChange }) {
   const { db } = useStore()
-  const toggle = (id) => onChange(value.includes(id) ? value.filter(x => x !== id) : [...value, id])
+  const sel = value || []
+  const toggle = (id) => onChange(sel.includes(id) ? sel.filter(x => x !== id) : [...sel, id])
   return (
     <div className="multi">
       {db.employees.map(e => (
-        <span key={e.id} className={`chip ${value.includes(e.id) ? "on" : ""}`} onClick={() => toggle(e.id)}>{e.name}</span>
+        <span key={e.id} className={`chip ${sel.includes(e.id) ? "on" : ""}`} onClick={() => toggle(e.id)}>{e.name}</span>
       ))}
     </div>
   )
