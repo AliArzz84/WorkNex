@@ -14,6 +14,10 @@ create table if not exists public.email_connections (
 
 alter table public.email_connections enable row level security;
 
+-- the signed-in client must be GRANTED table privileges (RLS policies alone are not enough).
+-- SELECT is granted but there is no SELECT *policy*, so the refresh token still can't be read back.
+grant select, insert, update, delete on public.email_connections to authenticated;
+
 -- a user may create/refresh/remove ONLY their own connection…
 drop policy if exists ec_insert on public.email_connections;
 create policy ec_insert on public.email_connections
