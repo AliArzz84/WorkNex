@@ -27,6 +27,11 @@ function loadLocalDB() {
 
 export function StoreProvider({ children }) {
   const cloud = isSupabaseConfigured
+  // guest "view-only" share link: ?view=<token> in the URL
+  const viewToken = cloud ? new URLSearchParams(window.location.search).get("view") : null
+  const isGuest = Boolean(viewToken)
+  const [guestMeta, setGuestMeta] = useState(null)                              // { label, role, sections, expires_at }
+  const [guestStatus, setGuestStatus] = useState(isGuest ? "loading" : "ok")    // 'loading' | 'ok' | 'invalid'
   const [db, setDb] = useState(() => cloud ? EMPTY : loadLocalDB())
   const lang = "en"
   const setLang = () => {}
@@ -141,7 +146,7 @@ export function StoreProvider({ children }) {
 
   /* === cloud: auth session === */
   useEffect(() => {
-    if (!cloud) return
+    if (!cloud || isGuest) return
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s) })
     return () => sub?.subscription?.unsubscribe?.()
@@ -149,7 +154,7 @@ export function StoreProvider({ children }) {
 
   /* === cloud: load role + workspace + realtime when logged in === */
   useEffect(() => {
-    if (!cloud) return
+    if (!cloud || isGuest) return
     if (!session) { setAccount(null); setDataReady(false); setDb(EMPTY); return }
     let channel, cancelled = false
     ;(async () => {
@@ -201,9 +206,28 @@ export function StoreProvider({ children }) {
     // reload (and wipe unsaved local edits) every time the session object changes.
   }, [cloud, session?.user?.id])
 
+  /* === guest: load a shared view-only link, then re-check it periodically so
+        revoking / expiry takes effect within a minute (and data stays fresh) === */
+  useEffect(() => {
+    if (!isGuest) return
+    let cancelled = false
+    const load = async () => {
+      const { data, error } = await supabase.rpc("fetch_shared_view", { p_token: viewToken })
+      if (cancelled) return
+      if (error || !data) { setGuestStatus("invalid"); return }
+      setGuestMeta({ label: data.label, role: data.role, sections: data.sections || [], expires_at: data.expires_at })
+      setDb(norm(data.data))
+      setView(prev => (data.sections || []).includes(prev) ? prev : ((data.sections || [])[0] || "dashboard"))
+      setGuestStatus("ok")
+    }
+    load()
+    const timer = setInterval(load, 45000)
+    return () => { cancelled = true; clearInterval(timer) }
+  }, [isGuest, viewToken])
+
   /* === cloud: live presence — who else is online / editing right now === */
   useEffect(() => {
-    if (!cloud || !session) { setPresence([]); return }
+    if (!cloud || isGuest || !session) { setPresence([]); return }
     const me = session.user.id
     const ch = supabase.channel("presence-default", { config: { presence: { key: me } } })
     presenceCh.current = ch
@@ -226,7 +250,7 @@ export function StoreProvider({ children }) {
 
   /* === cloud: write (debounced) when the manager changes data === */
   useEffect(() => {
-    if (!cloud || !session || !dataReady) return
+    if (!cloud || isGuest || !session || !dataReady) return
     const str = JSON.stringify(db)
     if (str === lastSynced.current) return
     dirty.current = true   // a local edit is now waiting to be saved
@@ -247,10 +271,30 @@ export function StoreProvider({ children }) {
   const signUp = (email, password) => supabase.auth.signUp({ email, password })
   const signOut = () => supabase.auth.signOut()
 
-  /* both signed-in users can edit; the Manager/Boss toggle is just a preview of the read-only layout */
-  const effectiveRole = role
-  const readOnly = effectiveRole === "boss"
-  const canPreview = true
+  /* both signed-in users can edit; the Manager/Boss toggle is just a preview of the read-only layout.
+     guests (shared view-only links) are always read-only and can't switch roles. */
+  const effectiveRole = isGuest ? "guest" : role
+  const readOnly = isGuest || effectiveRole === "boss"
+  const canPreview = !isGuest
+
+  /* shared view-only links — created & revoked by managers/boss */
+  const createViewLink = useCallback(async ({ label, sections, expiresAt }) => {
+    const { data, error } = await supabase
+      .from("view_links")
+      .insert({ label, sections, expires_at: expiresAt, created_by: session?.user?.email })
+      .select("token").single()
+    if (error) throw error
+    return data.token
+  }, [session?.user?.email])
+  const listViewLinks = useCallback(async () => {
+    const { data, error } = await supabase.from("view_links").select("*").order("created_at", { ascending: false })
+    if (error) throw error
+    return data || []
+  }, [])
+  const revokeViewLink = useCallback(async (token) => {
+    const { error } = await supabase.from("view_links").delete().eq("token", token)
+    if (error) throw error
+  }, [])
 
   /* translation */
   const t = useCallback((path) => {
@@ -446,8 +490,9 @@ export function StoreProvider({ children }) {
   const value = {
     db, lang, setLang, theme, toggleTheme, role: effectiveRole, setRole, readOnly, canPreview,
     cloud, session, account, authReady, dataReady, presence, signIn, signUp, signOut,
+    isGuest, guestMeta, guestStatus, createViewLink, listViewLinks, revokeViewLink,
     t, L, view, setView, search, setSearch,
-    editing, openEditor: (type, id) => setEditing({ type, id }), closeEditor: () => setEditing(null),
+    editing, openEditor: (type, id) => { if (!isGuest) setEditing({ type, id }) }, closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, resolveDialog, notify,
     money, fmtToman, toGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,

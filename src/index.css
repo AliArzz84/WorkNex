@@ -3,3 +3,76 @@
 @import "./styles/layout.css";
 @import "./styles/components.css";
 @import "./styles/views.css";
+
+/* ---------- Guest (shared view-only link) ---------- */
+.guest-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(255, 159, 10, .15);
+  color: var(--amber-ink);
+  white-space: nowrap;
+}
+
+.guest-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 2px;
+}
+
+.guest-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: rgba(255, 159, 10, .15);
+  color: var(--amber-ink);
+}
+
+.who-guest {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.guest-box small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.guest-gone {
+  text-align: center;
+  max-width: 360px;
+  padding: 0 24px;
+}
+
+.guest-gone .logo {
+  margin: 0 auto;
+}
+
+.guest-gone h2 {
+  margin: 14px 0 6px;
+  font-size: 19px;
+}
+
+.guest-gone p {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* hide editing controls for guests (belt — writes are also blocked server-side) */
+.app[data-role="guest"] .row-actions,
+.app[data-role="guest"] .add-btn,
+.app[data-role="guest"] .pay-action,
+.app[data-role="guest"] .tcheck {
+  display: none !important;
+}

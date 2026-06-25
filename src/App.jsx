@@ -36,13 +36,26 @@ const SEARCHABLE = new Set(["tasks", "employees", "finance", "meetings", "activi
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,
     cloud, session, account, authReady, signOut,
+    isGuest, guestMeta, guestStatus,
     view, setView, search, setSearch, openEditor, exportData, importData, clearAll, isPaid } = useStore()
   const fileRef = useRef()
 
-  // Cloud auth gates
-  if (cloud && !authReady) return <div className="splash"><div className="logo">M</div></div>
-  if (cloud && !session) return <Login />
+  // Guest (shared view-only link) gates — checked before auth so guests skip Login
+  if (cloud && isGuest && guestStatus === "loading") return <div className="splash"><div className="logo">M</div></div>
+  if (cloud && isGuest && guestStatus === "invalid") return (
+    <div className="splash"><div className="guest-gone">
+      <div className="logo">M</div>
+      <h2>This link isn’t available</h2>
+      <p>The share link has expired or been turned off. Ask whoever sent it for a new one.</p>
+    </div></div>
+  )
 
+  // Cloud auth gates (normal signed-in users)
+  if (cloud && !isGuest && !authReady) return <div className="splash"><div className="logo">M</div></div>
+  if (cloud && !isGuest && !session) return <Login />
+
+  // guests only see the sections their link allows
+  const nav = (isGuest && guestMeta) ? NAV.filter(n => guestMeta.sections.includes(n.key)) : NAV
   const ViewComp = VIEWS[view]
   const meetBadge = db.meetings.filter(m => !m.done && daysBetween(m.datetime) >= 0 && daysBetween(m.datetime) <= 2).length
   const payBadge = db.employees.filter(e => e.status === "active").filter(e => {
@@ -61,7 +74,7 @@ export default function App() {
           <div className="logo">M</div>
           <div><b>{L.appName}</b><small>{L.appSub}</small></div>
         </div>
-        {NAV.map(n => (
+        {nav.map(n => (
           <div key={n.key} className={`nav-item ${view === n.key ? "active" : ""}`} onClick={() => setView(n.key)}>
             {view === n.key && <motion.div className="hl" layoutId="navHL" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className="ic"><Icon name={n.icon} size={18} /></span>
@@ -70,6 +83,15 @@ export default function App() {
           </div>
         ))}
         <div className="side-foot">
+          {isGuest ? (
+            <div className="guest-box">
+              <span className="guest-pill"><Icon name="eye" size={13} /> View only</span>
+              <span className="who-guest">{guestMeta?.label}</span>
+              <small>{guestMeta?.expires_at
+                ? "Access until " + new Date(guestMeta.expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                : "Access doesn’t expire"}</small>
+            </div>
+          ) : (<>
           <button className="btn-soft" onClick={exportData}><Icon name="download" size={16} /> {L.exportData}</button>
           <button className="btn-soft" onClick={() => fileRef.current.click()}><Icon name="upload" size={16} /> {L.importData}</button>
           {!readOnly && (
@@ -77,6 +99,7 @@ export default function App() {
           )}
           <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
             onChange={e => e.target.files[0] && importData(e.target.files[0])} />
+          </>)}
           {cloud && session && (
             <div className="account-box">
               <div className="who">
@@ -95,6 +118,12 @@ export default function App() {
             <h1>{t("titles." + view)}</h1>
             <div className="sub">{t("subs." + view)}</div>
           </div>
+
+          {isGuest && (
+            <span className="guest-banner" title="You're viewing a read-only shared link">
+              <Icon name="eye" size={14} /> Guest · read only
+            </span>
+          )}
 
           {canPreview && (
             <div className="role-toggle" title="Switch between editing and what your boss sees">

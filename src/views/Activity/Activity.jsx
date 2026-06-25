@@ -19,8 +19,120 @@ const emailInitials = (e) => {
   return ((parts[0]?.[0] || "?") + (parts[1]?.[0] || "")).toUpperCase()
 }
 
+/* ---------- Shared view-only links (managers/boss create & revoke) ---------- */
+const SHARE_SECTIONS = [
+  ["dashboard", "Dashboard"], ["tasks", "Tasks"], ["meetings", "Meetings"], ["projects", "Projects"],
+  ["employees", "Employees"], ["teams", "Teams"], ["payroll", "Payroll"], ["finance", "Finance"],
+  ["diagram", "Diagram"], ["activity", "Activity"],
+]
+const SHARE_DURATIONS = [["forever", "Forever"], ["1h", "1 hour"], ["1d", "1 day"], ["7d", "7 days"], ["30d", "30 days"]]
+const SHARE_SENSITIVE = new Set(["payroll", "finance", "employees"])
+const expiresFromChoice = (c) => {
+  if (c === "forever") return null
+  const ms = { "1h": 3600e3, "1d": 86400e3, "7d": 7 * 86400e3, "30d": 30 * 86400e3 }[c]
+  return new Date(Date.now() + ms).toISOString()
+}
+const linkUrlFor = (token) => `${window.location.origin}${window.location.pathname}?view=${token}`
+
+function ShareLinksPanel() {
+  const { createViewLink, listViewLinks, revokeViewLink, notify, timeAgo, ask } = useStore()
+  const [links, setLinks] = useState([])
+  const [open, setOpen] = useState(false)
+  const [label, setLabel] = useState("")
+  const [secs, setSecs] = useState(["dashboard"])
+  const [dur, setDur] = useState("7d")
+  const [busy, setBusy] = useState(false)
+
+  const refresh = () => listViewLinks().then(setLinks).catch(() => {})
+  useEffect(() => { refresh() }, [])
+
+  const toggleSec = (k) => setSecs(s => s.includes(k) ? s.filter(x => x !== k) : [...s, k])
+  const create = async () => {
+    if (!label.trim() || secs.length === 0) { notify("Add a name and pick at least one section", "error"); return }
+    setBusy(true)
+    try {
+      const token = await createViewLink({ label: label.trim(), sections: secs, expiresAt: expiresFromChoice(dur) })
+      try { await navigator.clipboard.writeText(linkUrlFor(token)) } catch (e) {}
+      notify("Link created & copied to clipboard", "success")
+      setLabel(""); setSecs(["dashboard"]); setDur("7d"); setOpen(false); refresh()
+    } catch (e) { notify("Couldn't create the link", "error") }
+    setBusy(false)
+  }
+  const copy = async (token) => { try { await navigator.clipboard.writeText(linkUrlFor(token)); notify("Link copied", "success") } catch (e) {} }
+  const remove = async (lk) => {
+    if (await ask({ title: "Delete share link", message: `Stop “${lk.label}” from viewing? The link stops working immediately.`, confirmText: "Delete" })) {
+      try { await revokeViewLink(lk.token); refresh(); notify("Link deleted", "info") } catch (e) { notify("Couldn't delete", "error") }
+    }
+  }
+  const expiryText = (lk) => {
+    if (!lk.expires_at) return "Forever"
+    const t = new Date(lk.expires_at)
+    return (t < new Date() ? "Expired " : "Until ") + t.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+  }
+
+  return (
+    <div className="panel">
+      <div className="panel-h">
+        <span className="hicon"><Icon name="signal" size={16} /></span>
+        <h2>Shared view links</h2>
+        <span className="count">{links.length}</span>
+        <div className="right">
+          <button className="btn ghost sm" onClick={() => setOpen(o => !o)}><Icon name="plus" size={14} /> New link</button>
+        </div>
+      </div>
+
+      {open && (
+        <div className={styles.shareForm}>
+          <input className={styles.shareInput} placeholder="Who is this for? (e.g. Investor, Accountant)" value={label} onChange={e => setLabel(e.target.value)} autoFocus />
+          <div className={styles.shareSecs}>
+            {SHARE_SECTIONS.map(([k, lbl]) => (
+              <span key={k} className={`pill ${secs.includes(k) ? "on" : ""}`} onClick={() => toggleSec(k)}>
+                {lbl}{SHARE_SENSITIVE.has(k) ? " •" : ""}
+              </span>
+            ))}
+          </div>
+          {secs.some(s => SHARE_SENSITIVE.has(s)) && (
+            <div className={styles.shareWarn}><Icon name="alert" size={13} /> This link will expose salaries / financial / staff details (marked •).</div>
+          )}
+          <div className={styles.shareFoot}>
+            <label>Access for:&nbsp;
+              <select value={dur} onChange={e => setDur(e.target.value)}>
+                {SHARE_DURATIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
+            <button className="btn" disabled={busy} onClick={create}>{busy ? "…" : "Create link"}</button>
+          </div>
+        </div>
+      )}
+
+      {links.length === 0
+        ? <EmptyState icon="signal" text="No share links yet" />
+        : (
+          <div className={styles.shareList}>
+            {links.map(lk => (
+              <div className={styles.shareRow} key={lk.token}>
+                <div className={styles.shareMain}>
+                  <b>{lk.label}</b>
+                  <div className={styles.shareChips}>{(lk.sections || []).map(s => <span className="tag gray" key={s}>{s}</span>)}</div>
+                </div>
+                <div className={styles.shareRowMeta}>
+                  <small>{expiryText(lk)}</small>
+                  <small className="muted">{lk.last_seen ? "opened " + timeAgo(new Date(lk.last_seen).getTime()) : "not opened yet"}</small>
+                </div>
+                <div className="row-actions">
+                  <button className="iconbtn" title="Copy link" onClick={() => copy(lk.token)}><Icon name="copy" size={16} /></button>
+                  <button className="iconbtn del" title="Delete link" onClick={() => remove(lk)}><Icon name="trash" size={16} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+    </div>
+  )
+}
+
 export default function Activity() {
-  const { db, presence, session, timeAgo, fmtDateTime, account, search } = useStore()
+  const { db, presence, session, timeAgo, fmtDateTime, account, search, isGuest } = useStore()
   const [, tick] = useState(0)
   const [filter, setFilter] = useState("all")  // 'all' or a userId
   useEffect(() => {
@@ -64,6 +176,7 @@ export default function Activity() {
 
   return (
     <div>
+      {!isGuest && <ShareLinksPanel />}
       <div className="grid2">
         {/* Online right now */}
         <div className="panel">
