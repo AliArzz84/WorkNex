@@ -1,75 +1,135 @@
-# راه‌اندازی بک‌اند (Supabase) — قدم‌به‌قدم
+# راهنمای کارهای دستیِ Supabase (ادمین)
 
-این کارها رو فقط **یک‌بار** انجام می‌دی. بعدش برنامه آنلاین می‌شه و رئیست می‌تونه لاگین کنه و ببینه.
-تا وقتی این مراحل رو انجام ندی، برنامه مثل قبل لوکال کار می‌کنه (داده روی مرورگر).
-
----
-
-## ۱) ساختن پروژه‌ی Supabase (رایگان)
-1. برو به **https://supabase.com** و با گوگل/گیت‌هاب ثبت‌نام کن.
-2. **New project** بزن. یه اسم بده، یه **Database Password** بذار (یادداشتش کن)، یه ریجن نزدیک انتخاب کن (مثلاً Frankfurt).
-3. حدود یک دقیقه صبر کن تا پروژه ساخته بشه.
-
-## ۲) ساختن جدول‌ها (دیتابیس)
-1. توی داشبورد Supabase، از منوی چپ برو **SQL Editor → New query**.
-2. کل محتوای فایل **`supabase/schema.sql`** (توی همین پروژه) رو کپی کن، بچسبون، و **Run** بزن.
-3. باید پیغام موفقیت ببینی (Success).
-
-## ۳) گرفتن کلیدها و گذاشتنشون توی برنامه
-1. توی Supabase برو **Project Settings → API**.
-2. این دوتا رو کپی کن:
-   - **Project URL**
-   - **anon public** key (زیر بخش Project API keys)
-3. توی پوشه‌ی پروژه، یه فایل به اسم **`.env.local`** بساز (از روی `.env.example` کپی کن) و پُرش کن:
-   ```
-   VITE_SUPABASE_URL=https://xxxx.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJhbGc...
-   ```
-4. سرور رو ری‌استارت کن (خیلی مهم — Vite فقط موقع شروع env رو می‌خونه):
-   ```
-   npm run dev
-   ```
-
-## ۴) ساختن اکانت خودت و رئیس
-> 🔒 **مهم:** دسترسی فقط با دعوته. هر کسی بخواد Sign up کنه، اول باید ایمیلش توی لیست `allowed_emails` باشه، وگرنه موقع ثبت‌نام خطا می‌گیره. (لیست توی `schema.sql` هست؛ اضافه‌کردن نفر جدید پایین‌تر توضیح داده شده.)
-
-1. برنامه که باز شد، صفحه‌ی **Sign in / Sign up** میاد. روی **Sign up** برو و با ایمیلی که توی allowlist هست ثبت‌نام کن.
-   - 💡 برای راحتی موقع تست: توی Supabase برو **Authentication → Providers → Email** و گزینه‌ی **Confirm email** رو موقتاً خاموش کن، تا نیاز به تأیید ایمیل نباشه.
-2. حالا خودت رو **مدیر** کن (فقط برچسبه). برگرد به **SQL Editor** و این رو Run کن:
-   ```sql
-   update public.profiles set role = 'manager' where email = 'ali@cognivise.co.uk';
-   ```
-3. **رئیست** هم با ایمیل خودش (که توی allowlist هست) **Sign up** کنه — خودکار نقش **boss** می‌گیره.
-4. بعد از مدیرشدن، یه‌بار از برنامه **Sign out / Sign in** کن تا نقش جدید اعمال بشه. اولین ورودِ مدیر، داده‌ی نمونه رو می‌سازه.
-
-## ۵) آنلاین‌کردن (تا رئیس از خونه‌ش ببینه)
-وقتی لوکال درست کار کرد، دیپلوی می‌کنیم (رایگان):
-1. کد رو روی **GitHub** بذار.
-2. توی **https://vercel.com** اکانت بساز → **Import** همون ریپو.
-3. توی Vercel، همون دو متغیر `VITE_SUPABASE_URL` و `VITE_SUPABASE_ANON_KEY` رو توی **Environment Variables** وارد کن.
-4. **Deploy** بزن → یه لینک می‌گیری که به رئیست می‌دی. 🎉
-
-> ⚠️ فایل `.env.local` رو هیچ‌وقت توی گیت‌هاب عمومی نذار (کلیدهاته). توی Vercel جداگانه واردشون می‌کنی.
+> نصبِ اولیه **انجام شده**. این فایل فقط کارهاییه که هر از گاهی خودت توی Supabase انجام می‌دی.
+> همه‌ی کوئری‌ها رو اینجا اجرا کن: **Supabase → SQL Editor → New query → بچسبون → Run**.
+> (ایمیل‌های توی مثال‌ها فیک‌ان — جای `someone@example.com` ایمیلِ واقعی رو بذار.)
 
 ---
 
-## امنیت و دسترسی (invite-only)
+## ۱) مدیریتِ دسترسی — کی می‌تونه وارد بشه
+دسترسی **فقط با دعوت**ه. کسی می‌تونه Sign up کنه که ایمیلش توی لیستِ `allowed_emails` باشه.
 
-فقط ایمیل‌هایی که توی جدول `allowed_emails` باشن می‌تونن Sign up کنن و داده‌ها رو ببینن. هر کس دیگه‌ای:
-- موقع Sign up خطا می‌گیره (تریگرِ دیتابیس جلوش رو می‌گیره)،
-- و حتی اگه یه‌جوری اکانت بسازه، RLS نمی‌ذاره **هیچ داده‌ای** ببینه یا تغییر بده.
+**دیدنِ لیستِ افرادِ مجاز:**
+```sql
+select email, added_at from public.allowed_emails order by added_at;
+```
 
-الان این سه ایمیل مجازن: `ali@cognivise.co.uk`، `aliarzvi@gmail.com`، `amir@chromeclouds.co.uk`.
-
-**اضافه‌کردن یه نفر جدید** (باید *قبل* از اینکه Sign up کنه انجام بشه) — توی SQL Editor:
+**اضافه‌کردنِ یه نفرِ جدید** (حتماً *قبل* از اینکه Sign up کنه):
 ```sql
 insert into public.allowed_emails (email) values ('newperson@example.com');
 ```
-**حذف دسترسی یه نفر** (به‌علاوه اکانتش رو از **Authentication → Users** پاک کن):
+
+**حذفِ دسترسیِ یه نفر** (اکانتش رو هم از **Authentication → Users** پاک کن):
 ```sql
 delete from public.allowed_emails where email = 'someone@example.com';
 ```
 
-> ℹ️ نقش‌ها (مدیر/رئیس) فقط برچسبن و دسترسی رو محدود نمی‌کنن؛ هر دو می‌تونن ویرایش کنن. «نمای رئیس» هم فقط یه پیش‌نمایشِ چیدمانه. اگه روزی خواستی رئیس **واقعاً** فقط‌خواندنی باشه، سیاست `ws_allowed` رو طوری عوض کن که برای نوشتن `role = 'manager'` هم چک بشه.
+---
 
-داده‌ها زنده‌ان: هر تغییری که تو بدی، چند ثانیه بعد روی صفحه‌ی رئیس هم آپدیت می‌شه (Realtime).
+## ۲) برچسبِ مدیر / رئیس (اختیاری — فقط نمایشی)
+نقش دسترسی رو محدود نمی‌کنه، فقط برچسبیه که توی صفحه‌ی Activity دیده می‌شه.
+```sql
+update public.profiles set role = 'manager' where email = 'someone@example.com';
+-- یا 'boss'
+```
+
+---
+
+## ۳) بکاپ‌ها
+
+### الف) تاریخچه‌ی داخلِ دیتابیس (هر تغییر ذخیره می‌شه)
+**دیدنِ لیستِ نسخه‌ها:**
+```sql
+select id, saved_at, saved_by from public.workspace_history order by saved_at desc;
+```
+
+**دیدنِ محتوای یه نسخه‌ی خاص:**
+```sql
+select data from public.workspace_history where id = 4;   -- شماره رو از لیستِ بالا بردار
+```
+
+**برگردوندنِ داده به یه نسخه‌ی قبلی (Restore):**
+```sql
+update public.workspaces
+set data = (select data from public.workspace_history where id = 4)
+where id = 'default';
+```
+> چند ثانیه بعد روی خودِ اپ هم زنده آپدیت می‌شه.
+
+### ب) بکاپِ روزانه به Google Drive
+فایل‌ها با اسمِ `worknexus-YYYY-MM-DD.json` توی فولدرِ Drive ذخیره می‌شن.
+
+**گرفتنِ یه بکاپِ دستی همین الان:**
+```sql
+select public.run_gdrive_backup();
+```
+
+**دیدنِ نتیجه‌ی آخرین ارسال:**
+```sql
+select id, status_code, left(content, 200) as content, error_msg
+from net._http_response order by id desc limit 1;
+```
+
+**دیدنِ زمان‌بندیِ فعلی:**
+```sql
+select jobname, schedule, active from cron.job;
+```
+
+**تغییرِ زمان‌بندی** (هر اسمِ job همونه، فقط زمان عوض می‌شه):
+```sql
+-- روزی یک‌بار، ۲ بامداد (پیش‌فرض):
+select cron.schedule('gdrive-daily-backup', '0 2 * * *',  $$ select public.run_gdrive_backup(); $$);
+-- هر ۶ ساعت:
+select cron.schedule('gdrive-daily-backup', '0 */6 * * *', $$ select public.run_gdrive_backup(); $$);
+-- هر ساعت:
+select cron.schedule('gdrive-daily-backup', '0 * * * *',  $$ select public.run_gdrive_backup(); $$);
+```
+
+**خاموش‌کردنِ بکاپِ Drive:**
+```sql
+select cron.unschedule('gdrive-daily-backup');
+```
+
+---
+
+## ۴) حذفِ کاملِ یه اکانت
+وقتی یه اکانت رو از Auth پاک می‌کنی، ردِّش (لیستِ اکانت‌ها + لاگِ فعالیت) توی صفحه‌ی Activity می‌مونه. برای پاک‌سازیِ کامل سه قدم:
+
+**۱. حذف از Auth:** برو **Authentication → Users** و اکانت رو Delete کن.
+
+**۲. حذف از لیستِ مجاز:**
+```sql
+delete from public.allowed_emails where email = 'someone@example.com';
+```
+
+**۳. پاک‌کردنِ ردِّش از Activity** — اول `userId` ـش رو پیدا کن:
+```sql
+select key as user_id, value->>'email' as email
+from public.workspaces, jsonb_each(data->'seen') where id = 'default';
+```
+بعد با اون `user_id` این رو اجرا کن (جای `USER_ID_HERE` بذارش):
+```sql
+update public.workspaces
+set data = jsonb_set(
+  data #- '{seen,USER_ID_HERE}',
+  '{activity}',
+  coalesce((
+    select jsonb_agg(e order by ord)
+    from jsonb_array_elements(data->'activity') with ordinality t(e, ord)
+    where e->>'userId' is distinct from 'USER_ID_HERE'
+  ), '[]'::jsonb)
+)
+where id = 'default';
+```
+
+---
+
+## ۵) کارهای داشبوردی (بدونِ SQL)
+- **محافظت در برابر پسوردهای لو‌رفته:** Authentication → Passwords → روشنش کن.
+- **(اختیاری) بستنِ کاملِ ثبت‌نام:** Authentication → Sign In / Up. (دسترسی الان با allowlist کنترل می‌شه، این فقط یه لایه‌ی اضافه‌ست.)
+
+---
+
+## ۶) سلامتِ پروژه
+هر از گاهی یه نگاه به **هشدارهای امنیتی/کارایی** بنداز:
+**Supabase → Advisors** (Security و Performance).
