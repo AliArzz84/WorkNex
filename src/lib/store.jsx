@@ -159,10 +159,15 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     if (!cloud || isGuest) return
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
-    oauthCodeExchanged.then(() => {
+    let done = false
+    const go = () => {
+      if (done) return
+      done = true
       supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
-    })
-    return () => sub?.subscription?.unsubscribe?.()
+    }
+    oauthCodeExchanged.then(go)
+    const t = setTimeout(go, 8000)   // never let a slow/hung code exchange pin the splash screen
+    return () => { clearTimeout(t); sub?.subscription?.unsubscribe?.() }
   }, [cloud])
 
   /* once signed in, find out whether this account's inbox is connected — check again shortly
