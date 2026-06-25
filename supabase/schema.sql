@@ -28,14 +28,16 @@ alter table public.workspaces enable row level security;
 drop policy if exists "profiles_read"   on public.profiles;
 drop policy if exists "profiles_insert" on public.profiles;
 create policy "profiles_read"   on public.profiles for select to authenticated using (true);
-create policy "profiles_insert" on public.profiles for insert to authenticated with check (auth.uid() = id);
+-- wrap auth.uid() in a subselect so it's evaluated once per query, not once per row (perf)
+create policy "profiles_insert" on public.profiles for insert to authenticated with check ((select auth.uid()) = id);
 
 -- workspaces: any authenticated (signed-in) user can READ and WRITE.
 -- Both the manager and the boss can edit. Data is still private — only
 -- signed-in users can touch it.
+-- ws_write is FOR ALL, which already covers SELECT — so a separate ws_read policy is
+-- redundant (it just makes every read evaluate two permissive policies). One policy is enough.
 drop policy if exists "ws_read"  on public.workspaces;
 drop policy if exists "ws_write" on public.workspaces;
-create policy "ws_read"  on public.workspaces for select to authenticated using (true);
 create policy "ws_write" on public.workspaces for all to authenticated using (true) with check (true);
 
 -- 4) Auto-create a profile whenever someone signs up.
