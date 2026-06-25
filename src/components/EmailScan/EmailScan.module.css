@@ -1,0 +1,208 @@
+.trigger {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--txt);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.trigger:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dot {
+    position: absolute;
+    top: -4px;
+    inset-inline-end: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+}
+
+.modal {
+    max-width: 460px;
+    width: 100%;
+}
+
+.body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.conn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.connOn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-ink, #1a7f37);
+}
+
+.connOn i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #34c759;
+    display: inline-block;
+}
+
+.connOff {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.connOff p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 0;
+}
+
+.linkbtn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.linkbtn:hover {
+    color: var(--txt);
+}
+
+.scanBtn {
+    width: 100%;
+    justify-content: center;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.empty {
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 10px 0;
+}
+
+/* ---- card ---- */
+.card {
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    padding: 13px;
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.title {
+    font-size: 14.5px;
+    margin: 0 0 4px;
+}
+
+.from {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.summary {
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 0 0 6px;
+}
+
+.meta {
+    font-size: 12.5px;
+    color: var(--txt);
+    margin-bottom: 4px;
+}
+
+.ask {
+    font-size: 12.5px;
+    color: var(--txt);
+    margin: 8px 0;
+}
+
+.slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.slot {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--txt);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.slot:hover {
+    border-color: var(--accent);
+}
+
+.slotOn {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.time {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg, var(--surface));
+    color: var(--txt);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 10px;
+}
+
+.time:focus {
+    border-color: var(--accent);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}

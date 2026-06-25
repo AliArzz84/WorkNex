@@ -1,15 +1,17 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
-  I18N, sampleData, uid, daysBetween, nextPayday, periodKey, isPaid as isPaidPure, timeAgo
+  I18N, uid, daysBetween, nextPayday, periodKey, isPaid as isPaidPure, timeAgo
 } from './data.js'
 import { supabase, isSupabaseConfigured } from './supabaseClient.js'
 
 const KEY = "bm_react_v2"
 const MAX_LOG = 250   // how many activity entries we keep in the shared workspace
-const EMPTY = { teams: [], employees: [], projects: [], meetings: [], businesses: [], transactions: [], tasks: [], diagram: { nodes: [], edges: [] }, payments: {}, activity: [], seen: {}, currency: "£" }
+const EMPTY = { teams: [], employees: [], projects: [], meetings: [], businesses: [], transactions: [], tasks: [], suggestions: [], emailSeen: [], diagram: { nodes: [], edges: [] }, payments: {}, activity: [], seen: {}, currency: "£" }
 // Always guarantee the collections exist so views never crash on missing arrays.
 const norm = (d) => ({
   ...EMPTY, ...(d || {}),
+  suggestions: (d && Array.isArray(d.suggestions)) ? d.suggestions : [],
+  emailSeen: (d && Array.isArray(d.emailSeen)) ? d.emailSeen : [],
   payments: (d && d.payments) || {},
   activity: (d && Array.isArray(d.activity)) ? d.activity : [],
   seen: (d && d.seen) || {},
@@ -22,7 +24,7 @@ function loadLocalDB() {
   const raw = localStorage.getItem(KEY)
   // norm() guarantees every collection exists, so older/partial blobs can't crash the views
   if (raw) { try { return norm(JSON.parse(raw)) } catch (e) {} }
-  return sampleData("en")
+  return norm(null)   // fresh start = empty workspace (no sample data)
 }
 
 export function StoreProvider({ children }) {
@@ -52,6 +54,10 @@ export function StoreProvider({ children }) {
     const o = typeof opts === "string" ? { message: opts } : (opts || {})
     setDialog({ kind: "prompt", confirmText: "Save", cancelText: "Cancel", value: "", danger: false, ...o, resolve })
   }), [])
+  // extra-destructive confirm: user must type `confirmPhrase` before the button enables
+  const askType = useCallback((opts) => new Promise(resolve => {
+    setDialog({ kind: "type", confirmText: "Delete", cancelText: "Cancel", danger: true, value: "", ...(opts || {}), resolve })
+  }), [])
   const resolveDialog = useCallback((result) => {
     setDialog(d => { d?.resolve?.(result); return null })
   }, [])
@@ -66,6 +72,7 @@ export function StoreProvider({ children }) {
   const [authReady, setAuthReady] = useState(!cloud)  // local mode: ready immediately
   const [dataReady, setDataReady] = useState(!cloud)
   const [presence, setPresence] = useState([])        // who else is online/editing
+  const [emailConnected, setEmailConnected] = useState(false)  // Gmail linked for inbox scan
   const lastSynced = useRef("")
   const writeTimer = useRef(null)
   const presenceCh = useRef(null)
@@ -145,12 +152,29 @@ export function StoreProvider({ children }) {
   useEffect(() => { if (!cloud) localStorage.setItem(KEY, JSON.stringify(db)) }, [db, cloud])
 
   /* === cloud: auth session === */
+  // When the user comes back from a Google "Connect Gmail" OAuth, the session carries a
+  // provider_refresh_token. Persist it (locked, service-role-only table) so scan-email can
+  // mint fresh access tokens later. The client can write but never read it back.
+  const captureProviderToken = useCallback(async (s) => {
+    if (!s?.provider_refresh_token || !s.user) return
+    try {
+      await supabase.from("email_connections").upsert({
+        user_id: s.user.id, email: s.user.email, provider: "google", refresh_token: s.provider_refresh_token,
+      })
+      setEmailConnected(true)
+    } catch (e) { /* ignore — table may not exist until the SQL is run */ }
+  }, [])
   useEffect(() => {
     if (!cloud || isGuest) return
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s) })
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); captureProviderToken(data.session) })
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); captureProviderToken(s) })
     return () => sub?.subscription?.unsubscribe?.()
   }, [cloud])
+
+  /* once signed in, find out whether this account's inbox is already connected */
+  useEffect(() => {
+    if (cloud && !isGuest && session?.user?.id) refreshEmailStatus()
+  }, [cloud, session?.user?.id])
 
   /* === cloud: load role + workspace + realtime when logged in === */
   useEffect(() => {
@@ -168,11 +192,11 @@ export function StoreProvider({ children }) {
 
       const { data: ws } = await supabase.from("workspaces").select("data").eq("id", "default").single()
       let raw = ws?.data
-      // Only seed sample data the very first time. Once seeded (or cleared), respect what's there.
+      // First time only: start with an EMPTY workspace and mark it seeded so we never re-init.
       const alreadySetup = raw && (raw.seeded === true || (Array.isArray(raw.employees) && raw.employees.length > 0))
       let data
       if (!alreadySetup) {
-        data = norm(sampleData("en"))
+        data = norm(null)
         data.seeded = true
         await supabase.from("workspaces").update({ data, updated_at: new Date().toISOString() }).eq("id", "default")
       } else {
@@ -202,12 +226,8 @@ export function StoreProvider({ children }) {
         .subscribe()
     })().catch(e => console.error("Workspace load failed:", e))
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
-    // Key on the user id only — a token refresh keeps the same id, so we don't
-    // reload (and wipe unsaved local edits) every time the session object changes.
   }, [cloud, session?.user?.id])
 
-  /* === guest: load a shared view-only link, then re-check it periodically so
-        revoking / expiry takes effect within a minute (and data stays fresh) === */
   useEffect(() => {
     if (!isGuest) return
     let cancelled = false
@@ -294,6 +314,71 @@ export function StoreProvider({ children }) {
   const revokeViewLink = useCallback(async (token) => {
     const { error } = await supabase.from("view_links").delete().eq("token", token)
     if (error) throw error
+  }, [])
+
+  /* in-app AI assistant — calls the `assistant` Edge Function (Claude) */
+  const askAssistant = useCallback(async (history) => {
+    const { data, error } = await supabase.functions.invoke("assistant", { body: { messages: history } })
+    if (error) {
+      let msg = error.message
+      try { const body = await error.context?.json?.(); if (body?.error) msg = body.error } catch (e) {}
+      throw new Error(msg || "Assistant unavailable")
+    }
+    if (data?.error) throw new Error(data.error)
+    return data   // { reply, changed }
+  }, [])
+
+  /* email → meeting: send a pasted/forwarded email to the `parse-email` function (Claude)
+     and get back a structured proposal. This only ANALYSES — it writes nothing. */
+  const parseEmail = useCallback(async (text) => {
+    const d = new Date(), pad = (n) => String(n).padStart(2, "0")
+    const nowLocal = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    let tz; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone } catch (e) { tz = "Europe/London" }
+    const { data, error } = await supabase.functions.invoke("parse-email", { body: { text, now: nowLocal, tz } })
+    if (error) {
+      let msg = error.message
+      try { const body = await error.context?.json?.(); if (body?.error) msg = body.error } catch (e) {}
+      throw new Error(msg || "Couldn't analyse that email")
+    }
+    if (data?.error) throw new Error(data.error)
+    return data.proposal   // { is_meeting, title, attendees, has_explicit_time, datetime, proposed_slots, location, agenda, summary }
+  }, [])
+
+  /* === live Gmail inbox scan === */
+  // is the current user's inbox connected? (reads the locked table via a SECURITY DEFINER rpc)
+  const refreshEmailStatus = useCallback(async () => {
+    try { const { data } = await supabase.rpc("has_email_connection"); setEmailConnected(!!data) } catch (e) {}
+  }, [])
+  // kick off Google OAuth asking for read-only Gmail access; on return the token is captured above
+  const connectGmail = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        scopes: "https://www.googleapis.com/auth/gmail.readonly",
+        redirectTo: window.location.origin,
+        queryParams: { access_type: "offline", prompt: "consent" },
+      },
+    })
+    if (error) throw error   // (success navigates away to Google)
+  }, [])
+  const disconnectGmail = useCallback(async () => {
+    try { await supabase.from("email_connections").delete().eq("user_id", session?.user?.id) } catch (e) {}
+    setEmailConnected(false)
+  }, [session?.user?.id])
+  // ask the function to read recent inbox emails and return any meetings it found
+  const scanInbox = useCallback(async () => {
+    const d = new Date(), pad = (n) => String(n).padStart(2, "0")
+    const nowLocal = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    let tz; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone } catch (e) { tz = "Europe/London" }
+    const { data, error } = await supabase.functions.invoke("scan-email", { body: { now: nowLocal, tz } })
+    if (error) {
+      let msg = error.message
+      try { const body = await error.context?.json?.(); if (body?.error) msg = body.error } catch (e) {}
+      throw new Error(msg || "Couldn't scan your inbox")
+    }
+    if (data?.error === "not_connected" || data?.error === "reconnect_needed") { setEmailConnected(data.error !== "not_connected"); return { needsConnect: true, reason: data.error } }
+    if (data?.error) throw new Error(data.error)
+    return { meetings: data.meetings || [], scanned: data.scanned || 0 }
   }, [])
 
   /* translation */
@@ -408,6 +493,56 @@ export function StoreProvider({ children }) {
       return withLog(prev, next, logEntry("update", "task", k?.title, k && !k.done ? "completed" : "reopened"))
     })
   }, [])
+  /* === email-suggested meetings === */
+  // stash a Claude-parsed proposal as a pending suggestion (newest first, capped)
+  const addSuggestion = useCallback((proposal, rawText = "") => {
+    setDb(prev => ({
+      ...prev,
+      suggestions: [
+        { id: uid("sg"), createdAt: Date.now(), status: "pending", raw: String(rawText).slice(0, 600), ...proposal },
+        ...(prev.suggestions || []),
+      ].slice(0, 50),
+    }))
+  }, [])
+  const dismissSuggestion = useCallback((id) => {
+    setDb(prev => {
+      const s = (prev.suggestions || []).find(x => x.id === id)
+      const seen = s?.sourceId ? [...new Set([...(prev.emailSeen || []), s.sourceId])].slice(-500) : (prev.emailSeen || [])
+      return { ...prev, suggestions: (prev.suggestions || []).filter(x => x.id !== id), emailSeen: seen }
+    })
+  }, [])
+  // turn a suggestion into a real meeting at `datetime`, then drop the suggestion (atomic)
+  const acceptSuggestion = useCallback((id, datetime) => {
+    setDb(prev => {
+      const s = (prev.suggestions || []).find(x => x.id === id)
+      if (!s) return prev
+      // try to match named attendees to existing employees so avatars show; keep the rest as text
+      const names = (s.attendees || []).map(n => String(n || "").trim()).filter(Boolean)
+      const matchedIds = [], unmatched = []
+      for (const n of names) {
+        const token = n.split(/[<(@]/)[0].trim().toLowerCase()
+        const emp = prev.employees.find(e => {
+          const en = (e.name || "").toLowerCase()
+          return en && token && (en === token || en.includes(token) || token.includes(en))
+        })
+        if (emp && !matchedIds.includes(emp.id)) matchedIds.push(emp.id)
+        else if (!emp) unmatched.push(n)
+      }
+      const notesParts = []
+      if (s.agenda) notesParts.push(s.agenda)
+      if (unmatched.length) notesParts.push("With: " + unmatched.join(", "))
+      notesParts.push("(added from an email)")
+      const meeting = {
+        id: uid("m"), title: s.title || "Meeting", datetime: datetime || s.datetime || "",
+        priority: "med", attendees: matchedIds, location: s.location || "", projectId: "",
+        notes: notesParts.join("\n"), done: false, sourceId: s.sourceId || "",
+      }
+      const seen = s.sourceId ? [...new Set([...(prev.emailSeen || []), s.sourceId])].slice(-500) : (prev.emailSeen || [])
+      const next = { ...prev, meetings: [...prev.meetings, meeting], suggestions: prev.suggestions.filter(x => x.id !== id), emailSeen: seen }
+      return withLog(prev, next, logEntry("create", "meeting", meeting.title, "from email"))
+    })
+  }, [])
+
   const saveDiagram = useCallback((diagram) => {
     setDb(prev => {
       // the diagram autosaves on every drag — coalesce rapid edits into one log line
@@ -477,26 +612,25 @@ export function StoreProvider({ children }) {
     }
     r.readAsText(file)
   }, [L, notify])
-  const resetData = useCallback(async () => {
-    if (await ask({ title: "Load sample data", message: L.replaceSample, confirmText: "Replace", danger: false })) setDb(sampleData(lang))
-  }, [L, lang, ask])
   const clearAll = useCallback(async () => {
-    if (await ask({ title: L.clearAll, message: L.confirmClear, confirmText: L.clearAll, danger: true })) {
+    if (await askType({ title: L.clearAll, message: L.confirmClear, confirmPhrase: "DELETE", confirmText: L.clearAll, danger: true })) {
       // wipe the data but keep the access history + log the wipe itself
       setDb(prev => withLog(prev, { ...EMPTY, seeded: true, seen: prev.seen }, logEntry("delete", "workspace", "All data", "cleared the workspace")))
     }
-  }, [L, ask])
+  }, [L, askType])
 
   const value = {
     db, lang, setLang, theme, toggleTheme, role: effectiveRole, setRole, readOnly, canPreview,
     cloud, session, account, authReady, dataReady, presence, signIn, signUp, signOut,
-    isGuest, guestMeta, guestStatus, createViewLink, listViewLinks, revokeViewLink,
+    isGuest, guestMeta, guestStatus, createViewLink, listViewLinks, revokeViewLink, askAssistant,
+    parseEmail, addSuggestion, acceptSuggestion, dismissSuggestion,
+    emailConnected, connectGmail, disconnectGmail, scanInbox, refreshEmailStatus,
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => { if (!isGuest) setEditing({ type, id }) }, closeEditor: () => setEditing(null),
-    dialog, toast, ask, askText, resolveDialog, notify,
+    dialog, toast, ask, askText, askType, resolveDialog, notify,
     money, fmtToman, toGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
-    exportData, importData, resetData, clearAll,
+    exportData, importData, clearAll,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

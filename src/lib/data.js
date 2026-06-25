@@ -2,12 +2,12 @@
 export const I18N = {
   fa: {
     appName: "داشبورد مدیریت", appSub: "دستیار مدیر",
-    nav: { dashboard: "داشبورد", tasks: "کارها", finance: "مالی", diagram: "دیاگرام", employees: "کارمندان", projects: "پروژه‌ها", meetings: "جلسات", payroll: "حقوق و دستمزد", teams: "تیم‌ها", activity: "فعالیت‌ها" },
+    nav: { dashboard: "داشبورد", tasks: "کارها", finance: "مالی", diagram: "دیاگرام", employees: "کارمندان", projects: "پروژه‌ها", meetings: "جلسات", inbox: "صندوق ایمیل", payroll: "حقوق و دستمزد", teams: "تیم‌ها", activity: "فعالیت‌ها" },
     exportData: "خروجی گرفتن", importData: "ورود اطلاعات", loadSample: "داده نمونه",
     add: "افزودن", save: "ذخیره", cancel: "انصراف", confirmDel: "حذف شود؟",
     print: "پرینت / PDF", roleManager: "مدیر", roleBoss: "نمای رئیس",
-    titles: { dashboard: "داشبورد", tasks: "کارها", finance: "مالی", diagram: "دیاگرام جریان داده", employees: "کارمندان", projects: "پروژه‌ها", meetings: "جلسات", payroll: "حقوق و دستمزد", teams: "تیم‌ها", activity: "فعالیت و دسترسی" },
-    subs: { dashboard: "نمای کلی کسب‌وکار شما", tasks: "کارهایی که باید انجام بدی", finance: "درآمد و هزینه‌ی هر کسب‌وکار", diagram: "دیاگرام DFD رو بکش", employees: "مدیریت تیم و اطلاعات کارکنان", projects: "پروژه‌های جاری و وضعیتشان", meetings: "جلسات پیش‌رو", payroll: "پرداخت حقوق و یادآوری‌ها", teams: "دسته‌بندی تیم‌ها", activity: "چه کسی آنلاین است و چه چیزی تغییر کرده" },
+    titles: { dashboard: "داشبورد", tasks: "کارها", finance: "مالی", diagram: "دیاگرام جریان داده", employees: "کارمندان", projects: "پروژه‌ها", meetings: "جلسات", inbox: "جلسه‌های پیشنهادی", payroll: "حقوق و دستمزد", teams: "تیم‌ها", activity: "فعالیت و دسترسی" },
+    subs: { dashboard: "نمای کلی کسب‌وکار شما", tasks: "کارهایی که باید انجام بدی", finance: "درآمد و هزینه‌ی هر کسب‌وکار", diagram: "دیاگرام DFD رو بکش", employees: "مدیریت تیم و اطلاعات کارکنان", projects: "پروژه‌های جاری و وضعیتشان", meetings: "جلسات پیش‌رو", inbox: "ایمیل کاری رو بذار، جلسه‌اش رو پیدا می‌کنم", payroll: "پرداخت حقوق و یادآوری‌ها", teams: "دسته‌بندی تیم‌ها", activity: "چه کسی آنلاین است و چه چیزی تغییر کرده" },
     kpi: { employees: "کارمند", projects: "پروژه فعال", meetings: "جلسه این هفته", duePay: "حقوق در راه" },
     reminders: "یادآوری‌ها و هشدارها", todayMeetings: "جلسات امروز و پیش‌رو", activeProjects: "پروژه‌های فعال",
     noReminders: "الان چیز فوری‌ای نیست ✅", noData: "هنوز چیزی ثبت نشده",
@@ -37,12 +37,12 @@ export const I18N = {
   },
   en: {
     appName: "Manager Dashboard", appSub: "Your manager assistant",
-    nav: { dashboard: "Dashboard", tasks: "Tasks", finance: "Finance", diagram: "Diagram", employees: "Employees", projects: "Projects", meetings: "Meetings", payroll: "Payroll", teams: "Teams", activity: "Activity" },
+    nav: { dashboard: "Dashboard", tasks: "Tasks", finance: "Finance", diagram: "Diagram", employees: "Employees", projects: "Projects", meetings: "Meetings", inbox: "Inbox", payroll: "Payroll", teams: "Teams", activity: "Activity" },
     exportData: "Export", importData: "Import", loadSample: "Sample data",
     add: "Add", save: "Save", cancel: "Cancel", confirmDel: "Delete this?",
     print: "Print / PDF", roleManager: "Manager", roleBoss: "Boss view",
-    titles: { dashboard: "Dashboard", tasks: "Tasks", finance: "Finance", diagram: "Data Flow Diagram", employees: "Employees", projects: "Projects", meetings: "Meetings", payroll: "Payroll", teams: "Teams", activity: "Activity & Access" },
-    subs: { dashboard: "Overview of your business", tasks: "Things to do", finance: "Income & outgoing per business", diagram: "Draw your DFD", employees: "Manage your team & staff info", projects: "Ongoing projects & status", meetings: "Upcoming meetings", payroll: "Salary payments & reminders", teams: "Team grouping", activity: "Who's online and what changed" },
+    titles: { dashboard: "Dashboard", tasks: "Tasks", finance: "Finance", diagram: "Data Flow Diagram", employees: "Employees", projects: "Projects", meetings: "Meetings", inbox: "Suggested meetings", payroll: "Payroll", teams: "Teams", activity: "Activity & Access" },
+    subs: { dashboard: "Overview of your business", tasks: "Things to do", finance: "Income & outgoing per business", diagram: "Draw your DFD", employees: "Manage your team & staff info", projects: "Ongoing projects & status", meetings: "Upcoming meetings", inbox: "Paste a work email — I'll find the meeting", payroll: "Salary payments & reminders", teams: "Team grouping", activity: "Who's online and what changed" },
     kpi: { employees: "Employees", projects: "Active projects", meetings: "Meetings this week", duePay: "Salaries due" },
     reminders: "Reminders & alerts", todayMeetings: "Today & upcoming meetings", activeProjects: "Active projects",
     noReminders: "Nothing urgent right now ✅", noData: "Nothing here yet",
@@ -116,75 +116,6 @@ export function timeAgo(ts) {
 }
 export function isPaid(db, empId, period) { return !!(db.payments[empId] && db.payments[empId][period]) }
 
-/* ---------- sample data ---------- */
-export function sampleData(lang = "fa") {
-  const fa = lang === "fa"
-  const today = new Date()
-  const d = (off) => { const x = new Date(today); x.setDate(x.getDate() + off); return x.toISOString().slice(0, 10) }
-  const dt = (off, h) => { const x = new Date(today); x.setDate(x.getDate() + off); x.setHours(h, 0, 0, 0); return x.toISOString().slice(0, 16) }
-  const teams = [
-    { id: "t_dev", name: fa ? "توسعه نرم‌افزار" : "Engineering", lead: "e1", members: ["e1", "e2", "e6"] },
-    { id: "t_design", name: fa ? "طراحی" : "Design", lead: "e3", members: ["e3"] },
-    { id: "t_sales", name: fa ? "فروش و بازاریابی" : "Sales & Marketing", lead: "e4", members: ["e4", "e5"] },
-    { id: "t_ops", name: fa ? "عملیات" : "Operations", lead: "e7", members: ["e7"] },
-  ]
-  const employees = [
-    { id: "e1", name: fa ? "سارا محمدی" : "Sara Mohammadi", role: fa ? "مدیر فنی" : "Tech Lead", country: "Iran", email: "sara@company.com", phone: "0912-000-0001", salary: 3500, payDay: 1, hireDate: "2022-03-01", status: "active" },
-    { id: "e2", name: fa ? "علی رضایی" : "Ali Rezaei", role: fa ? "برنامه‌نویس ارشد" : "Senior Developer", country: "Iran", email: "ali@company.com", phone: "0912-000-0002", salary: 3000, payDay: 1, hireDate: "2022-09-15", status: "active" },
-    { id: "e3", name: fa ? "نگار کریمی" : "Negar Karimi", role: fa ? "طراح محصول" : "Product Designer", country: "United Kingdom", email: "negar@company.com", phone: "0912-000-0003", salary: 2600, payDay: 5, hireDate: "2023-01-10", status: "active" },
-    { id: "e4", name: fa ? "رضا قاسمی" : "Reza Ghasemi", role: fa ? "مدیر فروش" : "Sales Manager", country: "Iran", email: "reza@company.com", phone: "0912-000-0004", salary: 2900, payDay: 1, hireDate: "2021-06-20", status: "active" },
-    { id: "e5", name: fa ? "مریم احمدی" : "Maryam Ahmadi", role: fa ? "کارشناس بازاریابی" : "Marketing Specialist", country: "Turkey", email: "maryam@company.com", phone: "0912-000-0005", salary: 2200, payDay: 5, hireDate: "2023-08-01", status: "leave" },
-    { id: "e6", name: fa ? "حسین موسوی" : "Hossein Mousavi", role: "DevOps", country: "Germany", email: "hossein@company.com", phone: "0912-000-0006", salary: 3200, payDay: 1, hireDate: "2022-11-05", status: "active" },
-    { id: "e7", name: fa ? "فاطمه نوری" : "Fatemeh Nouri", role: fa ? "مدیر عملیات" : "Operations Manager", country: "United Kingdom", email: "fatemeh@company.com", phone: "0912-000-0007", salary: 2800, payDay: 10, hireDate: "2021-02-14", status: "active" },
-  ]
-  const projects = [
-    { id: "p1", name: fa ? "اپلیکیشن موبایل فروشگاه" : "Shop Mobile App", client: fa ? "دیجی‌کالا" : "Acme Retail", status: "active", progress: 65, startDate: d(-40), deadline: d(8), budget: 45000, team: "t_dev", notes: fa ? "نسخه‌ی iOS در مرحله‌ی تست" : "iOS build in testing" },
-    { id: "p2", name: fa ? "بازطراحی سایت شرکتی" : "Corporate Website Redesign", client: fa ? "بانک ملت" : "Globex", status: "active", progress: 40, startDate: d(-20), deadline: d(25), budget: 18000, team: "t_design", notes: "" },
-    { id: "p3", name: fa ? "کمپین تبلیغاتی بهار" : "Spring Marketing Campaign", client: fa ? "داخلی" : "Internal", status: "active", progress: 80, startDate: d(-15), deadline: d(3), budget: 9000, team: "t_sales", notes: fa ? "محتوای شبکه‌های اجتماعی آماده‌ست" : "Social content ready" },
-    { id: "p4", name: fa ? "مهاجرت زیرساخت به ابر" : "Cloud Infra Migration", client: fa ? "داخلی" : "Internal", status: "planning", progress: 10, startDate: d(2), deadline: d(60), budget: 12000, team: "t_dev", notes: "" },
-    { id: "p5", name: fa ? "داشبورد گزارش‌گیری" : "Analytics Dashboard", client: fa ? "اسنپ" : "Initech", status: "done", progress: 100, startDate: d(-90), deadline: d(-5), budget: 7500, team: "t_dev", notes: fa ? "تحویل داده شد" : "Delivered" },
-  ]
-  const meetings = [
-    { id: "m1", title: fa ? "جلسه‌ی هفتگی تیم فنی" : "Weekly engineering sync", datetime: dt(0, 10), priority: "high", attendees: ["e1", "e2", "e6"], location: fa ? "اتاق جلسات A" : "Room A", projectId: "p1", notes: "", done: false },
-    { id: "m2", title: fa ? "بازبینی طرح با کارفرما" : "Design review with client", datetime: dt(1, 14), priority: "med", attendees: ["e3", "e4"], location: "Google Meet", projectId: "p2", notes: "", done: false },
-    { id: "m3", title: fa ? "جلسه‌ی فروش ماهانه" : "Monthly sales meeting", datetime: dt(3, 11), priority: "low", attendees: ["e4", "e5", "e7"], location: fa ? "اتاق جلسات B" : "Room B", projectId: "", notes: "", done: false },
-    { id: "m4", title: fa ? "برنامه‌ریزی مهاجرت ابری" : "Cloud migration planning", datetime: dt(5, 9), priority: "high", attendees: ["e6", "e1"], location: "Zoom", projectId: "p4", notes: "", done: false },
-  ]
-  const businesses = [
-    { id: "b1", name: fa ? "استودیو آکمی" : "Acme Studio" },
-    { id: "b2", name: fa ? "مشاوره گلوبکس" : "Globex Consulting" },
-  ]
-  const transactions = [
-    { id: "tx1", business: "b1", type: "income", amount: 25000, date: d(-25), category: "Project payment", note: "Shop App milestone 1" },
-    { id: "tx2", business: "b1", type: "expense", amount: 12000, date: d(-22), category: "Salaries", note: "" },
-    { id: "tx3", business: "b1", type: "expense", amount: 1800, date: d(-18), category: "Software", note: "Cloud + tools" },
-    { id: "tx4", business: "b2", type: "income", amount: 9000, date: d(-12), category: "Consulting", note: "Website retainer" },
-    { id: "tx5", business: "b2", type: "expense", amount: 3000, date: d(-10), category: "Ads", note: "Spring campaign" },
-    { id: "tx6", business: "b1", type: "income", amount: 14000, date: d(-4), category: "Project payment", note: "Shop App milestone 2" },
-    { id: "tx7", business: "b1", type: "expense", amount: 900, date: d(-2), category: "Office", note: "Rent" },
-  ]
-  const tasks = [
-    { id: "k1", title: fa ? "تأیید بودجه‌ی فصل" : "Approve Q3 budget", done: false, priority: "high", due: d(1), assignee: "e1", projectId: "", notes: "" },
-    { id: "k2", title: fa ? "بررسی طرح‌های اپ فروشگاه" : "Review Shop App designs", done: false, priority: "med", due: d(3), assignee: "e3", projectId: "p1", notes: "" },
-    { id: "k3", title: fa ? "امضای قرارداد گلوبکس" : "Sign Globex contract", done: false, priority: "high", due: d(2), assignee: "e4", projectId: "p2", notes: "" },
-    { id: "k4", title: fa ? "جلسه‌ی یک‌به‌یک با سارا" : "1:1 with Sara", done: true, priority: "low", due: d(-1), assignee: "e1", projectId: "", notes: "" },
-    { id: "k5", title: fa ? "پرداخت اجاره‌ی دفتر" : "Pay office rent", done: false, priority: "med", due: d(5), assignee: "e7", projectId: "", notes: "" },
-  ]
-  const diagram = {
-    nodes: [
-      { id: "n1", position: { x: 40, y: 120 }, data: { label: "Customer" }, style: dfdStyle("entity") },
-      { id: "n2", position: { x: 300, y: 60 }, data: { label: "Order System" }, style: dfdStyle("process") },
-      { id: "n3", position: { x: 300, y: 220 }, data: { label: "Orders DB" }, style: dfdStyle("store") },
-      { id: "n4", position: { x: 580, y: 120 }, data: { label: "Manager" }, style: dfdStyle("entity") },
-    ],
-    edges: [
-      { id: "e1-2", source: "n1", target: "n2", label: "places order", animated: true },
-      { id: "e2-3", source: "n2", target: "n3", label: "save" },
-      { id: "e2-4", source: "n2", target: "n4", label: "report", animated: true },
-    ],
-  }
-  return { teams, employees, projects, meetings, businesses, transactions, tasks, diagram, payments: {}, currency: "£" }
-}
 
 export function dfdStyle(kind) {
   const base = { padding: 10, fontSize: 12, fontWeight: 600, color: "#1d1d1f", width: 150, textAlign: "center" }

@@ -44,6 +44,13 @@ const ICONS = {
   flow: <><circle cx="6" cy="6" r="2.4" /><circle cx="18" cy="18" r="2.4" /><path d="M8 7.7 16 16.3M6 8.4V14a4 4 0 0 0 4 4h4" /></>,
   pin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" /><circle cx="12" cy="10" r="3" /></>,
   eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></>,
+  link: <><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5" /></>,
+  wifi: <><path d="M5 12.55a11 11 0 0 1 14 0" /><path d="M8.5 16.5a5 5 0 0 1 7 0" /><path d="M2 8.82a15 15 0 0 1 20 0" /><path d="M12 20h.01" /></>,
+  logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></>,
+  chat: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />,
+  send: <><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></>,
+  mail: <><rect x="2" y="4" width="20" height="16" rx="2.5" /><path d="m3 6.5 9 6 9-6" /></>,
+  sparkles: <><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" /><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z" /></>,
 }
 export function Icon({ name, size = 18, strokeWidth = 1.7, className }) {
   const p = ICONS[name]
@@ -250,8 +257,11 @@ export function ConfirmDialog() {
   const [text, setText] = useState("")
   useEffect(() => { setText(dialog?.value || "") }, [dialog])
   const isPrompt = dialog?.kind === "prompt"
+  const isType = dialog?.kind === "type"          // type-a-phrase-to-confirm (extra-destructive)
+  const showInput = isPrompt || isType
+  const matched = !isType || text.trim() === dialog?.confirmPhrase
   const cancel = () => resolveDialog(isPrompt ? null : false)
-  const ok = () => resolveDialog(isPrompt ? text : true)
+  const ok = () => { if (isType && !matched) return; resolveDialog(isPrompt ? text : true) }
   return (
     <AnimatePresence>
       {dialog && (
@@ -259,7 +269,7 @@ export function ConfirmDialog() {
           onMouseDown={e => { if (e.target === e.currentTarget) cancel() }}>
           <motion.div className="modal confirm-card" initial={{ opacity: 0, scale: 0.92, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            onKeyDown={e => { if (e.key === "Escape") cancel(); if (e.key === "Enter" && isPrompt) ok() }}>
+            onKeyDown={e => { if (e.key === "Escape") cancel(); if (e.key === "Enter" && showInput) ok() }}>
             <div className="cf-body">
               {!isPrompt && (
                 <div className={`cf-ic ${dialog.danger ? "danger" : ""}`}>
@@ -268,13 +278,17 @@ export function ConfirmDialog() {
               )}
               {dialog.title && <h2>{dialog.title}</h2>}
               {dialog.message && <p>{dialog.message}</p>}
-              {isPrompt && (
-                <input className="cf-input" autoFocus value={text} onChange={e => setText(e.target.value)} />
+              {isType && (
+                <label className="cf-typelabel">Type <b>{dialog.confirmPhrase}</b> to confirm</label>
+              )}
+              {showInput && (
+                <input className="cf-input" autoFocus value={text} onChange={e => setText(e.target.value)}
+                  placeholder={isType ? dialog.confirmPhrase : undefined} />
               )}
             </div>
             <div className="modal-f">
               <button className="btn ghost" onClick={cancel}>{dialog.cancelText}</button>
-              <button className={`btn ${dialog.danger ? "danger-solid" : ""}`} onClick={ok}>{dialog.confirmText}</button>
+              <button className={`btn ${dialog.danger ? "danger-solid" : ""}`} onClick={ok} disabled={isType && !matched}>{dialog.confirmText}</button>
             </div>
           </motion.div>
         </motion.div>

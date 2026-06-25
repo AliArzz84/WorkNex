@@ -73,7 +73,7 @@ function ShareLinksPanel() {
   return (
     <div className="panel">
       <div className="panel-h">
-        <span className="hicon"><Icon name="signal" size={16} /></span>
+        <span className="hicon"><Icon name="link" size={16} /></span>
         <h2>Shared view links</h2>
         <span className="count">{links.length}</span>
         <div className="right">
@@ -106,7 +106,7 @@ function ShareLinksPanel() {
       )}
 
       {links.length === 0
-        ? <EmptyState icon="signal" text="No share links yet" />
+        ? <EmptyState icon="link" text="No share links yet" />
         : (
           <div className={styles.shareList}>
             {links.map(lk => (
@@ -181,7 +181,7 @@ export default function Activity() {
         {/* Online right now */}
         <div className="panel">
           <div className="panel-h">
-            <span className="hicon"><Icon name="signal" size={16} /></span>
+            <span className="hicon"><Icon name="wifi" size={16} /></span>
             <h2>Online now</h2>
             <span className="count">{online.length}</span>
           </div>

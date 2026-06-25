@@ -14,6 +14,8 @@ import Teams from './views/Teams/Teams.jsx'
 import Activity from './views/Activity/Activity.jsx'
 import Editor from './components/Editor/Editor.jsx'
 import Login from './components/Login/Login.jsx'
+import Assistant from './components/Assistant/Assistant.jsx'
+import EmailScan from './components/EmailScan/EmailScan.jsx'
 import { daysBetween, nextPayday, periodKey } from './lib/data.js'
 
 const NAV = [
@@ -106,7 +108,7 @@ export default function App() {
                 <span className="email" title={session.user.email}>{session.user.email}</span>
                 <span className="role-pill">{account === "manager" ? "Manager" : "Boss"}</span>
               </div>
-              <button className="btn-soft" onClick={signOut}><Icon name="undo" size={16} /> Sign out</button>
+              <button className="btn-soft" onClick={signOut}><Icon name="logout" size={16} /> Sign out</button>
             </div>
           )}
         </div>
@@ -164,6 +166,7 @@ export default function App() {
             </motion.button>
           )}
 
+          <EmailScan />
           <Presence />
           <RatesMenu />
           <Clocks />
@@ -179,6 +182,7 @@ export default function App() {
       <Editor />
       <ConfirmDialog />
       <Toast />
+      <Assistant />
     </div>
   )
 }
