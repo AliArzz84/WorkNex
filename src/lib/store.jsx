@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo, useCallback, u
 import {
   I18N, uid, daysBetween, nextPayday, periodKey, isPaid as isPaidPure, timeAgo
 } from './data.js'
-import { supabase, isSupabaseConfigured } from './supabaseClient.js'
+import { supabase, isSupabaseConfigured, oauthCodeExchanged } from './supabaseClient.js'
 
 const KEY = "bm_react_v2"
 const MAX_LOG = 250   // how many activity entries we keep in the shared workspace
@@ -154,12 +154,14 @@ export function StoreProvider({ children }) {
   useEffect(() => { if (!cloud) localStorage.setItem(KEY, JSON.stringify(db)) }, [db, cloud])
 
   /* === cloud: auth session === */
-  // (The Google refresh token is captured & stored in supabaseClient.js, at module load,
-  //  so the SIGNED_IN event can't be missed. Here we only track the session.)
+  // (Any OAuth code in the URL — incl. the Google refresh token capture — is exchanged in
+  //  supabaseClient.js; we await it before reading the session so login lands cleanly.)
   useEffect(() => {
     if (!cloud || isGuest) return
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    oauthCodeExchanged.then(() => {
+      supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
+    })
     return () => sub?.subscription?.unsubscribe?.()
   }, [cloud])
 
