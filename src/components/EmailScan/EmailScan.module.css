@@ -17,6 +17,55 @@
     color: var(--accent);
 }
 
+.trigger.connected {
+    border-color: #34c759;
+}
+
+/* Google profile picture shown when connected */
+.avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* little green "connected" dot, bottom-right of the button */
+.online {
+    position: absolute;
+    bottom: -1px;
+    inset-inline-end: -1px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #34c759;
+    border: 2px solid var(--surface);
+}
+
+.connAvatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.connText {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.connRow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.connText small {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 400;
+}
+
 .dot {
     position: absolute;
     top: -4px;

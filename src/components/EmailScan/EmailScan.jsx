@@ -58,6 +58,10 @@ export default function EmailScan() {
   // signed-in cloud users only (guests never see it)
   if (!cloud || !session || isGuest) return null
 
+  const meta = session.user?.user_metadata || {}
+  const gAvatar = meta.avatar_url || meta.picture || ""
+  const gEmail = session.user?.email || ""
+
   // only the meetings that came from an email (have a sourceId)
   const pending = (db.suggestions || []).filter(s => s.sourceId)
 
@@ -88,8 +92,12 @@ export default function EmailScan() {
 
   return (
     <>
-      <button className={styles.trigger} onClick={() => setOpen(true)} title="Scan email for meetings" aria-label="Email meetings">
-        <Icon name="mail" size={18} />
+      <button className={`${styles.trigger} ${emailConnected ? styles.connected : ""}`} onClick={() => setOpen(true)}
+        title={emailConnected ? `Gmail connected${gEmail ? " · " + gEmail : ""}` : "Connect email for meetings"} aria-label="Email meetings">
+        {emailConnected && gAvatar
+          ? <img className={styles.avatar} src={gAvatar} alt="" referrerPolicy="no-referrer" />
+          : <Icon name="mail" size={18} />}
+        {emailConnected && <span className={styles.online} />}
         {pending.length > 0 && <span className={styles.dot}>{pending.length}</span>}
       </button>
 
@@ -108,7 +116,13 @@ export default function EmailScan() {
                 <div className={styles.conn}>
                   {emailConnected ? (
                     <>
-                      <span className={styles.connOn}><i /> Gmail connected</span>
+                      <span className={styles.connOn}>
+                        {gAvatar && <img className={styles.connAvatar} src={gAvatar} alt="" referrerPolicy="no-referrer" />}
+                        <span className={styles.connText}>
+                          <span className={styles.connRow}><i /> Connected</span>
+                          {gEmail ? <small>{gEmail}</small> : null}
+                        </span>
+                      </span>
                       <button className={styles.linkbtn} onClick={disconnectGmail}>Disconnect</button>
                     </>
                   ) : (

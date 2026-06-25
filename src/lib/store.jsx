@@ -72,7 +72,9 @@ export function StoreProvider({ children }) {
   const [authReady, setAuthReady] = useState(!cloud)  // local mode: ready immediately
   const [dataReady, setDataReady] = useState(!cloud)
   const [presence, setPresence] = useState([])        // who else is online/editing
-  const [emailConnected, setEmailConnected] = useState(false)  // Gmail linked for inbox scan
+  // Gmail linked for inbox scan — seed from localStorage so a refresh shows it instantly,
+  // then reconcile with the server in the background.
+  const [emailConnected, setEmailConnected] = useState(() => localStorage.getItem("bm_gmail_connected") === "1")
   const lastSynced = useRef("")
   const writeTimer = useRef(null)
   const presenceCh = useRef(null)
@@ -152,28 +154,22 @@ export function StoreProvider({ children }) {
   useEffect(() => { if (!cloud) localStorage.setItem(KEY, JSON.stringify(db)) }, [db, cloud])
 
   /* === cloud: auth session === */
-  // When the user comes back from a Google "Connect Gmail" OAuth, the session carries a
-  // provider_refresh_token. Persist it (locked, service-role-only table) so scan-email can
-  // mint fresh access tokens later. The client can write but never read it back.
-  const captureProviderToken = useCallback(async (s) => {
-    if (!s?.provider_refresh_token || !s.user) return
-    try {
-      await supabase.from("email_connections").upsert({
-        user_id: s.user.id, email: s.user.email, provider: "google", refresh_token: s.provider_refresh_token,
-      })
-      setEmailConnected(true)
-    } catch (e) { /* ignore — table may not exist until the SQL is run */ }
-  }, [])
+  // (The Google refresh token is captured & stored in supabaseClient.js, at module load,
+  //  so the SIGNED_IN event can't be missed. Here we only track the session.)
   useEffect(() => {
     if (!cloud || isGuest) return
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); captureProviderToken(data.session) })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); captureProviderToken(s) })
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => sub?.subscription?.unsubscribe?.()
   }, [cloud])
 
-  /* once signed in, find out whether this account's inbox is already connected */
+  /* once signed in, find out whether this account's inbox is connected — check again shortly
+     after, since a just-completed "Connect Gmail" writes the row a moment after redirect */
   useEffect(() => {
-    if (cloud && !isGuest && session?.user?.id) refreshEmailStatus()
+    if (!(cloud && !isGuest && session?.user?.id)) return
+    refreshEmailStatus()
+    const t = setTimeout(refreshEmailStatus, 2500)
+    return () => clearTimeout(t)
   }, [cloud, session?.user?.id])
 
   /* === cloud: load role + workspace + realtime when logged in === */
@@ -347,7 +343,11 @@ export function StoreProvider({ children }) {
   /* === live Gmail inbox scan === */
   // is the current user's inbox connected? (reads the locked table via a SECURITY DEFINER rpc)
   const refreshEmailStatus = useCallback(async () => {
-    try { const { data } = await supabase.rpc("has_email_connection"); setEmailConnected(!!data) } catch (e) {}
+    try {
+      const { data } = await supabase.rpc("has_email_connection")
+      setEmailConnected(!!data)
+      localStorage.setItem("bm_gmail_connected", data ? "1" : "0")
+    } catch (e) {}
   }, [])
   // kick off Google OAuth asking for read-only Gmail access; on return the token is captured above
   const connectGmail = useCallback(async () => {
@@ -364,6 +364,7 @@ export function StoreProvider({ children }) {
   const disconnectGmail = useCallback(async () => {
     try { await supabase.from("email_connections").delete().eq("user_id", session?.user?.id) } catch (e) {}
     setEmailConnected(false)
+    localStorage.setItem("bm_gmail_connected", "0")
   }, [session?.user?.id])
   // ask the function to read recent inbox emails and return any meetings it found
   const scanInbox = useCallback(async () => {
