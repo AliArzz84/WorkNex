@@ -34,7 +34,7 @@ export default function Dashboard() {
     const pd = nextPayday(e); return daysBetween(pd.toISOString()) <= 10 && !isPaid(e.id, periodKey(pd))
   }).length
   const upMeet = db.meetings.filter(m => !m.done && daysBetween(m.datetime) >= 0)
-    .sort((a, b) => new Date(a.datetime) - new Date(b.datetime)).slice(0, 5)
+    .sort((a, b) => new Date(a.datetime) - new Date(b.datetime)).slice(0, 3)
   const actProj = db.projects.filter(p => p.status === "active")
     .sort((a, b) => daysBetween(a.deadline) - daysBetween(b.deadline)).slice(0, 4)
 

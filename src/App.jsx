@@ -42,11 +42,13 @@ const SEARCHABLE = new Set(["tasks", "employees", "meetings", "activity"])
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,
     cloud, session, account, authReady, signOut,
-    isGuest, guestMeta, guestStatus, isRequest,
+    isGuest, guestMeta, guestStatus, isRequest, requests,
     view, setView, search, setSearch, openEditor, exportData, importData, clearAll, isPaid } = useStore()
   const fileRef = useRef()
   const [toolsOpen, setToolsOpen] = useState(() => localStorage.getItem("bm_tools_open") !== "0")
   const toggleTools = () => setToolsOpen(o => { localStorage.setItem("bm_tools_open", o ? "0" : "1"); return !o })
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("bm_sidebar_collapsed") === "1")
+  const toggleSidebar = () => setCollapsed(c => { localStorage.setItem("bm_sidebar_collapsed", c ? "0" : "1"); return !c })
 
   // Public request form (?request=1) — no login needed
   if (cloud && isRequest) return <RequestForm />
@@ -73,20 +75,21 @@ export default function App() {
     const pd = nextPayday(e); return daysBetween(pd.toISOString()) <= 7 && !isPaid(e.id, periodKey(pd))
   }).length
   const taskBadge = db.tasks.filter(k => !k.done && k.due && daysBetween(k.due) === 0).length
-  const badges = { tasks: taskBadge, meetings: meetBadge, payroll: payBadge }
+  const reqBadge = (requests || []).filter(r => (r.status || "new") !== "done").length
+  const badges = { tasks: taskBadge, meetings: meetBadge, payroll: payBadge, requests: reqBadge }
 
   // Toggle only switches edit mode; it stays on the current page.
   const switchRole = (r) => setRole(r)
 
   return (
-    <div className="app" data-role={role}>
+    <div className="app" data-role={role} data-collapsed={collapsed ? "true" : "false"}>
       <aside className="sidebar">
         <div className="brand">
           <Logo size={30} />
           <div><b>{L.appName}</b><small>{L.appSub}</small></div>
         </div>
         {nav.map(n => (
-          <div key={n.key} className={`nav-item ${view === n.key ? "active" : ""}`} onClick={() => setView(n.key)}>
+          <div key={n.key} className={`nav-item ${view === n.key ? "active" : ""}`} onClick={() => setView(n.key)} title={t("nav." + n.key)}>
             {view === n.key && <motion.div className="hl" layoutId="navHL" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className="ic"><Icon name={n.icon} size={18} /></span>
             <span className="lbl">{t("nav." + n.key)}</span>
@@ -94,6 +97,12 @@ export default function App() {
           </div>
         ))}
         <div className="side-foot">
+          <button className="btn-soft collapse-toggle" onClick={toggleSidebar} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+            <span style={{ display: "grid", placeItems: "center", transform: collapsed ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s" }}>
+              <Icon name="chevron" size={16} />
+            </span>
+            Collapse
+          </button>
           {isGuest ? (
             <div className="guest-box">
               <span className="guest-pill"><Icon name="eye" size={13} /> View only</span>
@@ -103,6 +112,7 @@ export default function App() {
                 : "Access doesn’t expire"}</small>
             </div>
           ) : (<>
+          {!collapsed && (<>
           <button className="btn-soft tools-toggle" onClick={toggleTools} aria-expanded={toolsOpen}>
             <Icon name="expand" size={15} />
             <span style={{ flex: 1, textAlign: "start" }}>Data</span>
@@ -122,6 +132,7 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
+          </>)}
           <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
             onChange={e => e.target.files[0] && importData(e.target.files[0])} />
           </>)}

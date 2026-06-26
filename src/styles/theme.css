@@ -22,6 +22,14 @@
   --shadow-sm:0 1px 2px rgba(0,0,0,.06);
   --shadow:0 2px 6px rgba(0,0,0,.05),0 12px 28px rgba(0,0,0,.06);
   --radius:14px;
+  /* spacing scale (4px base) — one rhythm for the whole app */
+  --space-xs:4px; --space-sm:8px; --space-md:12px; --space-lg:16px;
+  --space-xl:20px; --space-2xl:24px; --space-3xl:32px;
+  /* type scale */
+  --text-xs:11px; --text-sm:12px; --text-base:13px; --text-md:14px; --text-lg:15px;
+  --heading-sm:16px; --heading-md:19px; --heading-lg:24px; --kpi-num:24px;
+  /* rhythm aliases: gap between major blocks / inner panel padding */
+  --block-gap:var(--space-xl); --panel-pad:var(--space-lg);
   color-scheme:light;
 }
 html[data-theme="dark"]{

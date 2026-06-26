@@ -1,16 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
 import { EmptyState, Icon, Tag, stagger, item } from '../../components/ui/ui.jsx'
 
 export default function Requests() {
-  const { listRequests, setRequestStatus, deleteRequest, notify, ask, timeAgo } = useStore()
-  const [reqs, setReqs] = useState([])
-  const [loading, setLoading] = useState(true)
+  // `requests` is kept live by the store (realtime + polling) — new submissions appear on their own
+  const { requests, requestsReady, setRequestStatus, deleteRequest, reloadRequests, notify, ask, timeAgo } = useStore()
   const [filter, setFilter] = useState("new")
 
-  const refresh = () => listRequests().then(r => { setReqs(r); setLoading(false) }).catch(() => { setReqs([]); setLoading(false) })
-  useEffect(() => { refresh() }, [])
+  const reqs = requests || []
+  const loading = !requestsReady
 
   const link = `${window.location.origin}${window.location.pathname}?request=1`
   const copyLink = async () => { try { await navigator.clipboard.writeText(link); notify("Form link copied — send it to your team", "success") } catch (e) {} }
@@ -19,8 +18,8 @@ export default function Requests() {
   const newCount = reqs.filter(r => statusOf(r) === "new").length
   const shown = filter === "all" ? reqs : reqs.filter(r => statusOf(r) === filter)
 
-  const toggleDone = async (r) => { try { await setRequestStatus(r.id, statusOf(r) === "done" ? "new" : "done"); refresh() } catch (e) { notify("Couldn't update", "error") } }
-  const remove = async (r) => { if (await ask({ title: "Delete request", message: "Delete this request?" })) { try { await deleteRequest(r.id); refresh() } catch (e) { notify("Couldn't delete", "error") } } }
+  const toggleDone = async (r) => { try { await setRequestStatus(r.id, statusOf(r) === "done" ? "new" : "done"); reloadRequests() } catch (e) { notify("Couldn't update", "error") } }
+  const remove = async (r) => { if (await ask({ title: "Delete request", message: "Delete this request?" })) { try { await deleteRequest(r.id); reloadRequests() } catch (e) { notify("Couldn't delete", "error") } } }
 
   const filters = [["new", `New (${newCount})`], ["done", "Done"], ["all", "All"]]
 

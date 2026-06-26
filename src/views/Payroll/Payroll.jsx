@@ -1,13 +1,18 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
-import { Avatar, Counter, Tag, Icon, Money, stagger, item } from '../../components/ui/ui.jsx'
+import { Avatar, Counter, Tag, Icon, Money, EmptyState, stagger, item } from '../../components/ui/ui.jsx'
 import { daysBetween, nextPayday, periodKey } from '../../lib/data.js'
 
 export default function Payroll() {
-  const { db, t, money, toUsd, fmtDate, relDay, isPaid, setPaid, ask } = useStore()
-  const active = db.employees.filter(e => e.status !== "inactive")
+  const { db, t, toUsd, fmtDate, relDay, isPaid, setPaid, ask } = useStore()
+  const [bizFilter, setBizFilter] = useState("all")
+  const bizName = (id) => db.businesses.find(b => b.id === id)?.name
+  const inBiz = (e) => bizFilter === "all" || (e.business || "") === bizFilter
+
+  const active = db.employees.filter(e => e.status !== "inactive" && inBiz(e))
   // mixed currencies → sum the USD-base equivalent of each salary
-  const total = db.employees.filter(e => e.status === "active").reduce((s, e) => s + toUsd(e.salary, e.currency), 0)
+  const total = db.employees.filter(e => e.status === "active" && inBiz(e)).reduce((s, e) => s + toUsd(e.salary, e.currency), 0)
   const rows = active.map(e => {
     const pd = nextPayday(e); const per = periodKey(pd)
     return { e, pd, dd: daysBetween(pd.toISOString()), per, paid: isPaid(e.id, per) }
@@ -22,23 +27,36 @@ export default function Payroll() {
 
   return (
     <div>
+      {db.businesses.length > 0 && (
+        <div className="pill-row">
+          <span className={`pill ${bizFilter === "all" ? "on" : ""}`} onClick={() => setBizFilter("all")}>{t("all")} businesses</span>
+          {db.businesses.map(b => (
+            <span key={b.id} className={`pill ${bizFilter === b.id ? "on" : ""}`} onClick={() => setBizFilter(b.id)}>{b.name}</span>
+          ))}
+        </div>
+      )}
+
       <motion.div className="kpis" variants={stagger} initial="initial" animate="animate">
         {kpis.map((k, i) => (
           <motion.div key={i} className={`kpi ${k.cls}`} variants={item} whileHover={{ y: -3 }}>
             <div className="ic"><Icon name={k.icon} size={20} /></div>
-            <h3 style={{ fontSize: k.small ? 19 : 28 }}>{k.small ? k.v : <Counter value={k.v} />}</h3>
+            <h3>{k.small ? k.v : <Counter value={k.v} />}</h3>
             <p>{k.p}</p>
           </motion.div>
         ))}
       </motion.div>
+
       <div className="panel">
-        <div className="panel-h"><h2>{t("nav.payroll")}</h2></div>
+        <div className="panel-h"><h2>{t("nav.payroll")}<span className="count">{rows.length}</span></h2></div>
         <table>
           <thead><tr><th>{t("name")}</th><th>{t("salary")}</th><th>{t("nextPay")}</th><th>{t("status")}</th><th className="right">{t("actions")}</th></tr></thead>
           <tbody>
             {rows.map(r => (
               <motion.tr key={r.e.id} variants={item} initial="initial" animate="animate" layout>
-                <td><div className="person"><Avatar emp={r.e} /><div><b>{r.e.name}</b><small>{r.e.role}</small></div></div></td>
+                <td><div className="person"><Avatar emp={r.e} /><div>
+                  <b>{r.e.name}</b>
+                  <small>{r.e.role}{bizFilter === "all" && bizName(r.e.business) ? " · " + bizName(r.e.business) : ""}</small>
+                </div></div></td>
                 <td><Money value={r.e.salary} currency={r.e.currency} /></td>
                 <td>{fmtDate(r.pd.toISOString())}<br /><small className="muted">{r.paid ? "" : relDay(r.dd)}</small></td>
                 <td>
@@ -63,6 +81,7 @@ export default function Payroll() {
             ))}
           </tbody>
         </table>
+        {!rows.length && <EmptyState icon="wallet" text={db.businesses.length && bizFilter !== "all" ? "No staff in this business yet" : t("noData")} />}
       </div>
     </div>
   )

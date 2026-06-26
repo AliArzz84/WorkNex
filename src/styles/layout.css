@@ -1,7 +1,53 @@
 .app {
     display: grid;
     grid-template-columns: 240px 1fr;
-    min-height: 100vh
+    min-height: 100vh;
+    transition: grid-template-columns .26s cubic-bezier(.4, 0, .2, 1)
+}
+
+/* Collapsed sidebar — icon-only rail */
+.app[data-collapsed="true"] {
+    grid-template-columns: 64px 1fr
+}
+.app[data-collapsed="true"] .sidebar {
+    padding: 18px 8px 14px
+}
+.app[data-collapsed="true"] .brand {
+    justify-content: center;
+    padding: 2px 0 16px
+}
+.app[data-collapsed="true"] .account-box .who,
+.app[data-collapsed="true"] .guest-box {
+    display: none
+}
+.app[data-collapsed="true"] .brand > div,
+.app[data-collapsed="true"] .nav-item .lbl {
+    max-width: 0;
+    opacity: 0
+}
+.app[data-collapsed="true"] .nav-item {
+    justify-content: center;
+    gap: 0;
+    padding: 10px 0;
+    font-size: 0
+}
+.app[data-collapsed="true"] .nav-item .badge {
+    position: absolute;
+    top: 5px;
+    right: 9px;
+    margin: 0;
+    min-width: 0;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    font-size: 0;
+    border-radius: 50%
+}
+.app[data-collapsed="true"] .btn-soft {
+    justify-content: center;
+    gap: 0;
+    padding: 8px 0;
+    font-size: 0
 }
 
 /* Sidebar */
@@ -11,18 +57,26 @@
     padding: 18px 12px 14px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: var(--space-sm);
     position: sticky;
     top: 0;
     height: 100vh;
-    transition: background .35s ease, border-color .35s ease
+    transition: background .35s ease, border-color .35s ease, padding .26s ease
 }
 
 .brand {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 2px 8px 16px
+    padding: 2px 8px 16px;
+    transition: padding .26s ease
+}
+
+.brand > div {
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 160px;
+    transition: max-width .26s ease, opacity .18s ease
 }
 
 .brand .logo {
@@ -61,7 +115,14 @@
     cursor: pointer;
     font-weight: 500;
     font-size: 13.5px;
-    transition: color .15s
+    transition: color .15s, padding .26s ease, gap .26s ease
+}
+
+.nav-item .lbl {
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 160px;
+    transition: max-width .26s ease, opacity .18s ease
 }
 
 .nav-item:hover:not(.active) {
@@ -116,7 +177,7 @@
     margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: var(--space-sm);
     padding-top: 12px;
     border-top: 1px solid var(--line)
 }
@@ -132,7 +193,8 @@
     padding: 8px 10px;
     cursor: pointer;
     font-weight: 500;
-    font-size: 13px
+    font-size: 13px;
+    transition: background .15s, color .15s, padding .26s ease, gap .26s ease
 }
 
 .btn-soft:hover {
@@ -152,15 +214,14 @@
 /* Main */
 .main {
     padding: 24px 30px;
-    width: 100%;
-    max-width: 1700px
+    width: 100%
 }
 
 .topbar {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 24px;
+    gap: var(--space-md);
+    margin-bottom: var(--block-gap);
     flex-wrap: wrap
 }
 

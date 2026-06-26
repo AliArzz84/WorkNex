@@ -23,6 +23,7 @@ export default function Finance() {
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
   const [preview, setPreview] = useState(null)   // template id whose recurring expansion is shown
+  const [tab, setTab] = useState("overview")      // overview | analysis | statements
 
   const allView = biz === "all"
   const bizId = allView ? null : biz
@@ -175,22 +176,28 @@ export default function Finance() {
         </div>
       )}
 
+      <div className="pill-row" style={{ marginBottom: 16 }}>
+        {[["overview", "Overview"], ["analysis", "Analysis"], ["statements", "Statements"]].map(([k, l]) =>
+          <span key={k} className={`pill ${tab === k ? "on" : ""}`} onClick={() => setTab(k)}>{l}</span>)}
+      </div>
+
+      {tab === "overview" && (<>
       <motion.div className="kpis" variants={stagger} initial="initial" animate="animate">
         <motion.div className="kpi k2" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="arrowUp" size={20} /></div>
-          <h3 style={{ fontSize: 19 }}><Money value={periodIncome} /></h3><p>Total income</p>
+          <h3><Money value={periodIncome} /></h3><p>Total income</p>
         </motion.div>
         <motion.div className="kpi k4" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="arrowDown" size={20} /></div>
-          <h3 style={{ fontSize: 19 }}><Money value={periodOutgoing} /></h3><p>Total outgoing</p>
+          <h3><Money value={periodOutgoing} /></h3><p>Total outgoing</p>
         </motion.div>
         <motion.div className="kpi k1" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="finance" size={20} /></div>
-          <h3 style={{ fontSize: 19, color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet} /></h3><p>Net profit</p>
+          <h3 style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet} /></h3><p>Net profit</p>
         </motion.div>
         <motion.div className="kpi k3" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="wallet" size={20} /></div>
-          <h3 style={{ fontSize: 19 }}><Money value={periodSalary} /></h3><p>Salaries (period total)</p>
+          <h3><Money value={periodSalary} /></h3><p>Salaries (period total)</p>
           <small style={{ color: "var(--muted)", fontSize: 11 }}>≈ {fmtBase(Math.round(runRate))}/mo · {months} mo</small>
         </motion.div>
       </motion.div>
@@ -200,7 +207,9 @@ export default function Finance() {
         <div className="panel-h"><span className="hicon"><Icon name="finance" size={16} /></span><h2>Monthly trend</h2></div>
         {trendHasData ? <ColumnsV data={trend} fmt={fmtBase} /> : <p className="muted">No activity in this period yet</p>}
       </div>
+      </>)}
 
+      {tab === "analysis" && (
       <div className="grid2">
         {/* F3: spending by category */}
         <div className="panel">
@@ -239,21 +248,9 @@ export default function Finance() {
           ) : <p className="muted">No transactions yet</p>}
         </div>
       </div>
-
-      {/* income / outgoing by business donuts */}
-      {(incomeDonut.length > 0 || expenseDonut.length > 0) && (
-        <div className="grid2">
-          <div className="panel">
-            <div className="panel-h"><span className="hicon"><Icon name="arrowUp" size={16} /></span><h2>Income by business</h2></div>
-            {incomeDonut.length ? <Donut data={incomeDonut} fmt={fmtBase} centerSub="income" centerIcon="arrowUp" centerColor="var(--green-ink)" /> : <p className="muted">No income yet</p>}
-          </div>
-          <div className="panel">
-            <div className="panel-h"><span className="hicon"><Icon name="arrowDown" size={16} /></span><h2>Outgoing by business</h2></div>
-            {expenseDonut.length ? <Donut data={expenseDonut} fmt={fmtBase} centerSub="outgoing" centerIcon="arrowDown" centerColor="var(--red-ink)" /> : <p className="muted">No outgoing yet</p>}
-          </div>
-        </div>
       )}
 
+      {tab === "statements" && (<>
       {/* F8: P&L statement (print-friendly) */}
       <div className="panel">
         <div className="panel-h"><span className="hicon"><Icon name="print" size={16} /></span><h2>Profit &amp; Loss</h2>
@@ -318,6 +315,7 @@ export default function Finance() {
         </table>
         {!tableRows.length && <EmptyState icon="finance" text="No transactions in this period" />}
       </div>
+      </>)}
     </div>
   )
 }

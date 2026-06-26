@@ -75,6 +75,8 @@ export function StoreProvider({ children }) {
   const [authReady, setAuthReady] = useState(!cloud)  // local mode: ready immediately
   const [dataReady, setDataReady] = useState(!cloud)
   const [presence, setPresence] = useState([])        // who else is online/editing
+  const [requests, setRequests] = useState([])        // request-form submissions (admin inbox + nav badge)
+  const [requestsReady, setRequestsReady] = useState(false)
   const lastSynced = useRef("")
   const writeTimer = useRef(null)
   const presenceCh = useRef(null)
@@ -319,6 +321,21 @@ export function StoreProvider({ children }) {
     const { error } = await supabase.from("requests").delete().eq("id", id)
     if (error) throw error
   }, [])
+  const reloadRequests = useCallback(async () => {
+    if (!cloud) return
+    const { data } = await supabase.from("requests").select("*").order("created_at", { ascending: false })
+    setRequests(data || []); setRequestsReady(true)
+  }, [cloud])
+  // keep the requests inbox + nav badge live: realtime on the table, with a 20s polling fallback
+  useEffect(() => {
+    if (!cloud || isGuest || isRequest || !session) { setRequests([]); setRequestsReady(false); return }
+    reloadRequests()
+    const ch = supabase.channel("requests-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "requests" }, () => reloadRequests())
+      .subscribe()
+    const poll = setInterval(reloadRequests, 20000)
+    return () => { clearInterval(poll); supabase.removeChannel(ch) }
+  }, [cloud, isGuest, isRequest, session?.user?.id, reloadRequests])
 
   /* in-app AI assistant — calls the `assistant` Edge Function (Claude) */
   const askAssistant = useCallback(async (history) => {
@@ -532,7 +549,7 @@ export function StoreProvider({ children }) {
     db, lang, setLang, theme, toggleTheme, role: effectiveRole, setRole, readOnly, canPreview,
     cloud, session, account, authReady, dataReady, presence, signIn, signUp, signOut,
     isGuest, guestMeta, guestStatus, createViewLink, listViewLinks, revokeViewLink, askAssistant,
-    isRequest, submitRequest, listRequests, setRequestStatus, deleteRequest,
+    isRequest, submitRequest, listRequests, setRequestStatus, deleteRequest, requests, requestsReady, reloadRequests,
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => { if (!isGuest) setEditing({ type, id }) }, closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, askType, resolveDialog, notify,

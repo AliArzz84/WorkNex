@@ -2,32 +2,32 @@
 .kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 22px
+  gap: var(--space-lg);
+  margin-bottom: var(--block-gap)
 }
 
 .kpi {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: var(--space-lg);
   box-shadow: var(--shadow-sm)
 }
 
 .kpi .ic {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
   display: grid;
   place-items: center;
   background: rgba(0, 113, 227, .1);
   color: var(--accent);
-  margin-bottom: 14px
+  margin-bottom: var(--space-md)
 }
 
 .kpi h3 {
   margin: 0;
-  font-size: 28px;
+  font-size: var(--kpi-num);
   font-weight: 700;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums
@@ -57,21 +57,21 @@
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px
+  gap: var(--space-lg)
 }
 
 .grid3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px
+  gap: var(--space-lg)
 }
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 18px;
-  margin-bottom: 18px;
+  padding: var(--panel-pad);
+  margin-bottom: var(--block-gap);
   box-shadow: var(--shadow-sm)
 }
 
@@ -79,7 +79,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: var(--space-lg);
   color: var(--txt)
 }
 
@@ -115,7 +115,7 @@ table {
 th,
 td {
   text-align: start;
-  padding: 11px 8px;
+  padding: var(--space-md) var(--space-sm);
   border-bottom: 1px solid var(--line);
   font-size: 13px;
   vertical-align: middle
@@ -125,7 +125,7 @@ th {
   color: var(--muted);
   font-weight: 500;
   font-size: 12px;
-  padding-bottom: 9px
+  padding-bottom: 10px
 }
 
 tbody tr:last-child td {
@@ -367,10 +367,10 @@ tr:hover td {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: var(--space-lg);
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: var(--space-md);
   box-shadow: var(--shadow-sm)
 }
 
@@ -885,6 +885,10 @@ tr:hover td {
   .pcard {
     box-shadow: none;
     border: 1px solid #ddd;
+    break-inside: avoid
+  }
+
+  table tbody tr {
     break-inside: avoid
   }
 
