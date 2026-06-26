@@ -15,7 +15,6 @@ import Activity from './views/Activity/Activity.jsx'
 import Editor from './components/Editor/Editor.jsx'
 import Login from './components/Login/Login.jsx'
 import Assistant from './components/Assistant/Assistant.jsx'
-import EmailScan from './components/EmailScan/EmailScan.jsx'
 import { daysBetween, nextPayday, periodKey } from './lib/data.js'
 
 const NAV = [
@@ -166,7 +165,6 @@ export default function App() {
             </motion.button>
           )}
 
-          <EmailScan />
           <Presence />
           <RatesMenu />
           <Clocks />
