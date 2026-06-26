@@ -51,6 +51,51 @@ export function Donut({ data, size = 150, thickness = 18, centerLabel, centerSub
   )
 }
 
+/* Vertical monthly columns: per month an Income column and a stacked Outgoing
+   column (Expenses red + Salaries orange), with the net printed under each month. */
+function CLegend({ color, label }) {
+  return <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted)" }}>
+    <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />{label}</span>
+}
+export function ColumnsV({ data, fmt = v => v, height = 150 }) {
+  const max = Math.max(1, ...data.map(d => Math.max(d.income || 0, (d.expense || 0) + (d.salary || 0))))
+  const h = (v) => `${Math.max(0, (v / max) * 100)}%`
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 16, fontSize: 12, marginBottom: 12, flexWrap: "wrap" }}>
+        <CLegend color="#34c759" label="Income" />
+        <CLegend color="#ff6b6b" label="Expenses" />
+        <CLegend color="#ff9f0a" label="Salaries" />
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 12, minWidth: "100%", padding: "0 2px" }}>
+          {data.map((d, i) => {
+            const out = (d.expense || 0) + (d.salary || 0)
+            return (
+              <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: "1 0 40px", minWidth: 40 }}>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 4, height, width: "100%" }}>
+                  <div title={`Income ${fmt(d.income || 0)}`} style={{ width: 13, display: "flex", alignItems: "flex-end", height: "100%" }}>
+                    <motion.div initial={{ height: 0 }} animate={{ height: h(d.income || 0) }} transition={{ duration: 0.6, delay: i * 0.03 }}
+                      style={{ width: "100%", background: "#34c759", borderRadius: "4px 4px 0 0" }} />
+                  </div>
+                  <div title={`Outgoing ${fmt(out)}`} style={{ width: 13, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: "100%" }}>
+                    <motion.div initial={{ height: 0 }} animate={{ height: h(d.salary || 0) }} transition={{ duration: 0.6, delay: i * 0.03 }}
+                      style={{ width: "100%", background: "#ff9f0a", borderRadius: "4px 4px 0 0" }} />
+                    <motion.div initial={{ height: 0 }} animate={{ height: h(d.expense || 0) }} transition={{ duration: 0.6, delay: i * 0.03 }}
+                      style={{ width: "100%", background: "#ff6b6b" }} />
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>{d.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", color: (d.net || 0) < 0 ? "var(--red-ink)" : "var(--green-ink)" }}>{fmt(d.net || 0)}</div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* Horizontal bars */
 export function BarsH({ data, fmt = v => v }) {
   const max = Math.max(...data.map(d => d.value), 1)

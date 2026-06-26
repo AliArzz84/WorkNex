@@ -7,6 +7,7 @@ import Tasks from './views/Tasks/Tasks.jsx'
 import Finance from './views/Finance/Finance.jsx'
 import Diagram from './views/Diagram/Diagram.jsx'
 import Employees from './views/Employees/Employees.jsx'
+import Businesses from './views/Businesses/Businesses.jsx'
 import Projects from './views/Projects/Projects.jsx'
 import Meetings from './views/Meetings/Meetings.jsx'
 import Payroll from './views/Payroll/Payroll.jsx'
@@ -22,6 +23,7 @@ const NAV = [
   { key: "tasks", icon: "tasks" },
   { key: "meetings", icon: "meetings" },
   { key: "projects", icon: "projects" },
+  { key: "businesses", icon: "business" },
   { key: "employees", icon: "employees" },
   { key: "teams", icon: "teams" },
   { key: "payroll", icon: "payroll" },
@@ -29,8 +31,8 @@ const NAV = [
   { key: "diagram", icon: "diagram" },
   { key: "activity", icon: "history" },
 ]
-const VIEWS = { dashboard: Dashboard, tasks: Tasks, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
-const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting", teams: "team", tasks: "task", finance: "transaction" }
+const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
+const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting", teams: "team", tasks: "task", finance: "transaction", businesses: "business" }
 // only the views that use the *topbar* search box (Projects has its own in-section search)
 const SEARCHABLE = new Set(["tasks", "employees", "finance", "meetings", "activity"])
 

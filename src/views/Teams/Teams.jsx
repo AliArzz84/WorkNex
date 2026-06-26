@@ -4,6 +4,7 @@ import { Avatar, EmptyState, Icon, stagger, item } from '../../components/ui/ui.
 
 export default function Teams() {
   const { db, t, L, lang, empById, openEditor, removeItem, ask } = useStore()
+  const bizName = (id) => db.businesses.find(b => b.id === id)?.name
   return (
     <motion.div className="grid3" variants={stagger} initial="initial" animate="animate">
       <AnimatePresence>
@@ -17,6 +18,11 @@ export default function Teams() {
                 <div style={{ flex: 1 }}>
                   <b>{tm.name}</b><br />
                   <small>{lead ? (lang === "fa" ? "سرپرست: " : "Lead: ") + lead.name : L.none}</small>
+                  {bizName(tm.business) && (
+                    <div className="muted" style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                      <Icon name="business" size={11} /> {bizName(tm.business)}
+                    </div>
+                  )}
                 </div>
                 {tm.country && <span className="tag gray"><Icon name="pin" size={11} /> {tm.country}</span>}
               </div>

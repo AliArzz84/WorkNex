@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
 import { CURRENCIES } from '../../lib/data.js'
+import { isSalaryCategory } from '../../lib/finance.js'
 import { Icon, Avatar } from '../ui/ui.jsx'
 import styles from './Editor.module.css'
 
@@ -113,7 +114,7 @@ function Footer({ onSave, close }) {
 
 function EmployeeForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", currency: "GBP", payDay: 1, hireDate: todayISO(), status: "active", notes: "" })
+  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", currency: "GBP", payDay: 1, hireDate: todayISO(), status: "active", business: "", notes: "" })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const submit = () => { if (!f.name.trim()) return; onSave("employee", { ...f, id, salary: Number(f.salary || 0), payDay: Number(f.payDay || 1) }); close() }
   const curSym = (CURRENCIES.find(c => c.code === (f.currency || "GBP")) || {}).symbol || "£"
@@ -141,7 +142,13 @@ function EmployeeForm({ existing, id, onSave, close }) {
             <option value="active">{t("statusActive")}</option><option value="leave">{t("statusLeave")}</option><option value="inactive">{t("statusInactive")}</option>
           </select></Field>
         </div>
-        <Field label={t("hireDate")}><input type="date" value={f.hireDate} onChange={e => set("hireDate", e.target.value)} /></Field>
+        <div className="two">
+          <Field label={t("hireDate")}><input type="date" value={f.hireDate} onChange={e => set("hireDate", e.target.value)} /></Field>
+          <Field label="Business"><select value={f.business || ""} onChange={e => set("business", e.target.value)}>
+            <option value="">No business</option>
+            {db.businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select></Field>
+        </div>
         <Field label={t("notes")}><textarea value={f.notes || ""} onChange={e => set("notes", e.target.value)} placeholder="Any extra info about this employee…" /></Field>
       </div>
       <Footer onSave={submit} close={close} />
@@ -151,7 +158,7 @@ function EmployeeForm({ existing, id, onSave, close }) {
 
 function ProjectForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", client: "", status: "planning", progress: 0, startDate: todayISO(), deadline: "", budget: "", team: "", notes: "" })
+  const [f, setF] = useState(existing || { name: "", client: "", status: "planning", progress: 0, startDate: todayISO(), deadline: "", budget: "", team: "", business: "", notes: "" })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const submit = () => { if (!f.name.trim()) return; onSave("project", { ...f, id, budget: Number(f.budget || 0), progress: Number(f.progress || 0) }); close() }
   return (
@@ -172,9 +179,15 @@ function ProjectForm({ existing, id, onSave, close }) {
           <Field label={`${t("budget")} (${db.currency})`}><input type="number" value={f.budget} onChange={e => set("budget", e.target.value)} /></Field>
           <Field label={`${t("progress")} (%)`}><input type="number" min="0" max="100" value={f.progress} onChange={e => set("progress", e.target.value)} /></Field>
         </div>
-        <Field label={t("team")}><select value={f.team || ""} onChange={e => set("team", e.target.value)}>
-          <option value="">{t("noTeam")}</option>{db.teams.map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
-        </select></Field>
+        <div className="two">
+          <Field label={t("team")}><select value={f.team || ""} onChange={e => set("team", e.target.value)}>
+            <option value="">{t("noTeam")}</option>{db.teams.map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
+          </select></Field>
+          <Field label="Business"><select value={f.business || ""} onChange={e => set("business", e.target.value)}>
+            <option value="">No business</option>
+            {db.businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select></Field>
+        </div>
         <Field label={t("notes")}><textarea value={f.notes} onChange={e => set("notes", e.target.value)} /></Field>
       </div>
       <Footer onSave={submit} close={close} />
@@ -212,8 +225,8 @@ function MeetingForm({ existing, id, onSave, close }) {
 }
 
 function TeamForm({ existing, id, onSave, close }) {
-  const { t } = useStore()
-  const [f, setF] = useState(existing || { name: "", country: "", lead: "", members: [] })
+  const { t, db } = useStore()
+  const [f, setF] = useState(existing || { name: "", country: "", business: "", lead: "", members: [] })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   // keep the lead valid: it must stay one of the chosen members
   const setMembers = (v) => setF(s => ({ ...s, members: v, lead: v.includes(s.lead) ? s.lead : "" }))
@@ -226,6 +239,10 @@ function TeamForm({ existing, id, onSave, close }) {
           <Field label={t("teamName") + " *"}><input value={f.name} onChange={e => set("name", e.target.value)} autoFocus /></Field>
           <Field label={t("basedIn")}><input value={f.country || ""} onChange={e => set("country", e.target.value)} placeholder="e.g. United Kingdom" /></Field>
         </div>
+        <Field label="Business"><select value={f.business || ""} onChange={e => set("business", e.target.value)}>
+          <option value="">No business</option>
+          {db.businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </select></Field>
         <Field label={`${t("members")} (${members.length})`}>
           <MemberList value={members} onChange={setMembers} lead={f.lead} onLead={(v) => set("lead", v)} />
         </Field>
@@ -267,9 +284,11 @@ function TaskForm({ existing, id, onSave, close }) {
 
 function TransactionForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { business: db.businesses[0]?.id || "", type: "income", amount: "", date: todayISO(), category: "", note: "" })
+  const [f, setF] = useState(existing || { business: db.businesses[0]?.id || "", type: "income", amount: "", date: todayISO(), category: "", note: "", recurring: "none", recurrenceEnd: "", project: "" })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const submit = () => { if (!f.business) return; onSave("transaction", { ...f, id, amount: Number(f.amount || 0) }); close() }
+  const cats = [...new Set(db.transactions.map(x => x.category).filter(Boolean))].sort()
+  const salaryWarn = f.type === "expense" && isSalaryCategory(f.category)
   return (
     <>
       <div className="modal-b">
@@ -285,7 +304,30 @@ function TransactionForm({ existing, id, onSave, close }) {
           <Field label={`Amount (${db.currency})`}><input type="number" value={f.amount} onChange={e => set("amount", e.target.value)} autoFocus /></Field>
           <Field label="Date"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} /></Field>
         </div>
-        <Field label="Category"><input value={f.category} onChange={e => set("category", e.target.value)} placeholder="e.g. Salaries, Ads, Project payment" /></Field>
+        <div className="two">
+          <Field label="Category">
+            <input list="tx-cats" value={f.category} onChange={e => set("category", e.target.value)} placeholder="e.g. Sales, Ads, Rent" />
+            <datalist id="tx-cats">{cats.map(c => <option key={c} value={c} />)}</datalist>
+          </Field>
+          <Field label="Project"><select value={f.project || ""} onChange={e => set("project", e.target.value)}>
+            <option value="">— Unallocated —</option>
+            {db.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select></Field>
+        </div>
+        {salaryWarn && (
+          <p style={{ margin: "-4px 2px 8px", fontSize: 12, color: "#e0952b", display: "flex", alignItems: "center", gap: 6 }}>
+            <Icon name="alert" size={13} /> Salaries are calculated automatically from active staff — use a different category to avoid double-counting.
+          </p>
+        )}
+        <div className="two">
+          <Field label="Repeats"><select value={f.recurring || "none"} onChange={e => set("recurring", e.target.value)}>
+            <option value="none">One-off</option>
+            <option value="monthly">Monthly</option>
+          </select></Field>
+          {f.recurring === "monthly"
+            ? <Field label="Repeat until (optional)"><input type="date" value={f.recurrenceEnd || ""} onChange={e => set("recurrenceEnd", e.target.value)} /></Field>
+            : <div />}
+        </div>
         <Field label="Note"><textarea value={f.note} onChange={e => set("note", e.target.value)} /></Field>
       </div>
       <Footer onSave={submit} close={close} />

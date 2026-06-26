@@ -4,3 +4,92 @@
     align-items: center;
     font-size: 13px
 }
+
+/* Profit-by-project table */
+.plTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.plTable th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--line);
+}
+.plTable td {
+    padding: 6px 6px;
+    border-bottom: 1px solid var(--line);
+}
+.plTotal td {
+    border-top: 1px solid var(--line-strong);
+    border-bottom: none;
+    padding-top: 8px;
+}
+
+/* Profit & Loss statement */
+.pl {
+    font-size: 13.5px;
+}
+.plRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 2px;
+}
+.plSection {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+    margin: 12px 2px 2px;
+    font-weight: 700;
+}
+.plSub {
+    border-top: 1px dashed var(--line-strong);
+    margin-top: 4px;
+    padding-top: 8px;
+    font-weight: 600;
+}
+.plTotal {
+    border-top: 1px solid var(--line-strong);
+    margin-top: 4px;
+    padding-top: 10px;
+    font-size: 15px;
+}
+
+/* recurring badge + occurrence preview */
+.recBadge {
+    margin-inline-start: 8px;
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 20px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.recBadge:hover {
+    color: var(--txt);
+    border-color: var(--accent, #0071e3);
+}
+.recList {
+    margin-top: 6px;
+    padding: 6px 8px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-width: 260px;
+}
+.recList > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+}

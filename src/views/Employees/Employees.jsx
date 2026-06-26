@@ -7,13 +7,24 @@ import styles from './Employees.module.css'
 export default function Employees() {
   const { db, t, L, lang, money, search, openEditor, removeItem, ask } = useStore()
   const [countryFilter, setCountryFilter] = useState("all")
+  const [bizFilter, setBizFilter] = useState("all")
 
+  const bizName = (id) => db.businesses.find(b => b.id === id)?.name
   const countries = [...new Set(db.employees.map(e => e.country).filter(Boolean))]
   let rows = db.employees.filter(e => JSON.stringify(e).toLowerCase().includes(search.toLowerCase()))
+  if (bizFilter !== "all") rows = rows.filter(e => (e.business || "") === bizFilter)
   if (countryFilter !== "all") rows = rows.filter(e => (e.country || "") === countryFilter)
 
   return (
     <div>
+      {db.businesses.length > 0 && (
+        <div className="pill-row">
+          <span className={`pill ${bizFilter === "all" ? "on" : ""}`} onClick={() => setBizFilter("all")}>{L.all} businesses</span>
+          {db.businesses.map(b => (
+            <span key={b.id} className={`pill ${bizFilter === b.id ? "on" : ""}`} onClick={() => setBizFilter(b.id)}>{b.name}</span>
+          ))}
+        </div>
+      )}
       <div className="pill-row">
         <span className={`pill ${countryFilter === "all" ? "on" : ""}`} onClick={() => setCountryFilter("all")}>{L.all}</span>
         {countries.map(c => (
@@ -35,9 +46,12 @@ export default function Employees() {
                   <td><div className="person"><Avatar emp={e} /><div>
                     <b>{e.name}</b>
                     <small>{e.role} • {e.email}</small>
-                    <div className={styles.empTeams}>{empTeams.length
-                      ? empTeams.map(tm => <Tag key={tm.id} color="amber">{tm.name}</Tag>)
-                      : <Tag color="gray">{t("noTeam")}</Tag>}</div>
+                    <div className={styles.empTeams}>
+                      {bizName(e.business) && <Tag color="green"><Icon name="business" size={11} /> {bizName(e.business)}</Tag>}
+                      {empTeams.length
+                        ? empTeams.map(tm => <Tag key={tm.id} color="amber">{tm.name}</Tag>)
+                        : <Tag color="gray">{t("noTeam")}</Tag>}
+                    </div>
                     {e.notes && <small className={styles.empNote}>📝 {e.notes}</small>}
                   </div></div></td>
                   <td>{e.country ? <Tag color="blue">{e.country}</Tag> : L.none}</td>
