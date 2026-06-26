@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from './lib/store.jsx'
 import { fadeSlide, Icon, Clocks, RatesMenu, Presence, ConfirmDialog, Toast } from './components/ui/ui.jsx'
@@ -42,6 +42,8 @@ export default function App() {
     isGuest, guestMeta, guestStatus,
     view, setView, search, setSearch, openEditor, exportData, importData, clearAll, isPaid } = useStore()
   const fileRef = useRef()
+  const [toolsOpen, setToolsOpen] = useState(() => localStorage.getItem("bm_tools_open") !== "0")
+  const toggleTools = () => setToolsOpen(o => { localStorage.setItem("bm_tools_open", o ? "0" : "1"); return !o })
 
   // Guest (shared view-only link) gates — checked before auth so guests skip Login
   if (cloud && isGuest && guestStatus === "loading") return <div className="splash"><div className="logo">M</div></div>
@@ -95,11 +97,25 @@ export default function App() {
                 : "Access doesn’t expire"}</small>
             </div>
           ) : (<>
-          <button className="btn-soft" onClick={exportData}><Icon name="download" size={16} /> {L.exportData}</button>
-          <button className="btn-soft" onClick={() => fileRef.current.click()}><Icon name="upload" size={16} /> {L.importData}</button>
-          {!readOnly && (
-            <button className="btn-soft danger" onClick={clearAll}><Icon name="trash" size={16} /> {L.clearAll}</button>
-          )}
+          <button className="btn-soft tools-toggle" onClick={toggleTools} aria-expanded={toolsOpen}>
+            <Icon name="expand" size={15} />
+            <span style={{ flex: 1, textAlign: "start" }}>Data</span>
+            <motion.span animate={{ rotate: toolsOpen ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ display: "grid", placeItems: "center" }}>
+              <Icon name="chevron" size={15} />
+            </motion.span>
+          </button>
+          <AnimatePresence initial={false}>
+            {toolsOpen && (
+              <motion.div key="tools" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }} style={{ overflow: "hidden", display: "flex", flexDirection: "column", gap: 8 }}>
+                <button className="btn-soft" onClick={exportData}><Icon name="download" size={16} /> {L.exportData}</button>
+                <button className="btn-soft" onClick={() => fileRef.current.click()}><Icon name="upload" size={16} /> {L.importData}</button>
+                {!readOnly && (
+                  <button className="btn-soft danger" onClick={clearAll}><Icon name="trash" size={16} /> {L.clearAll}</button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
             onChange={e => e.target.files[0] && importData(e.target.files[0])} />
           </>)}

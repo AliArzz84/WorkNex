@@ -49,6 +49,7 @@ const ICONS = {
   logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></>,
   chat: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />,
   send: <><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></>,
+  chevron: <polyline points="6 9 12 15 18 9" />,
 }
 export function Icon({ name, size = 18, strokeWidth = 1.7, className }) {
   const p = ICONS[name]
@@ -147,37 +148,14 @@ export function RatesMenu() {
 /* live presence — shows who else is online / editing, plus a total count */
 export function Presence() {
   const { presence, session, setView } = useStore()
-  const [, tick] = useState(0)
-  useEffect(() => {
-    const t = setInterval(() => tick(n => n + 1), 3000)  // refresh editing→online label
-    return () => clearInterval(t)
-  }, [])
   if (!session) return null
-  const others = (presence || []).filter(p => p.userId !== session.user.id)
   const total = (presence || []).length || 1   // everyone connected, including me
-  // when several accounts are on, keep the bar tidy — show a count + first two chips
-  const shown = others.slice(0, 2)
-  const extra = others.length - shown.length
+  // just the online count — the Activity page shows who exactly is online
   return (
     <div className={styles.presence}>
       <button className={styles.presCount} onClick={() => setView("activity")} title="Open activity & access">
         <i className={styles.dot} />{total} online
       </button>
-      {shown.map(p => {
-        const editing = p.editingAt && Date.now() - p.editingAt < 8000
-        const roleLabel = p.role === "manager" ? "Manager" : "Boss"
-        return (
-          <span key={p.userId} className={`${styles.presChip} ${editing ? styles.editing : ""}`}
-            title={`${p.email} is ${editing ? "editing" : "online"}`}>
-            <i className={styles.dot} />
-            <span className={styles.pe}>{p.email}</span>
-            <small>({roleLabel}) · {editing ? "editing…" : "online"}</small>
-          </span>
-        )
-      })}
-      {extra > 0 && (
-        <button className={styles.presMore} onClick={() => setView("activity")} title="See everyone">+{extra}</button>
-      )}
     </div>
   )
 }
