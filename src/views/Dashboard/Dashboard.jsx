@@ -26,7 +26,7 @@ function ProjectCard({ p }) {
 }
 
 export default function Dashboard() {
-  const { db, t, reminders, empById, relDay, fmtTime, setView, isPaid, todayExtras } = useStore()
+  const { db, t, empById, relDay, fmtTime, setView, isPaid, todayExtras } = useStore()
   const empN = db.employees.filter(e => e.status === "active").length
   const projN = db.projects.filter(p => p.status === "active").length
   const weekMeet = db.meetings.filter(m => !m.done && daysBetween(m.datetime) >= 0 && daysBetween(m.datetime) <= 7).length
@@ -66,42 +66,25 @@ export default function Dashboard() {
         ) : <EmptyState icon="check" text="Nothing scheduled for today ✅" />}
       </div>
 
-      <div className="grid2">
-        <div className="panel">
-          <div className="panel-h"><span className="hicon"><Icon name="bell" size={16} /></span><h2>{t("reminders")}</h2></div>
-          {reminders.length ? (
-            <motion.div variants={stagger} initial="initial" animate="animate">
-              {reminders.map(r => (
-                <motion.div key={r.key} className={`alert ${r.color}`} variants={item}>
-                  <div className="dot" />
-                  <div><b>{r.title}</b><p>{r.sub}</p></div>
-                  <div className="when">{r.when}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-          ) : <EmptyState icon="check" text={t("noReminders")} />}
+      <div className="panel">
+        <div className="panel-h">
+          <span className="hicon"><Icon name="meetings" size={16} /></span><h2>{t("todayMeetings")}</h2>
+          <div className="right"><button className="btn ghost sm" onClick={() => setView("meetings")}><Icon name="arrow" size={15} /></button></div>
         </div>
-
-        <div className="panel">
-          <div className="panel-h">
-            <span className="hicon"><Icon name="meetings" size={16} /></span><h2>{t("todayMeetings")}</h2>
-            <div className="right"><button className="btn ghost sm" onClick={() => setView("meetings")}><Icon name="arrow" size={15} /></button></div>
-          </div>
-          {upMeet.length ? (
-            <motion.div variants={stagger} initial="initial" animate="animate">
-              {upMeet.map(m => (
-                <motion.div key={m.id} className="alert blue" variants={item}>
-                  <div className="dot" />
-                  <div>
-                    <b>{m.title}</b>
-                    <p>{(m.attendees || []).map(id => empById(id)?.name).filter(Boolean).join(", ")}</p>
-                  </div>
-                  <div className="when">{relDay(daysBetween(m.datetime))} • {fmtTime(m.datetime)}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-          ) : <EmptyState icon="meetings" text={t("noData")} />}
-        </div>
+        {upMeet.length ? (
+          <motion.div variants={stagger} initial="initial" animate="animate">
+            {upMeet.map(m => (
+              <motion.div key={m.id} className="alert blue" variants={item}>
+                <div className="dot" />
+                <div>
+                  <b>{m.title}</b>
+                  <p>{(m.attendees || []).map(id => empById(id)?.name).filter(Boolean).join(", ")}</p>
+                </div>
+                <div className="when">{relDay(daysBetween(m.datetime))} • {fmtTime(m.datetime)}</div>
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : <EmptyState icon="meetings" text={t("noData")} />}
       </div>
 
       <div className="panel">

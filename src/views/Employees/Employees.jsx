@@ -17,19 +17,17 @@ export default function Employees() {
 
   return (
     <div>
-      {db.businesses.length > 0 && (
-        <div className="pill-row">
-          <span className={`pill ${bizFilter === "all" ? "on" : ""}`} onClick={() => setBizFilter("all")}>{L.all} businesses</span>
-          {db.businesses.map(b => (
-            <span key={b.id} className={`pill ${bizFilter === b.id ? "on" : ""}`} onClick={() => setBizFilter(b.id)}>{b.name}</span>
-          ))}
-        </div>
-      )}
-      <div className="pill-row">
-        <span className={`pill ${countryFilter === "all" ? "on" : ""}`} onClick={() => setCountryFilter("all")}>{L.all}</span>
-        {countries.map(c => (
-          <span key={c} className={`pill ${countryFilter === c ? "on" : ""}`} onClick={() => setCountryFilter(c)}>{c}</span>
-        ))}
+      <div className="filters">
+        {db.businesses.length > 0 && (
+          <select value={bizFilter} onChange={e => setBizFilter(e.target.value)}>
+            <option value="all">All businesses</option>
+            {db.businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
+        <select value={countryFilter} onChange={e => setCountryFilter(e.target.value)}>
+          <option value="all">All countries</option>
+          {countries.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
       </div>
       <div className="panel">
         <div className="panel-h"><h2>{t("nav.employees")}<span className="count">{rows.length}</span></h2></div>
@@ -55,7 +53,7 @@ export default function Employees() {
                     {e.notes && <small className={styles.empNote}>📝 {e.notes}</small>}
                   </div></div></td>
                   <td>{e.country ? <Tag color="blue">{e.country}</Tag> : L.none}</td>
-                  <td><Money value={e.salary} currency={e.currency} /></td>
+                  <td><Money value={e.salary} currency={e.currency} convertible /></td>
                   <td>{lang === "fa" ? "روز " + e.payDay : "Day " + e.payDay}</td>
                   <td><StatusTag status={e.status} /></td>
                   <td className="right">

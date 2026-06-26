@@ -176,7 +176,7 @@ function ProjectForm({ existing, id, onSave, close }) {
           <Field label={t("deadline")}><input type="date" value={f.deadline} onChange={e => set("deadline", e.target.value)} /></Field>
         </div>
         <div className="two">
-          <Field label={`${t("budget")} (${db.currency})`}><input type="number" value={f.budget} onChange={e => set("budget", e.target.value)} /></Field>
+          <Field label={`${t("budget")} ($)`}><input type="number" value={f.budget} onChange={e => set("budget", e.target.value)} /></Field>
           <Field label={`${t("progress")} (%)`}><input type="number" min="0" max="100" value={f.progress} onChange={e => set("progress", e.target.value)} /></Field>
         </div>
         <div className="two">
@@ -301,7 +301,7 @@ function TransactionForm({ existing, id, onSave, close }) {
           </select></Field>
         </div>
         <div className="two">
-          <Field label={`Amount (${db.currency})`}><input type="number" value={f.amount} onChange={e => set("amount", e.target.value)} autoFocus /></Field>
+          <Field label="Amount ($)"><input type="number" value={f.amount} onChange={e => set("amount", e.target.value)} autoFocus /></Field>
           <Field label="Date"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} /></Field>
         </div>
         <div className="two">

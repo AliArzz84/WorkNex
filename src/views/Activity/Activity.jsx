@@ -119,7 +119,7 @@ function ShareLinksPanel() {
                   <small>{expiryText(lk)}</small>
                   <small className="muted">{lk.last_seen ? "opened " + timeAgo(new Date(lk.last_seen).getTime()) : "not opened yet"}</small>
                 </div>
-                <div className="row-actions">
+                <div className="row-actions share-actions">
                   <button className="iconbtn" title="Copy link" onClick={() => copy(lk.token)}><Icon name="copy" size={16} /></button>
                   <button className="iconbtn del" title="Delete link" onClick={() => remove(lk)}><Icon name="trash" size={16} /></button>
                 </div>

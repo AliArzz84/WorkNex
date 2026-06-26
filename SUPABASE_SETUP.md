@@ -186,3 +186,45 @@ from public.workspaces where id = 'default';
 ## ۷) سلامتِ پروژه
 هر از گاهی یه نگاه به **هشدارهای امنیتی/کارایی** بنداز:
 **Supabase → Advisors** (Security و Performance).
+
+---
+
+## ۸) فرمِ درخواست‌ها (Requests)
+بخشِ **Requests** توی اپ یه فرمِ عمومی داره که لینکش رو برای تیم می‌فرستی؛ هر کی با لینک، **بدونِ اکانت**، اسم + راهِ ارتباطی + توضیحِ درخواستش رو پر می‌کنه و توی اپ می‌بینیش.
+
+> 🔧 **فقط یک‌بار لازمه** (برای ساختِ جدول + دسترسی‌ها) — این بلوک رو توی SQL Editor اجرا کن:
+> ```sql
+> create table if not exists public.requests (
+>   id uuid primary key default gen_random_uuid(),
+>   name text not null,
+>   channel text,                         -- WhatsApp / Discord / …
+>   contact text,                         -- شناسه/شماره‌ی طرف
+>   message text not null,
+>   status text not null default 'new',   -- new | done
+>   created_at timestamptz not null default now()
+> );
+> alter table public.requests enable row level security;
+>
+> -- فرمِ عمومی (ناشناس) فقط می‌تونه درخواست ثبت کنه
+> drop policy if exists req_insert on public.requests;
+> create policy req_insert on public.requests for insert to anon, authenticated with check (true);
+> -- کاربرانِ واردشده (مدیر/رئیس) می‌تونن ببینن و مدیریت کنن
+> drop policy if exists req_select on public.requests;
+> create policy req_select on public.requests for select to authenticated using (true);
+> drop policy if exists req_update on public.requests;
+> create policy req_update on public.requests for update to authenticated using (true) with check (true);
+> drop policy if exists req_delete on public.requests;
+> create policy req_delete on public.requests for delete to authenticated using (true);
+>
+> grant insert on public.requests to anon;
+> grant select, insert, update, delete on public.requests to authenticated;
+> ```
+
+**نحوه‌ی استفاده:** برو تبِ **Requests** → دکمه‌ی «Copy form link» → لینک رو برای تیم بفرست. لینک به شکلِ `…/?request=1` هست.
+
+**دیدنِ درخواست‌ها از طریقِ SQL (اختیاری):**
+```sql
+select created_at, name, channel, contact, status, message
+from public.requests order by created_at desc;
+```
+> ⚠️ چون فرم عمومیه، هر کسی با لینک می‌تونه ثبت کنه (احتمالِ اسپم). اگه زیاد شد، بهم بگو تا یه محدودیتِ ساده (مثلاً rate-limit یا CAPTCHA سبک) اضافه کنیم.

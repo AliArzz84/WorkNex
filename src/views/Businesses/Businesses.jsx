@@ -1,16 +1,16 @@
 import { motion } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
-import { EmptyState, Icon, Money, stagger, item } from '../../components/ui/ui.jsx'
+import { EmptyState, Icon, Money, CurrencyToggle, stagger, item } from '../../components/ui/ui.jsx'
 import { colorFor } from '../../lib/data.js'
 import styles from './Businesses.module.css'
 
 export default function Businesses() {
-  const { db, openEditor, removeItem, ask, toGbp } = useStore()
+  const { db, openEditor, removeItem, ask, toUsd } = useStore()
 
   const sum = (list, type) => list.filter(x => x.type === type).reduce((s, x) => s + Number(x.amount || 0), 0)
   const stats = db.businesses.map(b => {
     const staff = db.employees.filter(e => e.business === b.id)
-    const salary = staff.filter(e => e.status === "active").reduce((s, e) => s + toGbp(Number(e.salary || 0), e.currency), 0)
+    const salary = staff.filter(e => e.status === "active").reduce((s, e) => s + toUsd(Number(e.salary || 0), e.currency), 0)
     const projects = db.projects.filter(p => p.business === b.id).length
     const tx = db.transactions.filter(x => x.business === b.id)
     const net = sum(tx, "income") - sum(tx, "expense") - salary
@@ -19,6 +19,9 @@ export default function Businesses() {
 
   return (
     <div>
+      <div className="filters" style={{ justifyContent: "flex-end" }}>
+        <CurrencyToggle />
+      </div>
       <div className="panel">
         <div className="panel-h">
           <span className="hicon"><Icon name="business" size={16} /></span>

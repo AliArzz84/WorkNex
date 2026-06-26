@@ -30,12 +30,17 @@ export function StoreProvider({ children }) {
   // guest "view-only" share link: ?view=<token> in the URL
   const viewToken = cloud ? new URLSearchParams(window.location.search).get("view") : null
   const isGuest = Boolean(viewToken)
+  // public request form: ?request=1 — anyone can submit, no login
+  const isRequest = cloud ? Boolean(new URLSearchParams(window.location.search).get("request")) : false
   const [guestMeta, setGuestMeta] = useState(null)                              // { label, role, sections, expires_at }
   const [guestStatus, setGuestStatus] = useState(isGuest ? "loading" : "ok")    // 'loading' | 'ok' | 'invalid'
   const [db, setDb] = useState(() => cloud ? EMPTY : loadLocalDB())
   const lang = "en"
   const setLang = () => {}
   const [theme, setTheme] = useState(localStorage.getItem("bm_theme") || "light")
+  // base currency is USD; this just toggles how base amounts are *displayed* (USD or GBP)
+  const [displayCurrency, setDisplayCurrencyState] = useState(localStorage.getItem("bm_disp") || "USD")
+  const setDisplayCurrency = (c) => { setDisplayCurrencyState(c); localStorage.setItem("bm_disp", c) }
   const [role, setRoleState] = useState(localStorage.getItem("bm_role") || "manager")
   const [view, setView] = useState("dashboard")
   const [search, setSearch] = useState("")
@@ -150,7 +155,7 @@ export function StoreProvider({ children }) {
 
   /* === cloud: auth session === */
   useEffect(() => {
-    if (!cloud || isGuest) return
+    if (!cloud || isGuest || isRequest) return
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true) })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => sub?.subscription?.unsubscribe?.()
@@ -158,7 +163,7 @@ export function StoreProvider({ children }) {
 
   /* === cloud: load role + workspace + realtime when logged in === */
   useEffect(() => {
-    if (!cloud || isGuest) return
+    if (!cloud || isGuest || isRequest) return
     if (!session) { setAccount(null); setDataReady(false); setDb(EMPTY); return }
     let channel, cancelled = false
     ;(async () => {
@@ -296,6 +301,25 @@ export function StoreProvider({ children }) {
     if (error) throw error
   }, [])
 
+  /* requests — a public form (anon insert) + manager-side inbox */
+  const submitRequest = useCallback(async ({ name, channel, contact, message }) => {
+    const { error } = await supabase.from("requests").insert({ name, channel, contact, message })
+    if (error) throw error
+  }, [])
+  const listRequests = useCallback(async () => {
+    const { data, error } = await supabase.from("requests").select("*").order("created_at", { ascending: false })
+    if (error) throw error
+    return data || []
+  }, [])
+  const setRequestStatus = useCallback(async (id, status) => {
+    const { error } = await supabase.from("requests").update({ status }).eq("id", id)
+    if (error) throw error
+  }, [])
+  const deleteRequest = useCallback(async (id) => {
+    const { error } = await supabase.from("requests").delete().eq("id", id)
+    if (error) throw error
+  }, [])
+
   /* in-app AI assistant — calls the `assistant` Edge Function (Claude) */
   const askAssistant = useCallback(async (history) => {
     const { data, error } = await supabase.functions.invoke("assistant", { body: { messages: history } })
@@ -319,10 +343,10 @@ export function StoreProvider({ children }) {
   /* formatting helpers */
   const locale = lang === "fa" ? "fa-IR" : "en-US"
   const CUR_SYMBOL = { GBP: "£", USD: "$", EUR: "€", AED: "د.إ ", TRY: "₺", IRR: "" }
-  const money = useCallback((n, code = "GBP") => {
+  const money = useCallback((n, code = "USD") => {
     const amt = Number(n || 0)
     if (code === "IRR") return amt.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " تومان"
-    return (CUR_SYMBOL[code] || "£") + amt.toLocaleString("en-GB", { maximumFractionDigits: 0 })
+    return (CUR_SYMBOL[code] || "$") + amt.toLocaleString("en-GB", { maximumFractionDigits: 0 })
   }, [])
   // prefer the live nerkh GBP price; fall back to the exchangerate.host value
   const gbpToman = (currencyRates && currencyRates.GBP) || tomanPerGbp
@@ -341,6 +365,14 @@ export function StoreProvider({ children }) {
     const r = currencyRates && currencyRates[code]
     return (r && gbpToman) ? amt * r / gbpToman : amt
   }, [gbpToman, currencyRates])
+  // USD is the base currency; GBP is an optional display. Derive USD↔GBP from the live Toman rates.
+  const usdToGbp = (currencyRates && currencyRates.USD && gbpToman) ? currencyRates.USD / gbpToman : 0.79
+  const toUsd = useCallback((n, code = "USD") => {
+    const inGbp = toGbp(n, code)                 // any currency → GBP
+    return usdToGbp ? inGbp / usdToGbp : inGbp   // GBP → USD (base)
+  }, [toGbp, usdToGbp])
+  // format a USD-base amount in the currently selected display currency
+  const fmtBase = useCallback((n) => displayCurrency === "GBP" ? money(Number(n || 0) * usdToGbp, "GBP") : money(n, "USD"), [displayCurrency, usdToGbp, money])
   const fmtDate = useCallback((iso) => iso ? new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" }) : L.none, [locale, L])
   const fmtDateTime = useCallback((iso) => iso ? new Date(iso).toLocaleString(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : L.none, [locale, L])
   const fmtTime = useCallback((iso) => iso ? new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "", [locale])
@@ -500,10 +532,11 @@ export function StoreProvider({ children }) {
     db, lang, setLang, theme, toggleTheme, role: effectiveRole, setRole, readOnly, canPreview,
     cloud, session, account, authReady, dataReady, presence, signIn, signUp, signOut,
     isGuest, guestMeta, guestStatus, createViewLink, listViewLinks, revokeViewLink, askAssistant,
+    isRequest, submitRequest, listRequests, setRequestStatus, deleteRequest,
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => { if (!isGuest) setEditing({ type, id }) }, closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, askType, resolveDialog, notify,
-    money, fmtToman, toGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
+    money, fmtToman, toGbp, toUsd, fmtBase, displayCurrency, setDisplayCurrency, usdToGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
     exportData, importData, clearAll,
   }

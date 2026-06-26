@@ -814,11 +814,39 @@ tr:hover td {
   border-color: var(--accent)
 }
 
+/* compact dropdown filter bar (replaces rows of pills) */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.filters select,
+.filters input[type="date"] {
+  background: var(--surface);
+  color: var(--txt);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+}
+.filters select { cursor: pointer }
+.filters select:hover,
+.filters input[type="date"]:hover,
+.filters select:focus { border-color: var(--accent) }
+
 /* Boss (read-only) view — hide editing controls */
 .app[data-role="boss"] .row-actions,
 .app[data-role="boss"] .add-btn,
 .app[data-role="boss"] .pay-action {
   display: none !important
+}
+/* …but keep shared-link actions (copy / revoke) usable in Boss view */
+.app[data-role="boss"] .row-actions.share-actions {
+  display: flex !important
 }
 
 /* Print / PDF */

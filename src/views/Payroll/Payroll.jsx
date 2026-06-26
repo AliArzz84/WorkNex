@@ -4,10 +4,10 @@ import { Avatar, Counter, Tag, Icon, Money, stagger, item } from '../../componen
 import { daysBetween, nextPayday, periodKey } from '../../lib/data.js'
 
 export default function Payroll() {
-  const { db, t, money, toGbp, fmtDate, relDay, isPaid, setPaid, ask } = useStore()
+  const { db, t, money, toUsd, fmtDate, relDay, isPaid, setPaid, ask } = useStore()
   const active = db.employees.filter(e => e.status !== "inactive")
-  // mixed currencies → sum the GBP equivalent of each salary
-  const total = db.employees.filter(e => e.status === "active").reduce((s, e) => s + toGbp(e.salary, e.currency), 0)
+  // mixed currencies → sum the USD-base equivalent of each salary
+  const total = db.employees.filter(e => e.status === "active").reduce((s, e) => s + toUsd(e.salary, e.currency), 0)
   const rows = active.map(e => {
     const pd = nextPayday(e); const per = periodKey(pd)
     return { e, pd, dd: daysBetween(pd.toISOString()), per, paid: isPaid(e.id, per) }

@@ -13,14 +13,17 @@ import Meetings from './views/Meetings/Meetings.jsx'
 import Payroll from './views/Payroll/Payroll.jsx'
 import Teams from './views/Teams/Teams.jsx'
 import Activity from './views/Activity/Activity.jsx'
+import Requests from './views/Requests/Requests.jsx'
 import Editor from './components/Editor/Editor.jsx'
 import Login from './components/Login/Login.jsx'
+import RequestForm from './components/RequestForm/RequestForm.jsx'
 import Assistant from './components/Assistant/Assistant.jsx'
 import { daysBetween, nextPayday, periodKey } from './lib/data.js'
 
 const NAV = [
   { key: "dashboard", icon: "dashboard" },
   { key: "tasks", icon: "tasks" },
+  { key: "requests", icon: "chat" },
   { key: "meetings", icon: "meetings" },
   { key: "projects", icon: "projects" },
   { key: "businesses", icon: "business" },
@@ -31,19 +34,22 @@ const NAV = [
   { key: "diagram", icon: "diagram" },
   { key: "activity", icon: "history" },
 ]
-const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
+const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, requests: Requests, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
 const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting", teams: "team", tasks: "task", finance: "transaction", businesses: "business" }
 // only the views that use the *topbar* search box (Projects has its own in-section search)
-const SEARCHABLE = new Set(["tasks", "employees", "finance", "meetings", "activity"])
+const SEARCHABLE = new Set(["tasks", "employees", "meetings", "activity"])
 
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,
     cloud, session, account, authReady, signOut,
-    isGuest, guestMeta, guestStatus,
+    isGuest, guestMeta, guestStatus, isRequest,
     view, setView, search, setSearch, openEditor, exportData, importData, clearAll, isPaid } = useStore()
   const fileRef = useRef()
   const [toolsOpen, setToolsOpen] = useState(() => localStorage.getItem("bm_tools_open") !== "0")
   const toggleTools = () => setToolsOpen(o => { localStorage.setItem("bm_tools_open", o ? "0" : "1"); return !o })
+
+  // Public request form (?request=1) — no login needed
+  if (cloud && isRequest) return <RequestForm />
 
   // Guest (shared view-only link) gates — checked before auth so guests skip Login
   if (cloud && isGuest && guestStatus === "loading") return <div className="splash"><Logo size={54} /></div>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
-import { Tag, EmptyState, Icon, Money, stagger, item } from '../../components/ui/ui.jsx'
+import { Tag, EmptyState, Icon, Money, CurrencyToggle, stagger, item } from '../../components/ui/ui.jsx'
 import { Donut, BarsH, ColumnsV } from '../../components/Charts/Charts.jsx'
 import {
   isSalaryCategory, periodWindow, windowMonths, txOccurrences, expandAll,
@@ -17,7 +17,7 @@ const CAT_COLORS = ["#6c8cff", "#9b6cff", "#34d399", "#fbbf24", "#f472b6", "#60a
 const PERIODS = [["all", "All time"], ["month", "This month"], ["quarter", "This quarter"], ["year", "This year"], ["custom", "Custom"]]
 
 export default function Finance() {
-  const { db, money, fmtDate, search, openEditor, removeItem, ask, toGbp } = useStore()
+  const { db, fmtBase, fmtDate, openEditor, removeItem, ask, toUsd } = useStore()
   const [biz, setBiz] = useState("all")
   const [period, setPeriod] = useState("all")
   const [from, setFrom] = useState("")
@@ -46,10 +46,10 @@ export default function Finance() {
   // canonical period figures (single source of truth for reconciliation)
   const periodIncome = sum(occ, "income")
   const periodExpense = sum(occ, "expense", true)                       // manual expenses, excl reserved "Salaries"
-  const periodSalary = periodSalaryCost(db.employees, toGbp, win, bizId)
+  const periodSalary = periodSalaryCost(db.employees, toUsd, win, bizId)
   const periodOutgoing = periodExpense + periodSalary
   const periodNet = periodIncome - periodOutgoing
-  const runRate = monthlyRunRate(db.employees, toGbp, bizId)
+  const runRate = monthlyRunRate(db.employees, toUsd, bizId)
 
   // --- F3: spending by category (expenses excl Salaries) + synthetic Salaries line
   const catMap = new Map()
@@ -78,7 +78,7 @@ export default function Finance() {
   for (let idx = trendLo; idx <= win.endIdx; idx++) {
     const inc = incByM[idx] || 0
     const exp = expByM[idx] || 0
-    const sal = salaryForMonth(db.employees, toGbp, idx, bizId)
+    const sal = salaryForMonth(db.employees, toUsd, idx, bizId)
     trend.push({ label: monthLabel(idx), income: inc, expense: exp, salary: sal, net: inc - exp - sal })
   }
   const trendHasData = trend.some(m => m.income || m.expense || m.salary)
@@ -100,7 +100,7 @@ export default function Finance() {
     const list = occ.filter(o => o.business === b.id)
     const income = sum(list, "income")
     const expense = sum(list, "expense", true)
-    const salary = periodSalaryCost(db.employees, toGbp, win, b.id)
+    const salary = periodSalaryCost(db.employees, toUsd, win, b.id)
     return { b, income, expense, salary, incomeColor: GREENS[i % GREENS.length], outColor: REDS[i % REDS.length] }
   })
   const cards = allView ? perBiz : perBiz.filter(x => x.b.id === biz)
@@ -111,7 +111,6 @@ export default function Finance() {
   const tableRows = scopeTx
     .map(tx => ({ tx, occ: txOccurrences(tx, win, now) }))
     .filter(r => r.occ.length > 0)
-    .filter(r => JSON.stringify({ ...r.tx, name: bizName(r.tx.business), pr: projName(r.tx.project) }).toLowerCase().includes((search || "").toLowerCase()))
     .sort((a, b) => new Date(b.occ[b.occ.length - 1].date) - new Date(a.occ[a.occ.length - 1].date))
 
   // dev-only reconciliation check (no production UI)
@@ -130,7 +129,7 @@ export default function Finance() {
     const esc = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s }
     const rows = [...occ].sort((a, b) =>
       bizName(a.business).localeCompare(bizName(b.business)) || a.date.localeCompare(b.date) || String(a.category || "").localeCompare(String(b.category || "")))
-    const lines = [["Date", "Business", "Category", "Type", "Amount(GBP)", "Project", "Source", "Note"].join(",")]
+    const lines = [["Date", "Business", "Category", "Type", "Amount(USD)", "Project", "Source", "Note"].join(",")]
     for (const o of rows) {
       lines.push([o.date, bizName(o.business), o.category || "", o.type === "income" ? "Income" : "Outgoing",
         Number(o.amount || 0).toFixed(2), o.project ? projName(o.project) : "", o._source || "Manual", o.note || ""].map(esc).join(","))
@@ -150,25 +149,24 @@ export default function Finance() {
   return (
     <div>
       {/* period + custom range + CSV */}
-      <div className="pill-row">
-        {PERIODS.map(([k, l]) => <span key={k} className={`pill ${period === k ? "on" : ""}`} onClick={() => setPeriod(k)}>{l}</span>)}
-        {period === "custom" && (
-          <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ padding: "4px 8px" }} />
-            <span className="muted">→</span>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ padding: "4px 8px" }} />
-          </span>
+      <div className="filters">
+        <select value={period} onChange={e => setPeriod(e.target.value)}>
+          {PERIODS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        {period === "custom" && (<>
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+          <span className="muted">→</span>
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} />
+        </>)}
+        {db.businesses.length > 0 && (
+          <select value={biz} onChange={e => setBiz(e.target.value)}>
+            <option value="all">All businesses</option>
+            {db.businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
         )}
-        <button className="btn ghost sm" style={{ marginInlineStart: "auto" }} onClick={exportCSV}><Icon name="download" size={14} /> CSV</button>
+        <span style={{ marginInlineStart: "auto" }}><CurrencyToggle /></span>
+        <button className="btn ghost sm" onClick={exportCSV}><Icon name="download" size={14} /> CSV</button>
       </div>
-
-      {/* business scope */}
-      {db.businesses.length > 0 && (
-        <div className="pill-row">
-          <span className={`pill ${allView ? "on" : ""}`} onClick={() => setBiz("all")}>All businesses</span>
-          {db.businesses.map(b => <span key={b.id} className={`pill ${biz === b.id ? "on" : ""}`} onClick={() => setBiz(b.id)}>{b.name}</span>)}
-        </div>
-      )}
 
       {showBanner && (
         <div className="muted" style={{ fontSize: 12.5, margin: "0 2px 12px" }}>
@@ -193,21 +191,21 @@ export default function Finance() {
         <motion.div className="kpi k3" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="wallet" size={20} /></div>
           <h3 style={{ fontSize: 19 }}><Money value={periodSalary} /></h3><p>Salaries (period total)</p>
-          <small style={{ color: "var(--muted)", fontSize: 11 }}>≈ {money(Math.round(runRate))}/mo · {months} mo</small>
+          <small style={{ color: "var(--muted)", fontSize: 11 }}>≈ {fmtBase(Math.round(runRate))}/mo · {months} mo</small>
         </motion.div>
       </motion.div>
 
       {/* F2: monthly trend */}
       <div className="panel">
         <div className="panel-h"><span className="hicon"><Icon name="finance" size={16} /></span><h2>Monthly trend</h2></div>
-        {trendHasData ? <ColumnsV data={trend} fmt={money} /> : <p className="muted">No activity in this period yet</p>}
+        {trendHasData ? <ColumnsV data={trend} fmt={fmtBase} /> : <p className="muted">No activity in this period yet</p>}
       </div>
 
       <div className="grid2">
         {/* F3: spending by category */}
         <div className="panel">
           <div className="panel-h"><span className="hicon"><Icon name="arrowDown" size={16} /></span><h2>Spending by category</h2></div>
-          {catChartColored.length ? <BarsH data={catChartColored} fmt={money} /> : <p className="muted">No outgoing yet</p>}
+          {catChartColored.length ? <BarsH data={catChartColored} fmt={fmtBase} /> : <p className="muted">No outgoing yet</p>}
         </div>
         {/* F10: profit by project */}
         <div className="panel">
@@ -247,11 +245,11 @@ export default function Finance() {
         <div className="grid2">
           <div className="panel">
             <div className="panel-h"><span className="hicon"><Icon name="arrowUp" size={16} /></span><h2>Income by business</h2></div>
-            {incomeDonut.length ? <Donut data={incomeDonut} fmt={money} centerSub="income" centerIcon="arrowUp" centerColor="var(--green-ink)" /> : <p className="muted">No income yet</p>}
+            {incomeDonut.length ? <Donut data={incomeDonut} fmt={fmtBase} centerSub="income" centerIcon="arrowUp" centerColor="var(--green-ink)" /> : <p className="muted">No income yet</p>}
           </div>
           <div className="panel">
             <div className="panel-h"><span className="hicon"><Icon name="arrowDown" size={16} /></span><h2>Outgoing by business</h2></div>
-            {expenseDonut.length ? <Donut data={expenseDonut} fmt={money} centerSub="outgoing" centerIcon="arrowDown" centerColor="var(--red-ink)" /> : <p className="muted">No outgoing yet</p>}
+            {expenseDonut.length ? <Donut data={expenseDonut} fmt={fmtBase} centerSub="outgoing" centerIcon="arrowDown" centerColor="var(--red-ink)" /> : <p className="muted">No outgoing yet</p>}
           </div>
         </div>
       )}

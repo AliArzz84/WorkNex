@@ -93,22 +93,41 @@ export function Clocks() {
   )
 }
 
-/* ---------- Money: GBP by default, small button toggles to Toman ---------- */
-export function Money({ value, currency = "GBP" }) {
-  const { money, fmtToman } = useStore()
+/* ---------- Money ----------
+   No `currency` prop  → a BASE amount (stored in USD): shown in the page's USD/GBP display toggle.
+   With a `currency`   → a TAGGED amount (e.g. a salary in its own currency); `convertible` adds the ﷼ Toman toggle. */
+export function Money({ value, currency = null, convertible = false }) {
+  const { money, fmtToman, fmtBase } = useStore()
   const [toman, setToman] = useState(false)
-  const sym = (CURRENCIES.find(c => c.code === currency) || {}).symbol || "£"
+  if (currency == null) {
+    return <span className={styles.money2}><span className={styles.mGbp}>{fmtBase(value)}</span></span>
+  }
+  const sym = (CURRENCIES.find(c => c.code === currency) || {}).symbol || "$"
   const isToman = currency === "IRR"
+  const showToggle = convertible && !isToman
   return (
     <span className={styles.money2}>
-      <span className={styles.mGbp}>{(toman && !isToman) ? fmtToman(value, currency) : money(value, currency)}</span>
-      {!isToman && (
+      <span className={styles.mGbp}>{(toman && showToggle) ? fmtToman(value, currency) : money(value, currency)}</span>
+      {showToggle && (
         <button className={styles.mToggle} title="Switch currency"
           onClick={(e) => { e.stopPropagation(); setToman(t => !t) }}>
           {toman ? sym : "﷼"}
         </button>
       )}
     </span>
+  )
+}
+
+/* small USD / GBP display toggle (base currency stays USD) */
+export function CurrencyToggle() {
+  const { displayCurrency, setDisplayCurrency } = useStore()
+  const b = { padding: "6px 12px", fontSize: 12.5, fontWeight: 600, background: "transparent", color: "var(--muted)", border: "none", cursor: "pointer" }
+  const on = { ...b, background: "var(--accent)", color: "#fff" }
+  return (
+    <div style={{ display: "inline-flex", border: "1px solid var(--line-strong)", borderRadius: 10, overflow: "hidden" }} title="Display amounts in USD or GBP (base is USD)">
+      <button style={displayCurrency === "GBP" ? b : on} onClick={() => setDisplayCurrency("USD")}>$ USD</button>
+      <button style={displayCurrency === "GBP" ? on : b} onClick={() => setDisplayCurrency("GBP")}>£ GBP</button>
+    </div>
   )
 }
 

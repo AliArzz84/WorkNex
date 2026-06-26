@@ -63,7 +63,7 @@ function MiniTile({ date }) {
 }
 
 export default function Tasks() {
-  const { db, fmtDate, relDay, search, todayExtras } = useStore()
+  const { db, fmtDate, relDay, fmtTime, search, todayExtras } = useStore()
   const [filter, setFilter] = useState("todo")
 
   const match = (k) => JSON.stringify(k).toLowerCase().includes(search.toLowerCase())
@@ -74,11 +74,25 @@ export default function Tasks() {
   const today = todo.filter(k => k.due && daysBetween(k.due) === 0).sort(byPri)
   const noDate = todo.filter(k => !k.due).sort(byPri)
   const future = todo.filter(k => k.due && daysBetween(k.due) > 0)
+  // upcoming meetings + project deadlines surface here too, grouped with tasks by date
+  const inSearch = (o) => JSON.stringify(o).toLowerCase().includes((search || "").toLowerCase())
+  const upMeet = db.meetings
+    .filter(m => !m.done && m.datetime && daysBetween(m.datetime) > 0 && inSearch(m))
+    .map(m => ({ key: "m" + m.id, type: "meeting", id: m.id, color: "blue", icon: "meetings",
+      title: m.title, sub: "Meeting" + (m.location ? " • " + m.location : ""), when: fmtTime(m.datetime), date: m.datetime.slice(0, 10) }))
+  const upProj = db.projects
+    .filter(p => p.status !== "done" && p.deadline && daysBetween(p.deadline) > 0 && inSearch(p))
+    .map(p => ({ key: "d" + p.id, type: "project", id: p.id, color: "red", icon: "projects",
+      title: p.name, sub: "Project deadline" + (p.client ? " • " + p.client : ""), when: "Deadline", date: p.deadline }))
 
-  // group future tasks by their due date
+  // group everything upcoming by date → { tasks, extras }
   const groups = {}
-  future.forEach(k => { (groups[k.due] ||= []).push(k) })
+  const ensure = (date) => (groups[date] ||= { tasks: [], extras: [] })
+  future.forEach(k => ensure(k.due).tasks.push(k))
+  upMeet.forEach(m => ensure(m.date).extras.push(m))
+  upProj.forEach(p => ensure(p.date).extras.push(p))
   const futureDates = Object.keys(groups).sort()
+  const upcomingCount = future.length + upMeet.length + upProj.length
 
   const pills = [["todo", `To do (${todo.length})`], ["done", `Done (${doneList.length})`]]
 
@@ -121,22 +135,29 @@ export default function Tasks() {
             ) : <div className="empty" style={{ padding: "22px 10px" }}>Nothing scheduled for today 🎉</div>}
           </div>
 
-          {/* UPCOMING — grouped by day */}
+          {/* UPCOMING — tasks + meetings + project deadlines, grouped by day */}
           {futureDates.length > 0 && (
             <div className="panel">
-              <div className="panel-h"><span className="hicon"><Icon name="meetings" size={16} /></span><h2>Upcoming</h2><span className="count">{future.length}</span></div>
-              {futureDates.map(date => (
-                <div className={styles.taskGroup} key={date}>
-                  <div className={styles.taskGroupH}>
-                    <MiniTile date={date} />
-                    <span>{relDay(daysBetween(date))} · {fmtDate(date)}</span>
-                    <span className={styles.gcount}>{groups[date].length} task{groups[date].length > 1 ? "s" : ""}</span>
+              <div className="panel-h"><span className="hicon"><Icon name="meetings" size={16} /></span><h2>Upcoming</h2><span className="count">{upcomingCount}</span></div>
+              {futureDates.map(date => {
+                const g = groups[date]
+                const n = g.tasks.length + g.extras.length
+                return (
+                  <div className={styles.taskGroup} key={date}>
+                    <div className={styles.taskGroupH}>
+                      <MiniTile date={date} />
+                      <span>{relDay(daysBetween(date))} · {fmtDate(date)}</span>
+                      <span className={styles.gcount}>{n} item{n > 1 ? "s" : ""}</span>
+                    </div>
+                    <motion.div variants={stagger} initial="initial" animate="animate">
+                      <AnimatePresence>
+                        {g.extras.map(it => <TodayRow key={it.key} it={it} />)}
+                        {g.tasks.sort(byPri).map(k => <TaskRow key={k.id} k={k} />)}
+                      </AnimatePresence>
+                    </motion.div>
                   </div>
-                  <motion.div variants={stagger} initial="initial" animate="animate">
-                    <AnimatePresence>{groups[date].sort(byPri).map(k => <TaskRow key={k.id} k={k} />)}</AnimatePresence>
-                  </motion.div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -150,7 +171,6 @@ export default function Tasks() {
             </div>
           )}
 
-          {todo.length === 0 && <div className="panel"><EmptyState icon="tasks" text="No tasks to do — add one" /></div>}
         </>
       )}
     </div>

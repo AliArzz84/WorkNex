@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
-import { Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, Money, stagger, item } from '../../components/ui/ui.jsx'
+import { Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, Money, CurrencyToggle, stagger, item } from '../../components/ui/ui.jsx'
 import { daysBetween } from '../../lib/data.js'
 import { projectNetAllTime } from '../../lib/finance.js'
 
@@ -28,19 +28,18 @@ export default function Projects() {
 
   return (
     <div>
-      {db.businesses.length > 0 && (
-        <div className="pill-row">
-          <span className={`pill ${bizFilter === "all" ? "on" : ""}`} onClick={() => setBizFilter("all")}>{L.all} businesses</span>
-          {db.businesses.map(b => (
-            <span key={b.id} className={`pill ${bizFilter === b.id ? "on" : ""}`} onClick={() => setBizFilter(b.id)}>{b.name}</span>
-          ))}
-        </div>
-      )}
-      <div className="pill-row">
-        {filters.map(([k, lbl]) => (
-          <span key={k} className={`pill ${filter === k ? "on" : ""}`} onClick={() => setFilter(k)}>{lbl}</span>
-        ))}
-        <div className="search" style={{ maxWidth: 300 }}>
+      <div className="filters">
+        {db.businesses.length > 0 && (
+          <select value={bizFilter} onChange={e => setBizFilter(e.target.value)}>
+            <option value="all">All businesses</option>
+            {db.businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
+        <select value={filter} onChange={e => setFilter(e.target.value)}>
+          {filters.map(([k, lbl]) => <option key={k} value={k}>{lbl}</option>)}
+        </select>
+        <span style={{ marginInlineStart: "auto" }}><CurrencyToggle /></span>
+        <div className="search" style={{ maxWidth: 280 }}>
           <span className="si"><Icon name="search" size={15} /></span>
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search projects, team, people…" />
         </div>
