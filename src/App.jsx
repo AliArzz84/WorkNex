@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from './lib/store.jsx'
-import { fadeSlide, Icon, Clocks, RatesMenu, Presence, ConfirmDialog, Toast } from './components/ui/ui.jsx'
+import { fadeSlide, Icon, Logo, Clocks, RatesMenu, Presence, ConfirmDialog, Toast } from './components/ui/ui.jsx'
 import Dashboard from './views/Dashboard/Dashboard.jsx'
 import Tasks from './views/Tasks/Tasks.jsx'
 import Finance from './views/Finance/Finance.jsx'
@@ -46,17 +46,17 @@ export default function App() {
   const toggleTools = () => setToolsOpen(o => { localStorage.setItem("bm_tools_open", o ? "0" : "1"); return !o })
 
   // Guest (shared view-only link) gates — checked before auth so guests skip Login
-  if (cloud && isGuest && guestStatus === "loading") return <div className="splash"><div className="logo">M</div></div>
+  if (cloud && isGuest && guestStatus === "loading") return <div className="splash"><Logo size={54} /></div>
   if (cloud && isGuest && guestStatus === "invalid") return (
     <div className="splash"><div className="guest-gone">
-      <div className="logo">M</div>
+      <Logo size={54} />
       <h2>This link isn’t available</h2>
       <p>The share link has expired or been turned off. Ask whoever sent it for a new one.</p>
     </div></div>
   )
 
   // Cloud auth gates (normal signed-in users)
-  if (cloud && !isGuest && !authReady) return <div className="splash"><div className="logo">M</div></div>
+  if (cloud && !isGuest && !authReady) return <div className="splash"><Logo size={54} /></div>
   if (cloud && !isGuest && !session) return <Login />
 
   // guests only see the sections their link allows
@@ -76,7 +76,7 @@ export default function App() {
     <div className="app" data-role={role}>
       <aside className="sidebar">
         <div className="brand">
-          <div className="logo">M</div>
+          <Logo size={30} />
           <div><b>{L.appName}</b><small>{L.appSub}</small></div>
         </div>
         {nav.map(n => (

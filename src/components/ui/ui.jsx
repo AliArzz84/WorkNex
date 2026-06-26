@@ -51,6 +51,19 @@ const ICONS = {
   send: <><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></>,
   chevron: <polyline points="6 9 12 15 18 9" />,
 }
+/* App logo — blue rounded square with a white "M" (matches /public/favicon.svg). */
+export function Logo({ size = 30, className }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 100 100"
+      aria-label="Manager Dashboard" role="img"
+      style={{ borderRadius: Math.round(size * 0.24), boxShadow: "var(--shadow-sm)", display: "block", flex: "0 0 auto" }}>
+      <rect x="0" y="0" width="100" height="100" rx="24" fill="#2d8cff" />
+      <path d="M28 71 V33 L50 53 L72 33 V71" fill="none" stroke="#ffffff"
+        strokeWidth="13" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export function Icon({ name, size = 18, strokeWidth = 1.7, className }) {
   const p = ICONS[name]
   if (!p) return null
@@ -117,7 +130,7 @@ export function RatesMenu() {
   }, [])
   const r = currencyRates || {}
   const fmt = (n) => new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(n)
-  const rows = [["USD", "$"], ["EUR", "€"], ["GBP", "£"], ["AED", "د.إ"], ["TRY", "₺"]].filter(([k]) => r[k])
+  const rows = [["USD", "$"], ["EUR", "€"], ["GBP", "£"]].filter(([k]) => r[k])
   const teaser = r.USD ? `$ ${fmt(r.USD)}` : "Rates"
   return (
     <div className={styles.rates} ref={ref}>

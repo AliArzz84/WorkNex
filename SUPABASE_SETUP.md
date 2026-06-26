@@ -6,18 +6,47 @@
 
 ---
 
-## ۱) مدیریتِ دسترسی — کی می‌تونه وارد بشه
-دسترسی **فقط با دعوت**ه. کسی می‌تونه Sign up کنه که ایمیلش توی لیستِ `allowed_emails` باشه.
+## ۱) مدیریتِ دسترسی — کی می‌تونه وارد بشه (+ نقشش)
+دسترسی **فقط با دعوت**ه. کسی می‌تونه Sign up کنه که ایمیلش توی لیستِ `allowed_emails` باشه. نقشِ هر نفر (`manager` یا `boss`) رو هم همون موقعِ دعوت مشخص می‌کنی.
 
-**دیدنِ لیستِ افرادِ مجاز:**
+> 🔧 **فقط یک‌بار لازمه** (برای فعال‌کردنِ نقش هنگامِ دعوت) — این بلوک رو یک‌بار توی SQL Editor اجرا کن:
+> ```sql
+> -- ستونِ نقش به لیستِ مجاز (پیش‌فرض boss)
+> alter table public.allowed_emails
+>   add column if not exists role text not null default 'boss'
+>   check (role in ('manager','boss'));
+>
+> -- ثبت‌نام، نقشِ دعوت‌شده رو روی پروفایل بذاره (به‌جای boss ثابت)
+> create or replace function public.handle_new_user()
+> returns trigger language plpgsql security definer set search_path to 'public'
+> as $$
+> declare is_allowed boolean; invited_role text;
+> begin
+>   select true, role into is_allowed, invited_role
+>   from public.allowed_emails where lower(email) = lower(new.email) limit 1;
+>   if not coalesce(is_allowed, false) then
+>     raise exception 'This email is not authorised to sign up. Contact the administrator.';
+>   end if;
+>   insert into public.profiles (id, email, role)
+>   values (new.id, new.email, coalesce(invited_role, 'boss'))
+>   on conflict (id) do nothing;
+>   return new;
+> end; $$;
+> ```
+
+**دیدنِ لیستِ افرادِ مجاز + نقششون:**
 ```sql
-select email, added_at from public.allowed_emails order by added_at;
+select email, role, added_at from public.allowed_emails order by added_at;
 ```
 
-**اضافه‌کردنِ یه نفرِ جدید** (حتماً *قبل* از اینکه Sign up کنه):
+**اضافه‌کردنِ یه نفرِ جدید + نقشش** (حتماً *قبل* از اینکه Sign up کنه):
 ```sql
+-- مدیر:
+insert into public.allowed_emails (email, role) values ('newperson@example.com', 'manager');
+-- رئیس (نقش اختیاریه، پیش‌فرض boss):
 insert into public.allowed_emails (email) values ('newperson@example.com');
 ```
+> ⚠️ نقش فقط لحظه‌ی **Sign up** روی پروفایلِ طرف می‌نشینه. اگه کسی **قبلاً** ثبت‌نام کرده، نقشش از اینجا عوض نمی‌شه — از بخشِ ۲ تغییرش بده.
 
 **حذفِ دسترسیِ یه نفر** (اکانتش رو هم از **Authentication → Users** پاک کن):
 ```sql
@@ -26,12 +55,17 @@ delete from public.allowed_emails where email = 'someone@example.com';
 
 ---
 
-## ۲) برچسبِ مدیر / رئیس (اختیاری — فقط نمایشی)
-نقش دسترسی رو محدود نمی‌کنه، فقط برچسبیه که توی صفحه‌ی Activity دیده می‌شه.
+## ۲) تغییرِ نقشِ یه کاربرِ موجود (مدیر / رئیس)
+نقش رو معمولاً موقعِ دعوت (بخشِ ۱) مشخص می‌کنی. برای عوض‌کردنِ نقشِ کسی که **از قبل ثبت‌نام کرده**:
 ```sql
 update public.profiles set role = 'manager' where email = 'someone@example.com';
 -- یا 'boss'
 ```
+> برای سازگاریِ دعوتِ بعدی، توی لیستِ مجاز هم آپدیت کن:
+> ```sql
+> update public.allowed_emails set role = 'manager' where email = 'someone@example.com';
+> ```
+> نقش دسترسی رو محدود نمی‌کنه؛ نمای پیش‌فرض (رئیس/مدیر) و برچسبِ صفحه‌ی Activity رو تعیین می‌کنه.
 
 ---
 
