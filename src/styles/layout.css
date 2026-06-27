@@ -354,3 +354,35 @@
 .btn.ghost.danger:hover {
     background: rgba(229, 72, 77, .1)
 }
+
+/* mobile nav: hamburger (hidden on desktop) + drawer scrim */
+.menu-btn {
+    display: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--txt);
+    cursor: pointer;
+    place-items: center;
+    flex: 0 0 auto;
+    transition: background .15s ease, transform .12s cubic-bezier(.4, 0, .2, 1)
+}
+
+.menu-btn:hover {
+    background: var(--hover)
+}
+
+.menu-btn:active {
+    transform: scale(.92)
+}
+
+.nav-scrim {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .42);
+    backdrop-filter: blur(2px);
+    z-index: 39
+}

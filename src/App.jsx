@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from './lib/store.jsx'
 import { fadeSlide, Icon, Logo, Clocks, RatesMenu, Presence, Reminders, ConfirmDialog, Toast } from './components/ui/ui.jsx'
@@ -51,6 +51,16 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("bm_sidebar_collapsed") === "1")
   const toggleSidebar = () => setCollapsed(c => { localStorage.setItem("bm_sidebar_collapsed", c ? "0" : "1"); return !c })
   const [backupsOpen, setBackupsOpen] = useState(false)
+  const [mobileNav, setMobileNav] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width:780px)").matches)
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width:780px)")
+    const on = () => { setIsMobile(mq.matches); if (!mq.matches) setMobileNav(false) }
+    mq.addEventListener("change", on)
+    return () => mq.removeEventListener("change", on)
+  }, [])
+  // on mobile we use an off-canvas drawer, so the desktop icon-rail collapse never applies
+  const effectiveCollapsed = collapsed && !isMobile
 
   // Public request form (?request=1) — no login needed
   if (cloud && isRequest) return <RequestForm />
@@ -84,14 +94,14 @@ export default function App() {
   const switchRole = (r) => setRole(r)
 
   return (
-    <div className="app" data-role={role} data-collapsed={collapsed ? "true" : "false"}>
-      <aside className="sidebar">
+    <div className="app" data-role={role} data-collapsed={effectiveCollapsed ? "true" : "false"}>
+      <aside className={"sidebar" + (mobileNav ? " open" : "")}>
         <div className="brand">
           <Logo size={30} />
           <div><b>{L.appName}</b><small>{L.appSub}</small></div>
         </div>
         {nav.map(n => (
-          <div key={n.key} className={`nav-item ${view === n.key ? "active" : ""}`} onClick={() => setView(n.key)} title={t("nav." + n.key)}>
+          <div key={n.key} className={`nav-item ${view === n.key ? "active" : ""}`} onClick={() => { setView(n.key); setMobileNav(false) }} title={t("nav." + n.key)}>
             {view === n.key && <motion.div className="hl" layoutId="navHL" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className="ic"><Icon name={n.icon} size={18} /></span>
             <span className="lbl">{t("nav." + n.key)}</span>
@@ -120,7 +130,7 @@ export default function App() {
                 : "Access doesn’t expire"}</small>
             </div>
           ) : (<>
-          {!collapsed && (<>
+          {!effectiveCollapsed && (<>
           <button className="btn-soft tools-toggle" onClick={toggleTools} aria-expanded={toolsOpen}>
             <Icon name="expand" size={15} />
             <span style={{ flex: 1, textAlign: "start" }}>Data</span>
@@ -158,9 +168,11 @@ export default function App() {
           )}
         </div>
       </aside>
+      {mobileNav && <div className="nav-scrim" onClick={() => setMobileNav(false)} />}
 
       <main className="main">
         <div className="topbar">
+          <button className="menu-btn" onClick={() => setMobileNav(true)} aria-label="Open menu"><Icon name="menu" size={20} /></button>
           <div>
             <h1>{t("titles." + view)}</h1>
             <div className="sub">{t("subs." + view)}</div>

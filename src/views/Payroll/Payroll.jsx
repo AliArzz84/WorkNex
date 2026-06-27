@@ -57,9 +57,9 @@ export default function Payroll() {
                   <b>{r.e.name}</b>
                   <small>{r.e.role}{bizFilter === "all" && bizName(r.e.business) ? " · " + bizName(r.e.business) : ""}</small>
                 </div></div></td>
-                <td><Money value={r.e.salary} currency={r.e.currency} /></td>
-                <td>{fmtDate(r.pd.toISOString())}<br /><small className="muted">{r.paid ? "" : relDay(r.dd)}</small></td>
-                <td>
+                <td data-label={t("salary")}><Money value={r.e.salary} currency={r.e.currency} /></td>
+                <td data-label={t("nextPay")}>{fmtDate(r.pd.toISOString())}<br /><small className="muted">{r.paid ? "" : relDay(r.dd)}</small></td>
+                <td data-label={t("status")}>
                   {r.paid ? <Tag color="green">✓ {t("paid")}</Tag>
                     : r.dd < 0 ? <Tag color="red">{t("overdue")}</Tag>
                       : r.dd === 0 ? <Tag color="amber">{t("dueToday")}</Tag>

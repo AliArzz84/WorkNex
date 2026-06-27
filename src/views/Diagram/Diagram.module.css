@@ -269,3 +269,25 @@
     border-color: var(--accent);
     color: #fff
 }
+
+/* mobile: shorter canvas + bigger tap targets in the toolbar */
+@media(max-width:780px) {
+    .canvas {
+        height: 62vh;
+        min-height: 360px
+    }
+
+    .toolbar {
+        padding: 9px 10px;
+        gap: 8px
+    }
+
+    .tool {
+        padding: 8px 11px
+    }
+
+    .toolBtn {
+        width: 36px;
+        height: 36px
+    }
+}

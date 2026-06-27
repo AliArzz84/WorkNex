@@ -52,10 +52,10 @@ export default function Employees() {
                     </div>
                     {e.notes && <small className={styles.empNote}>📝 {e.notes}</small>}
                   </div></div></td>
-                  <td>{e.country ? <Tag color="blue">{e.country}</Tag> : L.none}</td>
-                  <td><Money value={e.salary} currency={e.currency} convertible /></td>
-                  <td>{lang === "fa" ? "روز " + e.payDay : "Day " + e.payDay}</td>
-                  <td><StatusTag status={e.status} /></td>
+                  <td data-label={t("country")}>{e.country ? <Tag color="blue">{e.country}</Tag> : L.none}</td>
+                  <td data-label={t("salary")}><Money value={e.salary} currency={e.currency} convertible /></td>
+                  <td data-label={t("payDay")}>{lang === "fa" ? "روز " + e.payDay : "Day " + e.payDay}</td>
+                  <td data-label={t("status")}><StatusTag status={e.status} /></td>
                   <td className="right">
                     <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                       <button className="iconbtn" onClick={() => openEditor("employee", e.id)}><Icon name="edit" size={16} /></button>

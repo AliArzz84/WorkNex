@@ -187,3 +187,26 @@
     opacity: .45;
     cursor: not-allowed;
 }
+
+/* mobile: the chat fills the screen and respects the notch / home bar */
+@media(max-width:600px) {
+    .fab {
+        bottom: calc(18px + env(safe-area-inset-bottom));
+        inset-inline-end: 16px;
+        width: 52px;
+        height: 52px
+    }
+
+    .panel {
+        width: auto;
+        inset-inline: 10px;
+        top: calc(58px + env(safe-area-inset-top));
+        bottom: calc(82px + env(safe-area-inset-bottom));
+        height: auto;
+        max-height: none
+    }
+
+    .foot input {
+        font-size: 16px
+    }
+}

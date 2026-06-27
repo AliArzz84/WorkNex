@@ -223,6 +223,12 @@
     background: var(--red)
 }
 
+@media(max-width:420px) {
+    .remMenu {
+        width: calc(100vw - 24px)
+    }
+}
+
 .remMenu {
     position: absolute;
     top: calc(100% + 8px);

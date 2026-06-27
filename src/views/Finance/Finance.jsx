@@ -278,10 +278,10 @@ export default function Finance() {
                         </div>
                       )}
                     </td>
-                    <td>{bizName(tx.business)}</td>
-                    <td>{tx.category}{tx.project ? <small className="muted"> • {projName(tx.project)}</small> : ""}{tx.note ? <small className="muted"> • {tx.note}</small> : ""}</td>
-                    <td>{tx.type === "income" ? <Tag color="green"><Icon name="arrowUp" size={11} /> Income</Tag> : <Tag color="red"><Icon name="arrowDown" size={11} /> Outgoing</Tag>}</td>
-                    <td className="right" style={{ color: tx.type === "income" ? "var(--green-ink)" : "var(--red-ink)" }}>
+                    <td data-label="Business">{bizName(tx.business)}</td>
+                    <td data-label="Category">{tx.category}{tx.project ? <small className="muted"> • {projName(tx.project)}</small> : ""}{tx.note ? <small className="muted"> • {tx.note}</small> : ""}</td>
+                    <td data-label="Type">{tx.type === "income" ? <Tag color="green"><Icon name="arrowUp" size={11} /> Income</Tag> : <Tag color="red"><Icon name="arrowDown" size={11} /> Outgoing</Tag>}</td>
+                    <td data-label="Amount" className="right" style={{ color: tx.type === "income" ? "var(--green-ink)" : "var(--red-ink)" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
                         <span>{tx.type === "income" ? "+" : "−"}</span><Money value={tx.amount} align="flex-end" />
                       </span>
