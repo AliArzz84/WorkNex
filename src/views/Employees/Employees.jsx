@@ -5,7 +5,7 @@ import { Avatar, StatusTag, Tag, EmptyState, Icon, Money, item } from '../../com
 import styles from './Employees.module.css'
 
 export default function Employees() {
-  const { db, t, L, lang, money, search, openEditor, removeItem, ask } = useStore()
+  const { db, t, L, lang, search, openEditor, removeItem, ask } = useStore()
   const [countryFilter, setCountryFilter] = useState("all")
   const [bizFilter, setBizFilter] = useState("all")
 

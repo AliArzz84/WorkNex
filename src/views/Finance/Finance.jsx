@@ -2,17 +2,14 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
 import { Tag, EmptyState, Icon, Money, CurrencyToggle, stagger, item } from '../../components/ui/ui.jsx'
-import { Donut, BarsH, ColumnsV } from '../../components/Charts/Charts.jsx'
+import { BarsH, ColumnsV } from '../../components/Charts/Charts.jsx'
 import {
   isSalaryCategory, periodWindow, windowMonths, txOccurrences, expandAll,
   monthlyRunRate, periodSalaryCost, salaryForMonth, monthLabel, monthIndexOf,
 } from '../../lib/finance.js'
 import styles from './Finance.module.css'
 
-// income slices render in green tones, outgoing in red tones (each business a distinct shade)
-const GREENS = ["#34c759", "#30a14e", "#5dd37a", "#1f9d57", "#0a8f43"]
-const REDS = ["#ff6b6b", "#fb5454", "#e0352b", "#ff8a8a", "#c62f27"]
-const CAT_COLORS = ["#6c8cff", "#9b6cff", "#34d399", "#fbbf24", "#f472b6", "#60a5fa", "#22d3ee", "#fb923c", "#a78bfa", "#f87171", "#2dd4bf", "#facc15"]
+const CAT_COLORS =["#6c8cff", "#9b6cff", "#34d399", "#fbbf24", "#f472b6", "#60a5fa", "#22d3ee", "#fb923c", "#a78bfa", "#f87171", "#2dd4bf", "#facc15"]
 
 const PERIODS = [["all", "All time"], ["month", "This month"], ["quarter", "This quarter"], ["year", "This year"], ["custom", "Custom"]]
 
@@ -95,18 +92,6 @@ export default function Finance() {
     projMap.set(key, row)
   }
   const projRows = [...projMap.values()].map(r => ({ ...r, net: r.income - r.expense })).sort((a, b) => b.net - a.net)
-
-  // --- per-business summary for the donuts (over the window)
-  const perBiz = db.businesses.map((b, i) => {
-    const list = occ.filter(o => o.business === b.id)
-    const income = sum(list, "income")
-    const expense = sum(list, "expense", true)
-    const salary = periodSalaryCost(db.employees, toUsd, win, b.id)
-    return { b, income, expense, salary, incomeColor: GREENS[i % GREENS.length], outColor: REDS[i % REDS.length] }
-  })
-  const cards = allView ? perBiz : perBiz.filter(x => x.b.id === biz)
-  const incomeDonut = cards.filter(x => x.income > 0).map(x => ({ label: x.b.name, value: x.income, color: x.incomeColor }))
-  const expenseDonut = cards.filter(x => (x.expense + x.salary) > 0).map(x => ({ label: x.b.name, value: x.expense + x.salary, color: x.outColor }))
 
   // --- transactions table: ONE row per template (recurring collapsed to a badge)
   const tableRows = scopeTx

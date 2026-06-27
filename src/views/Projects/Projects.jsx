@@ -6,7 +6,7 @@ import { daysBetween } from '../../lib/data.js'
 import { projectNetAllTime } from '../../lib/finance.js'
 
 export default function Projects() {
-  const { db, t, L, money, fmtDate, relDay, teamById, teamMembers, openEditor, removeItem, ask } = useStore()
+  const { db, t, L, fmtDate, relDay, teamById, teamMembers, openEditor, removeItem, ask } = useStore()
   const [filter, setFilter] = useState("all")
   const [bizFilter, setBizFilter] = useState("all")
   const [q, setQ] = useState("")

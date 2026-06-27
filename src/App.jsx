@@ -206,7 +206,8 @@ export default function App() {
         </div>
 
         <AnimatePresence mode="wait">
-          <motion.div key={view} {...fadeSlide}>
+          {/* no exit animation: with mode="wait" an exit would stall the next view on fast switches → blank section */}
+          <motion.div key={view} initial={fadeSlide.initial} animate={fadeSlide.animate} transition={fadeSlide.transition}>
             <ViewComp />
           </motion.div>
         </AnimatePresence>
