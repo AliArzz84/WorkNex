@@ -896,3 +896,117 @@ tr:hover td {
     margin-bottom: 12px
   }
 }
+
+/* ============================================================
+   Micro-interactions — tactile press + smooth hover.
+   Transforms only (GPU-friendly). Where a control is already a
+   framer motion.button (add-btn, theme-btn) its inline transform
+   wins, so nothing double-animates.
+   ============================================================ */
+
+/* ease colour / shadow / press across every button-like control */
+.btn,
+.iconbtn,
+.btn-soft,
+.pill,
+.chip,
+.role-toggle button,
+.modal-h .x,
+.nav-item {
+  transition: background .18s ease, color .15s ease, border-color .15s ease,
+    box-shadow .18s ease, transform .12s cubic-bezier(.4, 0, .2, 1)
+}
+
+/* press-down feedback */
+.btn:active,
+.btn-soft:active,
+.role-toggle button:active,
+.modal-h .x:active {
+  transform: scale(.94)
+}
+
+.btn:active {
+  box-shadow: none
+}
+
+.pill:active,
+.chip:active {
+  transform: scale(.95)
+}
+
+.nav-item:active {
+  transform: scale(.98)
+}
+
+/* icon buttons feel a touch springier */
+.iconbtn:hover {
+  transform: scale(1.08)
+}
+
+.iconbtn:active {
+  transform: scale(.88)
+}
+
+/* the Today checkbox pops when pressed */
+.tcheck:active {
+  transform: scale(.86)
+}
+
+/* theme toggle: smooth the background only (transform is framer's) */
+.theme-btn {
+  transition: background .18s ease, border-color .15s ease
+}
+
+/* inputs: ease the focus ring / border in */
+.filters select,
+.filters input[type="date"],
+.search input,
+.field input,
+.field select,
+.field textarea {
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease
+}
+
+/* table rows: fade the hover tint instead of snapping */
+td {
+  transition: background .16s ease
+}
+
+/* KPI cards lift on hover (Finance / Payroll / Businesses;
+   Dashboard KPIs already lift via framer whileHover) */
+.kpi {
+  transition: transform .2s cubic-bezier(.4, 0, .2, 1), box-shadow .2s ease
+}
+
+.kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow)
+}
+
+/* stacked member avatars pop out on hover */
+.pcard .members .avatar {
+  transition: transform .15s ease, box-shadow .15s ease
+}
+
+.pcard .members .avatar:hover {
+  transform: translateY(-3px) scale(1.14);
+  z-index: 3;
+  box-shadow: var(--shadow-sm)
+}
+
+/* progress-bar fill colour eases if it changes */
+.prog>i {
+  transition: background .2s ease
+}
+
+/* respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important
+  }
+}

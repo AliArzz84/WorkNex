@@ -82,13 +82,24 @@ select id, saved_at, saved_by from public.workspace_history order by saved_at de
 select data from public.workspace_history where id = 4;   -- شماره رو از لیستِ بالا بردار
 ```
 
-**برگردوندنِ داده به یه نسخه‌ی قبلی (Restore):**
+**برگردوندنِ داده به یه نسخه‌ی قبلی (Restore) — از طریقِ SQL:**
 ```sql
 update public.workspaces
 set data = (select data from public.workspace_history where id = 4)
 where id = 'default';
 ```
 > چند ثانیه بعد روی خودِ اپ هم زنده آپدیت می‌شه.
+
+**بازگردانی از داخلِ خودِ اپ (بدونِ SQL):** حالا یه دکمه‌ی **Backups** توی سایدبار → **Data** هست که همین تاریخچه رو نشون می‌ده و با یه کلیک Restore می‌کنه (بازگردانی خودش هم ذخیره می‌شه، پس برگشت‌پذیره).
+
+> 🔧 **فقط یک‌بار لازمه** (تا کاربرانِ واردشده بتونن این تاریخچه رو از داخلِ اپ بخونن) — این بلوک رو توی SQL Editor اجرا کن:
+> ```sql
+> drop policy if exists wsh_select on public.workspace_history;
+> create policy wsh_select on public.workspace_history
+>   for select to authenticated using (true);
+> grant select on public.workspace_history to authenticated;
+> ```
+> بعدش توی اپ: **Data → Backups → انتخابِ نسخه → Restore**. تا وقتی این اجرا نشه، لیستِ Backups داخلِ اپ خالی نشون داده می‌شه (دیتات هرچند همچنان server-side بکاپ می‌شه).
 
 ### ب) بکاپِ روزانه به Google Drive
 فایل‌ها با اسمِ `worknexus-YYYY-MM-DD.json` توی فولدرِ Drive ذخیره می‌شن.

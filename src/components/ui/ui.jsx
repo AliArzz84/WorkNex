@@ -192,6 +192,54 @@ export function Presence() {
   )
 }
 
+/* reminders bell — what needs attention now (meetings, payroll, deadlines) */
+export function Reminders() {
+  const { reminders, setView, enableNotifications } = useStore()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener("mousedown", onDoc)
+    return () => document.removeEventListener("mousedown", onDoc)
+  }, [])
+  const list = reminders || []
+  const urgent = list.filter(r => r.urgent).length
+  const canAsk = typeof Notification !== "undefined" && Notification.permission === "default"
+  const go = (r) => { setView(r.view); setOpen(false) }
+  return (
+    <div className={styles.rem} ref={ref}>
+      <button className={styles.remBtn} onClick={() => setOpen(o => !o)} title="Reminders & alerts" aria-label="Reminders">
+        <Icon name="bell" size={17} />
+        {list.length > 0 && <span className={`${styles.remCount} ${urgent ? styles.remCountUrgent : ""}`}>{list.length}</span>}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div className={styles.remMenu} initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.16 }}>
+            <div className={styles.remHead}><span>Needs attention</span>{list.length > 0 && <b>{list.length}</b>}</div>
+            <div className={styles.remBody}>
+              {list.length ? list.map(r => (
+                <button className={styles.remRow} key={r.key} onClick={() => go(r)}>
+                  <i className={`${styles.remDot} ${styles["d_" + r.color] || ""}`} />
+                  <span className={styles.remText}><b>{r.title}</b>{r.sub && <small>{r.sub}</small>}</span>
+                  <span className={styles.remWhen}>{r.when}</span>
+                </button>
+              )) : (
+                <div className={styles.remEmpty}><Icon name="check" size={22} /><span>You’re all caught up</span></div>
+              )}
+            </div>
+            {canAsk && (
+              <button className={styles.remEnable} onClick={() => enableNotifications()}>
+                <Icon name="bell" size={14} /> Enable desktop reminders
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 /* ---------- Animated number count-up ---------- */
 export function Counter({ value }) {
   const [d, setD] = useState(0)

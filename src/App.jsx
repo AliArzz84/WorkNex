@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from './lib/store.jsx'
-import { fadeSlide, Icon, Logo, Clocks, RatesMenu, Presence, ConfirmDialog, Toast } from './components/ui/ui.jsx'
+import { fadeSlide, Icon, Logo, Clocks, RatesMenu, Presence, Reminders, ConfirmDialog, Toast } from './components/ui/ui.jsx'
+import Backups from './components/Backups/Backups.jsx'
 import Dashboard from './views/Dashboard/Dashboard.jsx'
 import Tasks from './views/Tasks/Tasks.jsx'
 import Finance from './views/Finance/Finance.jsx'
@@ -49,6 +50,7 @@ export default function App() {
   const toggleTools = () => setToolsOpen(o => { localStorage.setItem("bm_tools_open", o ? "0" : "1"); return !o })
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("bm_sidebar_collapsed") === "1")
   const toggleSidebar = () => setCollapsed(c => { localStorage.setItem("bm_sidebar_collapsed", c ? "0" : "1"); return !c })
+  const [backupsOpen, setBackupsOpen] = useState(false)
 
   // Public request form (?request=1) — no login needed
   if (cloud && isRequest) return <RequestForm />
@@ -93,7 +95,13 @@ export default function App() {
             {view === n.key && <motion.div className="hl" layoutId="navHL" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className="ic"><Icon name={n.icon} size={18} /></span>
             <span className="lbl">{t("nav." + n.key)}</span>
-            {badges[n.key] > 0 && <span className="badge">{badges[n.key]}</span>}
+            {badges[n.key] > 0 && (
+              <motion.span className="badge" key={badges[n.key]}
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 500, damping: 22 }}>
+                {badges[n.key]}
+              </motion.span>
+            )}
           </div>
         ))}
         <div className="side-foot">
@@ -126,6 +134,9 @@ export default function App() {
                 transition={{ duration: 0.2 }} style={{ overflow: "hidden", display: "flex", flexDirection: "column", gap: 8 }}>
                 <button className="btn-soft" onClick={exportData}><Icon name="download" size={16} /> {L.exportData}</button>
                 <button className="btn-soft" onClick={() => fileRef.current.click()}><Icon name="upload" size={16} /> {L.importData}</button>
+                {cloud && (
+                  <button className="btn-soft" onClick={() => setBackupsOpen(true)}><Icon name="history" size={16} /> Backups</button>
+                )}
                 {!readOnly && (
                   <button className="btn-soft danger" onClick={clearAll}><Icon name="trash" size={16} /> {L.clearAll}</button>
                 )}
@@ -200,6 +211,7 @@ export default function App() {
             </motion.button>
           )}
 
+          {!isGuest && <Reminders />}
           <Presence />
           <RatesMenu />
           <Clocks />
@@ -217,6 +229,7 @@ export default function App() {
       <ConfirmDialog />
       <Toast />
       <Assistant />
+      <Backups open={backupsOpen} onClose={() => setBackupsOpen(false)} />
     </div>
   )
 }

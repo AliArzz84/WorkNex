@@ -487,19 +487,19 @@ export function StoreProvider({ children }) {
     const out = []
     db.meetings.filter(m => !m.done).forEach(m => {
       const dd = daysBetween(m.datetime)
-      if (dd >= 0 && dd <= 2) out.push({ key: "m" + m.id, color: "blue", title: L.meetReminder(m.title), sub: fmtDateTime(m.datetime), when: relDay(dd), sort: dd * 10 })
+      if (dd >= 0 && dd <= 2) out.push({ key: "m" + m.id, cat: "meeting", view: "meetings", urgent: dd === 0, color: "blue", title: L.meetReminder(m.title), sub: fmtDateTime(m.datetime), when: relDay(dd), sort: dd * 10 })
     })
     db.employees.filter(e => e.status === "active").forEach(e => {
       const pd = nextPayday(e); const dd = daysBetween(pd.toISOString()); const per = periodKey(pd)
       if (isPaidPure(db, e.id, per)) return
       if (dd <= 7) {
         const overdue = dd < 0
-        out.push({ key: "p" + e.id, color: overdue ? "red" : "amber", title: overdue ? L.payOverdue(e.name) : L.payReminder(e.name), sub: money(e.salary, e.currency), when: relDay(dd), sort: overdue ? -100 + dd : dd })
+        out.push({ key: "p" + e.id, cat: "salary", view: "payroll", urgent: dd <= 0, color: overdue ? "red" : "amber", title: overdue ? L.payOverdue(e.name) : L.payReminder(e.name), sub: money(e.salary, e.currency), when: relDay(dd), sort: overdue ? -100 + dd : dd })
       }
     })
     db.projects.filter(p => p.status === "active").forEach(p => {
       const dd = daysBetween(p.deadline)
-      if (dd <= 5) out.push({ key: "d" + p.id, color: dd < 0 ? "red" : "amber", title: L.deadlineReminder(p.name), sub: p.client, when: relDay(dd), sort: dd })
+      if (dd <= 5) out.push({ key: "d" + p.id, cat: "deadline", view: "projects", urgent: dd <= 0, color: dd < 0 ? "red" : "amber", title: L.deadlineReminder(p.name), sub: p.client, when: relDay(dd), sort: dd })
     })
     return out.sort((a, b) => a.sort - b.sort)
   }, [db, L, money, fmtDateTime, relDay])
@@ -545,6 +545,55 @@ export function StoreProvider({ children }) {
     }
   }, [L, askType])
 
+  /* === backups: browse + restore the server-side version history ===
+     A DB trigger already snapshots the whole workspace into `workspace_history`
+     on every save (plus a daily Google-Drive backup runs server-side). Here we
+     just let the user view those points in time and roll back from inside the app. */
+  const listSnapshots = useCallback(async () => {
+    if (!cloud) return []
+    const { data, error } = await supabase.from("workspace_history")
+      .select("id, saved_at, saved_by")
+      .eq("workspace_id", "default")
+      .order("saved_at", { ascending: false }).limit(50)
+    if (error) throw error
+    return data || []
+  }, [cloud])
+
+  const restoreSnapshot = useCallback(async (id) => {
+    if (!cloud) return
+    const { data: snap, error } = await supabase.from("workspace_history").select("data").eq("id", id).single()
+    if (error) throw error
+    // the restore is itself written back into history, so it's always reversible
+    setDb(prev => withLog(prev, { ...norm(snap.data), seen: prev.seen }, logEntry("update", "workspace", "Restored a backup", "rolled the workspace back to an earlier version")))
+  }, [cloud])
+
+  /* === desktop reminders (Web Notifications API) — no backend needed === */
+  const enableNotifications = useCallback(async () => {
+    if (typeof Notification === "undefined") { notify("This browser doesn't support notifications", "error"); return false }
+    const p = await Notification.requestPermission()
+    if (p === "granted") { notify("Desktop reminders enabled", "success"); return true }
+    notify("Notifications are blocked — turn them on in your browser settings", "error")
+    return false
+  }, [notify])
+
+  // when there are overdue/today items and permission is granted, fire one OS
+  // notification per day (re-fires if the urgent count changes that day)
+  useEffect(() => {
+    if (isGuest || isRequest || !dataReady) return
+    if (cloud && !session) return
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return
+    const urgent = reminders.filter(r => r.urgent)
+    if (!urgent.length) return
+    const sig = new Date().toISOString().slice(0, 10) + ":" + urgent.length
+    if (localStorage.getItem("bm_notified") === sig) return
+    localStorage.setItem("bm_notified", sig)
+    const body = urgent.slice(0, 4).map(r => "• " + r.title).join("\n") + (urgent.length > 4 ? "\n+" + (urgent.length - 4) + " more" : "")
+    try {
+      const n = new Notification(urgent.length + (urgent.length > 1 ? " items need" : " item needs") + " your attention", { body, tag: "bm-reminders" })
+      n.onclick = () => { window.focus(); n.close() }
+    } catch (e) {}
+  }, [reminders, cloud, isGuest, isRequest, session?.user?.id, dataReady])
+
   const value = {
     db, lang, setLang, theme, toggleTheme, role: effectiveRole, setRole, readOnly, canPreview,
     cloud, session, account, authReady, dataReady, presence, signIn, signUp, signOut,
@@ -556,6 +605,7 @@ export function StoreProvider({ children }) {
     money, fmtToman, toGbp, toUsd, fmtBase, displayCurrency, setDisplayCurrency, usdToGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
     exportData, importData, clearAll,
+    listSnapshots, restoreSnapshot, enableNotifications,
   }
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
