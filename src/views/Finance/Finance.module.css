@@ -93,3 +93,168 @@
     gap: 12px;
     font-size: 12px;
 }
+
+/* Excel export dropdown */
+.xlsxWrap {
+    position: relative;
+    display: inline-flex;
+}
+.xlsxMenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    inset-inline-end: 0;
+    z-index: 60;
+    min-width: 230px;
+    max-height: 80vh;
+    overflow: auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 14px 38px rgba(0, 0, 0, .28);
+    padding: 6px;
+}
+.xlsxHead {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 4px 8px 8px;
+}
+.xlsxItem {
+    display: block;
+    width: 100%;
+    text-align: start;
+    background: transparent;
+    border: 0;
+    color: var(--txt);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+.xlsxItem:hover {
+    background: var(--hover);
+}
+.xlsxAll {
+    font-weight: 700;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line);
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 2px;
+}
+.xlsxBiz {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 0 4px 8px;
+}
+.xlsxChip {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--muted);
+    border-radius: 7px;
+    padding: 4px 9px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.xlsxChip:hover {
+    color: var(--txt);
+    border-color: var(--accent);
+}
+.chipOn {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+.xlsxHead2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 6px 8px 4px;
+}
+.xlsxLink {
+    background: transparent;
+    border: 0;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.xlsxSecs {
+    display: flex;
+    flex-direction: column;
+    max-height: 240px;
+    overflow: auto;
+}
+.xlsxCheck {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    text-align: start;
+    background: transparent;
+    border: 0;
+    color: var(--txt);
+    border-radius: 8px;
+    padding: 7px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+.xlsxCheck:hover {
+    background: var(--hover);
+}
+.box {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    flex: 0 0 auto;
+    border: 1.6px solid var(--line-strong);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    transition: background .15s ease, border-color .15s ease;
+}
+.boxOn {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+.xlsxExport {
+    width: 100%;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 9px;
+    padding: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s ease, transform .12s ease;
+}
+.xlsxExport:hover {
+    background: var(--accent-press);
+}
+.xlsxExport:active {
+    transform: scale(.97);
+}
+.xlsxExport:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
