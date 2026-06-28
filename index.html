@@ -6,9 +6,37 @@
     <title>Manager Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#0071e3" />
+    <!-- apply the saved theme before first paint so the boot screen matches the app -->
+    <script>
+      try { if ((localStorage.getItem("bm_theme") || "light") === "dark") document.documentElement.setAttribute("data-theme", "dark"); } catch (e) {}
+    </script>
+    <style>
+      /* instant loading screen — shown the moment the tab opens, before React mounts.
+         createRoot().render() clears #root on mount, so this disappears on its own. */
+      #boot {
+        position: fixed; inset: 0; z-index: 9999;
+        display: grid; place-items: center;
+        background: #ffffff;
+      }
+      html[data-theme="dark"] #boot { background: #1c1c1e; }
+      .boot-logo { width: 66px; height: 66px; display: block; transform-origin: center;
+        animation: bootBreathe 1.6s ease-in-out infinite; }
+      .boot-logo .m { stroke-dasharray: 150; animation: bootDraw 1.6s ease-in-out infinite; }
+      @keyframes bootBreathe { 0%, 100% { transform: scale(.93); opacity: .8 } 50% { transform: scale(1); opacity: 1 } }
+      @keyframes bootDraw { 0% { stroke-dashoffset: 150 } 55% { stroke-dashoffset: 0 } 78% { stroke-dashoffset: 0 } 100% { stroke-dashoffset: 150 } }
+      @media (prefers-reduced-motion: reduce) { .boot-logo, .boot-logo .m { animation: none } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot">
+        <svg class="boot-logo" viewBox="0 0 100 100" role="img" aria-label="Loading…">
+          <rect x="0" y="0" width="100" height="100" rx="24" fill="#2d8cff" />
+          <path class="m" d="M28 71 V33 L50 53 L72 33 V71" fill="none" stroke="#ffffff"
+            stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -27,31 +27,28 @@
    background: var(--bg)
 }
 
-.splash .logo {
-   width: 54px;
-   height: 54px;
-   border-radius: 14px;
-   background: linear-gradient(160deg, #0a84ff, #0071e3);
-   display: grid;
-   place-items: center;
-   color: #fff;
-   font-weight: 700;
-   font-size: 22px;
-   animation: pulse 1.1s ease-in-out infinite
+/* loading logo — gently breathes while its white "M" stroke draws itself in */
+.loading-logo {
+   transform-origin: center;
+   animation: logoBreathe 1.6s ease-in-out infinite;
+}
+.loading-logo path {
+   stroke-dasharray: 150;
+   animation: logoDraw 1.6s ease-in-out infinite;
 }
 
-@keyframes pulse {
-
-   0%,
-   100% {
-      opacity: .55;
-      transform: scale(.96)
-   }
-
-   50% {
-      opacity: 1;
-      transform: scale(1)
-   }
+@keyframes logoBreathe {
+   0%, 100% { opacity: .8; transform: scale(.93) }
+   50% { opacity: 1; transform: scale(1) }
+}
+@keyframes logoDraw {
+   0% { stroke-dashoffset: 150 }
+   55% { stroke-dashoffset: 0 }
+   78% { stroke-dashoffset: 0 }
+   100% { stroke-dashoffset: 150 }
+}
+@media (prefers-reduced-motion: reduce) {
+   .loading-logo, .loading-logo path { animation: none }
 }
 
 /* (auth screen styles moved to components/Login.module.css) */

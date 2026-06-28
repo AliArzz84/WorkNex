@@ -380,6 +380,15 @@ tr:hover td {
   gap: 8px
 }
 
+/* deadline accent stripe down the inside edge of the card */
+.pcard.dl-soon {
+  box-shadow: var(--shadow-sm), inset 3px 0 0 var(--amber)
+}
+
+.pcard.dl-urgent {
+  box-shadow: var(--shadow-sm), inset 3px 0 0 var(--red)
+}
+
 .pcard .ph b {
   font-size: 14px;
   font-weight: 600

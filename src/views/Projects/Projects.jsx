@@ -5,6 +5,16 @@ import { Avatar, ProjStatusTag, ProgressBar, EmptyState, Icon, Money, CurrencyTo
 import { daysBetween } from '../../lib/data.js'
 import { projectNetAllTime } from '../../lib/finance.js'
 
+// deadline urgency → a coloured badge + card accent. Skips finished projects and
+// ones with no date (daysBetween("") returns 0, so the date must be checked first).
+function deadlineInfo(deadline, status, dd) {
+  if (!deadline || status === "done") return null
+  if (dd < 0) return { color: "red", urgent: true, label: -dd === 1 ? "1 day overdue" : `${-dd} days overdue` }
+  if (dd === 0) return { color: "red", urgent: true, label: "Due today" }
+  if (dd <= 7) return { color: "amber", urgent: dd <= 2, label: dd === 1 ? "Due tomorrow" : `Due in ${dd} days` }
+  return null
+}
+
 export default function Projects() {
   const { db, t, L, fmtDate, relDay, teamById, teamMembers, openEditor, removeItem, ask } = useStore()
   const [filter, setFilter] = useState("all")
@@ -48,10 +58,11 @@ export default function Projects() {
         <AnimatePresence>
           {rows.map(p => {
             const dd = daysBetween(p.deadline)
+            const dl = deadlineInfo(p.deadline, p.status, dd)
             const pHasTx = db.transactions.some(x => (x.project || "") === p.id)
             const pNet = pHasTx ? projectNetAllTime(db.transactions, p.id, now) : null
             return (
-              <motion.div key={p.id} className="pcard" variants={item} whileHover={{ y: -4 }} layout exit={{ opacity: 0, scale: 0.95 }}>
+              <motion.div key={p.id} className={`pcard${dl ? (dl.color === "red" ? " dl-urgent" : " dl-soon") : ""}`} variants={item} whileHover={{ y: -4 }} layout exit={{ opacity: 0, scale: 0.95 }}>
                 <div className="ph">
                   <div style={{ flex: 1 }}>
                     <b>{p.name}</b><br /><small>{p.client}</small>
@@ -61,7 +72,14 @@ export default function Projects() {
                       </div>
                     )}
                   </div>
-                  <ProjStatusTag status={p.status} />
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                    <ProjStatusTag status={p.status} />
+                    {dl && (
+                      <span className={`tag ${dl.color}`} style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                        <Icon name="clock" size={11} /> {dl.label}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <ProgressBar value={p.progress} />
                 <div className="meta"><span>{p.progress}%</span><Money value={p.budget} align="flex-end" /></div>
@@ -73,7 +91,9 @@ export default function Projects() {
                 )}
                 <div className="meta">
                   <span>{t("deadline")}: {fmtDate(p.deadline)}</span>
-                  <span style={{ color: dd < 0 ? "var(--red-ink)" : "var(--muted)" }}>{relDay(dd)}</span>
+                  <span style={{ color: dl ? (dl.color === "red" ? "var(--red-ink)" : "var(--amber-ink)") : "var(--muted)", fontWeight: dl ? 600 : 400 }}>
+                    {p.deadline ? relDay(dd) : "—"}
+                  </span>
                 </div>
                 <div className="meta">
                   <span className="muted">{teamById(p.team)?.name || t("noTeam")}</span>

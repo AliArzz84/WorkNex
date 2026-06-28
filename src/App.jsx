@@ -66,7 +66,7 @@ export default function App() {
   if (cloud && isRequest) return <RequestForm />
 
   // Guest (shared view-only link) gates — checked before auth so guests skip Login
-  if (cloud && isGuest && guestStatus === "loading") return <div className="splash"><Logo size={54} /></div>
+  if (cloud && isGuest && guestStatus === "loading") return <div className="splash"><Logo size={54} className="loading-logo" /></div>
   if (cloud && isGuest && guestStatus === "invalid") return (
     <div className="splash"><div className="guest-gone">
       <Logo size={54} />
@@ -76,7 +76,7 @@ export default function App() {
   )
 
   // Cloud auth gates (normal signed-in users)
-  if (cloud && !isGuest && !authReady) return <div className="splash"><Logo size={54} /></div>
+  if (cloud && !isGuest && !authReady) return <div className="splash"><Logo size={54} className="loading-logo" /></div>
   if (cloud && !isGuest && !session) return <Login />
 
   // guests only see the sections their link allows
@@ -88,7 +88,9 @@ export default function App() {
   }).length
   const taskBadge = db.tasks.filter(k => !k.done && k.due && daysBetween(k.due) === 0).length
   const reqBadge = (requests || []).filter(r => (r.status || "new") !== "done").length
-  const badges = { tasks: taskBadge, meetings: meetBadge, payroll: payBadge, requests: reqBadge }
+  // projects whose deadline is within a week (or already overdue) and aren't finished
+  const projBadge = db.projects.filter(p => p.status !== "done" && p.deadline && daysBetween(p.deadline) <= 7).length
+  const badges = { tasks: taskBadge, meetings: meetBadge, payroll: payBadge, requests: reqBadge, projects: projBadge }
 
   // Toggle only switches edit mode; it stays on the current page.
   const switchRole = (r) => setRole(r)
