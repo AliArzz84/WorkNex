@@ -25,7 +25,7 @@ export default function Employees() {
           </select>
         )}
         <select value={countryFilter} onChange={e => setCountryFilter(e.target.value)}>
-          <option value="all">All countries</option>
+          <option value="all">All locations</option>
           {countries.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>

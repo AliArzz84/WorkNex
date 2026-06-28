@@ -11,7 +11,7 @@ export const I18N = {
     kpi: { employees: "کارمند", projects: "پروژه فعال", meetings: "جلسه این هفته", duePay: "حقوق در راه" },
     reminders: "یادآوری‌ها و هشدارها", todayMeetings: "جلسات امروز و پیش‌رو", activeProjects: "پروژه‌های فعال",
     noReminders: "الان چیز فوری‌ای نیست ✅", noData: "هنوز چیزی ثبت نشده",
-    name: "نام", role: "سمت", team: "تیم", country: "ملیت", email: "ایمیل", phone: "تلفن", salary: "حقوق ماهانه",
+    name: "نام", role: "سمت", team: "تیم", country: "محل استقرار", email: "ایمیل", phone: "تلفن", salary: "حقوق ماهانه",
     noTeam: "بدون تیم", selectMembers: "اعضای این تیم را انتخاب کن", teamMembersLabel: "اعضا",
     payDay: "روز پرداخت (هر ماه)", hireDate: "تاریخ استخدام", status: "وضعیت", actions: "عملیات",
     statusActive: "فعال", statusLeave: "مرخصی", statusInactive: "غیرفعال",
@@ -46,7 +46,7 @@ export const I18N = {
     kpi: { employees: "Employees", projects: "Active projects", meetings: "Meetings this week", duePay: "Salaries due" },
     reminders: "Reminders & alerts", todayMeetings: "Today & upcoming meetings", activeProjects: "Active projects",
     noReminders: "Nothing urgent right now ✅", noData: "Nothing here yet",
-    name: "Name", role: "Role", team: "Team", country: "Nationality", email: "Email", phone: "Phone", salary: "Monthly salary",
+    name: "Name", role: "Role", team: "Team", country: "Based in", email: "Email", phone: "Phone", salary: "Monthly salary",
     noTeam: "No team", selectMembers: "Pick members for this team", teamMembersLabel: "Members",
     payDay: "Pay day (each month)", hireDate: "Hire date", status: "Status", actions: "Actions",
     statusActive: "Active", statusLeave: "On leave", statusInactive: "Inactive",
@@ -82,6 +82,16 @@ export const CURRENCIES = [
   { code: "AED", symbol: "د.إ", label: "AED" },
   { code: "TRY", symbol: "₺", label: "₺  TRY" },
 ]
+
+/* request-form categories (shared by the public form + the manager inbox) */
+export const REQUEST_CATEGORIES = [
+  { key: "meeting", label: "Meeting", color: "blue" },
+  { key: "task", label: "Task", color: "amber" },
+  { key: "question", label: "Question", color: "green" },
+  { key: "access", label: "Access", color: "red" },
+  { key: "other", label: "Other", color: "gray" },
+]
+export const REQUEST_CAT = Object.fromEntries(REQUEST_CATEGORIES.map(c => [c.key, c]))
 
 /* ---------- pure helpers ---------- */
 export const uid = (p) => p + "_" + Math.random().toString(36).slice(2, 9)

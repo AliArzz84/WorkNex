@@ -24,7 +24,6 @@ import { daysBetween, nextPayday, periodKey } from './lib/data.js'
 const NAV = [
   { key: "dashboard", icon: "dashboard" },
   { key: "tasks", icon: "tasks" },
-  { key: "requests", icon: "chat" },
   { key: "meetings", icon: "meetings" },
   { key: "projects", icon: "projects" },
   { key: "businesses", icon: "business" },
@@ -33,6 +32,7 @@ const NAV = [
   { key: "payroll", icon: "payroll" },
   { key: "finance", icon: "finance" },
   { key: "diagram", icon: "diagram" },
+  { key: "requests", icon: "chat" },
   { key: "activity", icon: "history" },
 ]
 const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, requests: Requests, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }

@@ -114,10 +114,10 @@ function Footer({ onSave, close }) {
 
 function EmployeeForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", currency: "GBP", payDay: 1, hireDate: todayISO(), status: "active", business: "", notes: "" })
+  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", currency: "USD", payDay: 1, hireDate: todayISO(), status: "active", business: "", notes: "" })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const submit = () => { if (!f.name.trim()) return; onSave("employee", { ...f, id, salary: Number(f.salary || 0), payDay: Number(f.payDay || 1) }); close() }
-  const curSym = (CURRENCIES.find(c => c.code === (f.currency || "GBP")) || {}).symbol || "£"
+  const curSym = (CURRENCIES.find(c => c.code === (f.currency || "USD")) || {}).symbol || "$"
   return (
     <>
       <div className="modal-b">
@@ -132,8 +132,8 @@ function EmployeeForm({ existing, id, onSave, close }) {
         </div>
         <div className="two">
           <Field label={`${t("salary")} (${curSym})`}><input type="number" value={f.salary} onChange={e => set("salary", e.target.value)} /></Field>
-          <Field label="Paid in"><select value={f.currency || "GBP"} onChange={e => set("currency", e.target.value)}>
-            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+          <Field label="Paid in"><select value={f.currency || "USD"} onChange={e => set("currency", e.target.value)}>
+            {CURRENCIES.filter(c => ["USD", "GBP", "EUR"].includes(c.code)).map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
           </select></Field>
         </div>
         <div className="two">

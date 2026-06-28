@@ -231,6 +231,12 @@ from public.workspaces where id = 'default';
 > grant select, insert, update, delete on public.requests to authenticated;
 > ```
 
+> 🔧 **یک‌بار لازمه — برای فیلدِ «موضوع» (Category) روی فرم:** تا دسته‌ی هر درخواست (جلسه/تسک/سؤال/دسترسی/…) ذخیره و توی اینباکس نشون داده شه:
+> ```sql
+> alter table public.requests add column if not exists category text;
+> ```
+> (تا قبل از اجراش هم فرم کار می‌کنه — فقط موضوع ذخیره نمی‌شه.)
+
 **نحوه‌ی استفاده:** برو تبِ **Requests** → دکمه‌ی «Copy form link» → لینک رو برای تیم بفرست. لینک به شکلِ `…/?request=1` هست.
 
 **دیدنِ درخواست‌ها از طریقِ SQL (اختیاری):**

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
 import { EmptyState, Icon, Tag, stagger, item } from '../../components/ui/ui.jsx'
+import { REQUEST_CAT } from '../../lib/data.js'
 
 export default function Requests() {
   // `requests` is kept live by the store (realtime + polling) — new submissions appear on their own
@@ -45,7 +46,7 @@ export default function Requests() {
                   <motion.div key={r.id} className={`alert ${statusOf(r) === "done" ? "gray" : "blue"}`} variants={item} layout exit={{ opacity: 0, x: 24 }}>
                     <div className="dot" />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <b>{r.name} {statusOf(r) === "done" && <Tag color="green">done</Tag>}</b>
+                      <b>{r.name} {r.category && REQUEST_CAT[r.category] && <Tag color={REQUEST_CAT[r.category].color}>{REQUEST_CAT[r.category].label}</Tag>} {statusOf(r) === "done" && <Tag color="green">done</Tag>}</b>
                       <p style={{ whiteSpace: "pre-wrap" }}>{r.message}</p>
                       <small className="muted">{r.channel || "—"}{r.contact ? " · " + r.contact : ""} · {timeAgo(new Date(r.created_at).getTime())}</small>
                     </div>

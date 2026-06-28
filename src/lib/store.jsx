@@ -304,8 +304,13 @@ export function StoreProvider({ children }) {
   }, [])
 
   /* requests — a public form (anon insert) + manager-side inbox */
-  const submitRequest = useCallback(async ({ name, channel, contact, message }) => {
-    const { error } = await supabase.from("requests").insert({ name, channel, contact, message })
+  const submitRequest = useCallback(async ({ name, channel, contact, message, category }) => {
+    const base = { name, channel, contact, message }
+    // include category if provided; if the column doesn't exist yet, fall back so the form never breaks
+    let { error } = await supabase.from("requests").insert(category ? { ...base, category } : base)
+    if (error && category && /category|column/i.test(error.message || "")) {
+      ;({ error } = await supabase.from("requests").insert(base))
+    }
     if (error) throw error
   }, [])
   const listRequests = useCallback(async () => {
