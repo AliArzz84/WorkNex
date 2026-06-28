@@ -101,8 +101,13 @@ where id = 'default';
 > ```
 > بعدش توی اپ: **Data → Backups → انتخابِ نسخه → Restore**. تا وقتی این اجرا نشه، لیستِ Backups داخلِ اپ خالی نشون داده می‌شه (دیتات هرچند همچنان server-side بکاپ می‌شه).
 
-### ب) بکاپِ روزانه به Google Drive
+### ب) بکاپِ بیرونی به Google Drive
 فایل‌ها با اسمِ `worknexus-YYYY-MM-DD.json` توی فولدرِ Drive ذخیره می‌شن.
+
+> 🔧 **پیشنهادشده — هر ۶ ساعت به‌جای روزی یک‌بار:** تاریخچه‌ی داخلِ دیتابیس توی *همون* پروژه‌ی Supabase ـه، پس تنها بکاپِ واقعیِ ضدِّ فاجعه همینه. هرچی فرکانسش بیشتر باشه، در بدترین حالت کمتر کار از دست می‌ره. این رو یک‌بار اجرا کن:
+> ```sql
+> select cron.schedule('gdrive-daily-backup', '0 */6 * * *', $$ select public.run_gdrive_backup(); $$);
+> ```
 
 **گرفتنِ یه بکاپِ دستی همین الان:**
 ```sql
@@ -122,12 +127,12 @@ select jobname, schedule, active from cron.job;
 
 **تغییرِ زمان‌بندی** (هر اسمِ job همونه، فقط زمان عوض می‌شه):
 ```sql
--- روزی یک‌بار، ۲ بامداد (پیش‌فرض):
-select cron.schedule('gdrive-daily-backup', '0 2 * * *',  $$ select public.run_gdrive_backup(); $$);
--- هر ۶ ساعت:
+-- هر ۶ ساعت (پیشنهادشده — ۰، ۶، ۱۲، ۱۸):
 select cron.schedule('gdrive-daily-backup', '0 */6 * * *', $$ select public.run_gdrive_backup(); $$);
 -- هر ساعت:
 select cron.schedule('gdrive-daily-backup', '0 * * * *',  $$ select public.run_gdrive_backup(); $$);
+-- روزی یک‌بار، ۲ بامداد:
+select cron.schedule('gdrive-daily-backup', '0 2 * * *',  $$ select public.run_gdrive_backup(); $$);
 ```
 
 **خاموش‌کردنِ بکاپِ Drive:**

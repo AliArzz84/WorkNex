@@ -4,7 +4,7 @@ import { useStore } from '../../lib/store.jsx'
 import { Icon } from '../ui/ui.jsx'
 
 export default function Backups({ open, onClose }) {
-  const { listSnapshots, restoreSnapshot, fmtDateTime, timeAgo, ask, notify } = useStore()
+  const { listSnapshots, restoreSnapshot, fmtDateTime, timeAgo, ask, notify, exportData } = useStore()
   const [rows, setRows] = useState(null)   // null = loading
   const [busy, setBusy] = useState(false)
 
@@ -41,10 +41,18 @@ export default function Backups({ open, onClose }) {
               <button className="x" onClick={onClose}>✕</button>
             </div>
             <div className="modal-b">
-              <p className="muted" style={{ margin: "0 0 14px", fontSize: 13, lineHeight: 1.6 }}>
+              <p className="muted" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: 1.6 }}>
                 Your workspace is backed up automatically on every change. Pick a point in time below to roll back —
                 the restore is saved too, so it can always be undone.
               </p>
+
+              {rows && rows.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 12.5, color: "var(--muted)",
+                  margin: "0 0 14px", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 10, background: "var(--panel-2)" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", flex: "0 0 auto" }} />
+                  <span>Latest snapshot <b style={{ color: "var(--txt)" }}>{timeAgo(new Date(rows[0].saved_at).getTime())}</b> · an offsite copy is sent to Google Drive daily</span>
+                </div>
+              )}
               {rows === null ? (
                 <div className="empty" style={{ padding: "30px 10px" }}>Loading…</div>
               ) : rows.length === 0 ? (
@@ -74,6 +82,9 @@ export default function Backups({ open, onClose }) {
               )}
             </div>
             <div className="modal-f">
+              <button className="btn ghost" onClick={exportData} style={{ marginInlineEnd: "auto" }} title="Save a full copy of all data to your own computer">
+                <Icon name="download" size={15} /> Download a copy
+              </button>
               <button className="btn ghost" disabled={busy} onClick={load}><Icon name="refresh" size={15} /> Refresh</button>
               <button className="btn ghost" onClick={onClose}>Close</button>
             </div>

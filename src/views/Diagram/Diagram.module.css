@@ -78,6 +78,12 @@
     background: var(--hover)
 }
 
+.toolBtn:disabled {
+    opacity: .38;
+    cursor: not-allowed;
+    background: var(--surface)
+}
+
 .toolBtn.danger {
     color: #e5484d;
     border-color: rgba(229, 72, 77, .4)

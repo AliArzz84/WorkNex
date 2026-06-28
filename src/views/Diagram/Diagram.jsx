@@ -65,6 +65,35 @@ function DiagramCanvas() {
   const saveTimer = useRef(null)
   const lastSavedSig = useRef("")
   const dragging = useRef(false)   // true while a node is being dragged — pauses autosave hashing
+  // unsaved local edits are pending — block an incoming snapshot from clobbering them
+  // (this is what fixes the "a deleted node comes back, so you have to delete twice" bug)
+  const localDirty = useRef(false)
+  const history = useRef({ stack: [], i: -1, lock: false })   // undo/redo snapshots
+  const [hist, setHist] = useState({ canUndo: false, canRedo: false })
+
+  const syncHist = () => setHist({ canUndo: history.current.i > 0, canRedo: history.current.i < history.current.stack.length - 1 })
+  const pushHistory = (state) => {
+    const h = history.current
+    h.stack = h.stack.slice(0, h.i + 1)
+    h.stack.push({ nodes: [...state.nodes], edges: [...state.edges] })
+    if (h.stack.length > 60) h.stack.shift()
+    h.i = h.stack.length - 1
+    syncHist()
+  }
+  const undo = () => {
+    const h = history.current
+    if (h.i <= 0) return
+    dragging.current = false
+    h.i--; h.lock = true                       // the resulting autosave shouldn't record a new step
+    setNodes(h.stack[h.i].nodes); setEdges(h.stack[h.i].edges); syncHist()
+  }
+  const redo = () => {
+    const h = history.current
+    if (h.i >= h.stack.length - 1) return
+    dragging.current = false
+    h.i++; h.lock = true
+    setNodes(h.stack[h.i].nodes); setEdges(h.stack[h.i].edges); syncHist()
+  }
 
   /* only the meaningful parts — ignore ReactFlow's selected/dragging/measured churn.
      style is derived from kind (dfdStyle), so `k` already captures any visual change — no need to serialize the whole style object */
@@ -77,15 +106,30 @@ function DiagramCanvas() {
   useEffect(() => {
     if (dragging.current) return   // mid-drag: skip hashing + saving entirely so the drag stays smooth (the final, dragging:false change runs this and saves)
     const cur = sig(nodes, edges)
-    if (firstRun.current) { firstRun.current = false; lastSavedSig.current = cur; return }
+    if (firstRun.current) {
+      firstRun.current = false
+      lastSavedSig.current = cur
+      history.current = { stack: [{ nodes, edges }], i: 0, lock: false }
+      return
+    }
     if (cur === lastSavedSig.current) return
+    localDirty.current = true   // a local edit is now waiting to be saved — don't let a remote snapshot revert it
+    // consume the undo/redo lock now (not in the timer) so a fresh edit that coalesces with it still gets recorded
+    const skipHistory = history.current.lock
+    history.current.lock = false
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => { lastSavedSig.current = cur; saveDiagram({ nodes, edges }) }, 700)
+    saveTimer.current = setTimeout(() => {
+      lastSavedSig.current = cur
+      localDirty.current = false
+      saveDiagram({ nodes, edges })
+      if (!skipHistory) pushHistory({ nodes, edges })   // undo/redo states are already in the stack
+    }, 700)
     return () => saveTimer.current && clearTimeout(saveTimer.current)
   }, [nodes, edges])
 
   /* pull external changes (realtime / Clear all), compared by signature */
   useEffect(() => {
+    if (localDirty.current) return   // we have an unsaved local edit in flight — our save will win; don't clobber it
     const incoming = db.diagram || { nodes: [], edges: [] }
     const incNodes = (incoming.nodes || []).map(toFlowNode)
     const incomingSig = sig(incNodes, incoming.edges)
@@ -94,6 +138,18 @@ function DiagramCanvas() {
     setEdges(incoming.edges || [])
     lastSavedSig.current = incomingSig
   }, [db.diagram])
+
+  /* keyboard undo / redo (ignored while typing in a dialog field) */
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target?.matches?.("input, textarea")) return
+      const z = e.key === "z" || e.key === "Z"
+      if ((e.ctrlKey || e.metaKey) && z && !e.shiftKey) { e.preventDefault(); undo() }
+      else if ((e.ctrlKey || e.metaKey) && ((z && e.shiftKey) || e.key === "y" || e.key === "Y")) { e.preventDefault(); redo() }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
 
   /* close the context menu on outside click / Escape */
   useEffect(() => {
@@ -116,6 +172,7 @@ function DiagramCanvas() {
 
   /* ---- actions ---- */
   const addNode = (kind, pos) => {
+    dragging.current = false
     const r = wrapRef.current?.getBoundingClientRect()
     const position = pos || screenToFlowPosition({ x: (r?.left || 0) + (r?.width || 600) / 2, y: (r?.top || 0) + (r?.height || 400) / 2 })
     setNodes(ns => [...ns, { id: newId(), type: "dfd", position, data: { label: KIND_LABEL[kind], kind }, style: dfdStyle(kind) }])
@@ -125,12 +182,12 @@ function DiagramCanvas() {
     const label = await askText({ title: "Rename node", value: n?.data?.label || "", confirmText: "Rename" })
     if (label != null) setNodes(ns => ns.map(x => x.id === id ? { ...x, data: { ...x.data, label } } : x))
   }
-  const duplicateNode = (id) => setNodes(ns => {
+  const duplicateNode = (id) => { dragging.current = false; setNodes(ns => {
     const n = ns.find(x => x.id === id); if (!n) return ns
     return [...ns.map(x => ({ ...x, selected: false })), { ...n, id: newId(), position: { x: n.position.x + 28, y: n.position.y + 28 }, selected: true }]
-  })
+  }) }
   const setNodeKind = (id, kind) => setNodes(ns => ns.map(n => n.id === id ? { ...n, data: { ...n.data, kind }, style: dfdStyle(kind) } : n))
-  const deleteNode = (id) => { setNodes(ns => ns.filter(n => n.id !== id)); setEdges(es => es.filter(e => e.source !== id && e.target !== id)) }
+  const deleteNode = (id) => { dragging.current = false; setNodes(ns => ns.filter(n => n.id !== id)); setEdges(es => es.filter(e => e.source !== id && e.target !== id)) }
 
   const editEdgeLabel = async (id) => {
     const e = edges.find(x => x.id === id)
@@ -139,11 +196,11 @@ function DiagramCanvas() {
   }
   const toggleEdgeAnimated = (id) => setEdges(es => es.map(x => x.id === id ? { ...x, animated: !x.animated } : x))
   const setEdgeType = (id, type) => setEdges(es => es.map(x => x.id === id ? { ...x, type } : x))
-  const deleteEdge = (id) => setEdges(es => es.filter(x => x.id !== id))
+  const deleteEdge = (id) => { dragging.current = false; setEdges(es => es.filter(x => x.id !== id)) }
 
   const selectAll = () => { setNodes(ns => ns.map(n => ({ ...n, selected: true }))); setEdges(es => es.map(e => ({ ...e, selected: true }))) }
   const clearCanvas = async () => {
-    if (await ask({ title: "Clear canvas", message: "Remove every node and connection from this diagram?", confirmText: "Clear", danger: true })) { setNodes([]); setEdges([]) }
+    if (await ask({ title: "Clear canvas", message: "Remove every node and connection from this diagram?", confirmText: "Clear", danger: true })) { dragging.current = false; setNodes([]); setEdges([]) }
   }
 
   /* ---- context menu ---- */
@@ -175,11 +232,13 @@ function DiagramCanvas() {
           ))}
         </span>
         <span className={styles.legend}>
+          <button className={styles.toolBtn} onClick={undo} disabled={!hist.canUndo} title="Undo (Ctrl+Z)"><Icon name="undo" size={15} /></button>
+          <button className={styles.toolBtn} onClick={redo} disabled={!hist.canRedo} title="Redo (Ctrl+Shift+Z)"><Icon name="redo" size={15} /></button>
           <button className={styles.toolBtn} onClick={() => fitView({ duration: 400, padding: 0.2 })} title="Fit to screen"><Icon name="expand" size={15} /></button>
           <button className={styles.toolBtn} onClick={selectAll} title="Select all"><Icon name="check" size={15} /></button>
           <button className={`${styles.toolBtn} ${styles.danger}`} onClick={clearCanvas} title="Clear canvas"><Icon name="trash" size={15} /></button>
         </span>
-        <span className={`muted ${styles.hint}`}>Right-click anywhere for actions • drag a dot to connect • double-click to rename</span>
+        <span className={`muted ${styles.hint}`}>Right-click for actions • drag a dot to connect • double-click to rename • Ctrl+Z to undo</span>
       </div>
 
       <div className={styles.canvas} ref={wrapRef} onContextMenu={(e) => e.preventDefault()}>

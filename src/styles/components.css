@@ -450,6 +450,12 @@ tr:hover td {
   padding: 20px
 }
 
+/* the confirm/prompt dialog is summoned from inside other modals (e.g. Backups),
+   so it must always sit above them — not just whatever renders last in the DOM */
+.modal-bg.confirm-bg {
+  z-index: 120
+}
+
 .modal {
   background: var(--panel);
   border: 1px solid var(--line);

@@ -25,7 +25,6 @@ const SECTIONS = [
   ["employees", "Employees"],
   ["projects", "Projects"],
   ["teams", "Teams"],
-  ["meetings", "Meetings"],
   ["payments", "Payroll history"],
   ["activity", "Activity log"],
 ]
@@ -402,16 +401,6 @@ export default function Finance() {
       ], db.teams.filter(inBiz).map(t => [
         t.name, bizName(t.business), empName(t.lead), (t.members || []).length,
         (t.members || []).map(empName).filter(Boolean).join(", "),
-      ]))
-
-      // ---- Meetings
-      want("meetings") && sheet("Meetings", [
-        { name: "Title", width: 24 }, { name: "When", width: 18, numFmt: "yyyy-mm-dd hh:mm" },
-        { name: "Attendees", width: 30 }, { name: "Location", width: 16 }, { name: "Priority", width: 10 },
-        { name: "Done", width: 8 }, { name: "Notes", width: 28 },
-      ], db.meetings.map(m => [
-        m.title || "", D(m.datetime), (m.attendees || []).map(empName).filter(Boolean).join(", "),
-        m.location || "", m.priority || "", m.done ? "Yes" : "", m.notes || "",
       ]))
 
       // ---- Payments (payroll history)
