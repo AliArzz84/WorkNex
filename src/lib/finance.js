@@ -190,6 +190,36 @@ export function extraForMonth(employees, toGbp, monthIdx, bizId) {
     }, 0)
 }
 
+/* ---- Per-employee SALARY FEE: the cost of paying a salary (bank transfer, FX,
+   payroll processor), stored as a percentage of the salary (e.salaryFeePct).
+   A real recurring outgoing — counted in Finance like extras, gated the same way. */
+export const employeeSalaryFeeMonthly = (emp) =>
+  Number(emp.salary || 0) * Number(emp.salaryFeePct || 0) / 100
+
+export function periodSalaryFee(employees, toGbp, win, bizId) {
+  return employees
+    .filter(e => e.status === "active" && (bizId == null || (e.business || "") === bizId))
+    .reduce((s, e) => {
+      const hireIdx = e.hireDate ? (monthIndexOf(e.hireDate) ?? win.startIdx) : win.startIdx
+      const from = Math.max(win.startIdx, hireIdx)
+      const months = Math.max(0, win.endIdx - from + 1)
+      return s + toGbp(employeeSalaryFeeMonthly(e), e.currency) * months
+    }, 0)
+}
+export function monthlySalaryFeeRate(employees, toGbp, bizId) {
+  return employees
+    .filter(e => e.status === "active" && (bizId == null || (e.business || "") === bizId))
+    .reduce((s, e) => s + toGbp(employeeSalaryFeeMonthly(e), e.currency), 0)
+}
+export function salaryFeeForMonth(employees, toGbp, monthIdx, bizId) {
+  return employees
+    .filter(e => e.status === "active" && (bizId == null || (e.business || "") === bizId))
+    .reduce((s, e) => {
+      const hireIdx = e.hireDate ? (monthIndexOf(e.hireDate) ?? -Infinity) : -Infinity
+      return monthIdx >= hireIdx ? s + toGbp(employeeSalaryFeeMonthly(e), e.currency) : s
+    }, 0)
+}
+
 /* All-time net profit attributed to a project (income − expense, excluding the Salaries
    category; salaries are never allocated to projects). Used by the Projects cards. */
 export function projectNetAllTime(transactions, projectId, now) {

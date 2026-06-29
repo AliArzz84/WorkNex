@@ -7,6 +7,7 @@ import {
   isSalaryCategory, periodWindow, windowMonths, txOccurrences, expandAll,
   monthlyRunRate, periodSalaryCost, salaryForMonth, monthLabel, monthIndexOf,
   periodExtraCost, extraForMonth, employeeExtraMonthly, previousWindow,
+  periodSalaryFee, salaryFeeForMonth, employeeSalaryFeeMonthly,
 } from '../../lib/finance.js'
 import styles from './Finance.module.css'
 
@@ -94,7 +95,8 @@ export default function Finance() {
   const periodSalary = periodSalaryCost(db.employees, toUsd, win, bizId)
   const periodExtra = periodExtraCost(db.employees, toUsd, win, bizId)   // per-employee extra costs (not payroll)
   const periodFees = occ.reduce((s, o) => s + Number(o.fee || 0), 0)     // per-transaction fees (always a cost)
-  const periodOutgoing = periodExpense + periodSalary + periodExtra + periodFees
+  const periodSalFee = periodSalaryFee(db.employees, toUsd, win, bizId)  // cost of paying salaries (transfer/processing)
+  const periodOutgoing = periodExpense + periodSalary + periodExtra + periodFees + periodSalFee
   const periodNet = periodIncome - periodOutgoing
   const runRate = monthlyRunRate(db.employees, toUsd, bizId)
   const margin = periodIncome > 0 ? periodNet / periodIncome : null
@@ -108,6 +110,7 @@ export default function Finance() {
     const pOut = sum(pocc, "expense", true)
       + periodSalaryCost(db.employees, toUsd, prevWin, bizId)
       + periodExtraCost(db.employees, toUsd, prevWin, bizId)
+      + periodSalaryFee(db.employees, toUsd, prevWin, bizId)
       + pocc.reduce((s, o) => s + Number(o.fee || 0), 0)
     prev = { income: pInc, outgoing: pOut, net: pInc - pOut, salary: periodSalaryCost(db.employees, toUsd, prevWin, bizId) }
   }
@@ -127,6 +130,7 @@ export default function Finance() {
   const catChart = [...expenseCats]
   if (periodSalary > 0) catChart.push({ label: "Salaries (from active staff)", value: periodSalary })
   if (periodExtra > 0) catChart.push({ label: "Extra staff costs", value: periodExtra })
+  if (periodSalFee > 0) catChart.push({ label: "Salary fees", value: periodSalFee })
   if (periodFees > 0) catChart.push({ label: "Fees & charges", value: periodFees })
   const catChartColored = catChart.map((r, i) => ({ ...r, color: CAT_COLORS[i % CAT_COLORS.length] }))
 
@@ -143,7 +147,7 @@ export default function Finance() {
   for (let idx = trendLo; idx <= win.endIdx; idx++) {
     const inc = incByM[idx] || 0
     const exp = expByM[idx] || 0
-    const sal = salaryForMonth(db.employees, toUsd, idx, bizId)
+    const sal = salaryForMonth(db.employees, toUsd, idx, bizId) + salaryFeeForMonth(db.employees, toUsd, idx, bizId)
     const ext = extraForMonth(db.employees, toUsd, idx, bizId)
     trend.push({ label: monthLabel(idx), income: inc, expense: exp, salary: sal, extra: ext, net: inc - exp - sal - ext })
   }
@@ -176,8 +180,8 @@ export default function Finance() {
   if (import.meta.env.DEV) {
     const catSum = catChartColored.reduce((s, r) => s + r.value, 0)
     console.assert(Math.abs(catSum - periodOutgoing) < 0.01, "[finance] category breakdown != periodOutgoing", catSum, periodOutgoing)
-    const projSum = projRows.reduce((s, r) => s + r.net, 0) - periodSalary - periodExtra
-    console.assert(Math.abs(projSum - periodNet) < 0.01, "[finance] project profit + salaries + extra != periodNet", projSum, periodNet)
+    const projSum = projRows.reduce((s, r) => s + r.net, 0) - periodSalary - periodExtra - periodSalFee
+    console.assert(Math.abs(projSum - periodNet) < 0.01, "[finance] project profit + salaries + extra + salary fees != periodNet", projSum, periodNet)
   }
 
   const periodLabel = PERIODS.find(p => p[0] === period)?.[1] || "All time"
@@ -211,6 +215,7 @@ export default function Finance() {
         const exp = sum(oc, "expense", true)
         const sal = salFor(id => periodSalaryCost(db.employees, toUsd, w, id))
         const ext = salFor(id => periodExtraCost(db.employees, toUsd, w, id))
+        const salFee = salFor(id => periodSalaryFee(db.employees, toUsd, w, id))
         const fee = oc.reduce((s, o) => s + Number(o.fee || 0), 0)
         const rr = salFor(id => monthlyRunRate(db.employees, toUsd, id))
         // category breakdown
@@ -225,6 +230,7 @@ export default function Finance() {
         const cc = [...cm.values()].sort((a, b) => b.value - a.value)
         if (sal > 0) cc.push({ label: "Salaries (from active staff)", value: sal })
         if (ext > 0) cc.push({ label: "Extra staff costs", value: ext })
+        if (salFee > 0) cc.push({ label: "Salary fees", value: salFee })
         if (fee > 0) cc.push({ label: "Fees & charges", value: fee })
         // monthly trend
         const lo = Math.max(w.startIdx, w.endIdx - 11); const iBy = {}, eBy = {}
@@ -237,7 +243,7 @@ export default function Finance() {
         const tr = []
         for (let i = lo; i <= w.endIdx; i++) {
           const ii = iBy[i] || 0, ee = eBy[i] || 0
-          const ss = salFor(id => salaryForMonth(db.employees, toUsd, i, id))
+          const ss = salFor(id => salaryForMonth(db.employees, toUsd, i, id)) + salFor(id => salaryFeeForMonth(db.employees, toUsd, i, id))
           const xx = salFor(id => extraForMonth(db.employees, toUsd, i, id))
           tr.push({ label: monthLabel(i), income: ii, expense: ee, salary: ss, extra: xx, net: ii - ee - ss - xx })
         }
@@ -253,12 +259,12 @@ export default function Finance() {
           pm.set(key, r)
         }
         const pr = [...pm.values()].map(r => ({ ...r, net: r.income - r.expense })).sort((a, b) => b.net - a.net)
-        return { av, ids, w, oc, inc, exp, sal, ext, fee, outg: exp + sal + ext + fee, net: inc - (exp + sal + ext + fee), rr, cc, tr, pr }
+        return { av, ids, w, oc, inc, exp, sal, ext, salFee, fee, outg: exp + sal + ext + fee + salFee, net: inc - (exp + sal + ext + fee + salFee), rr, cc, tr, pr }
       }
 
       const F = fin(sel)
       const allView = F.av, selIds = F.ids, win = F.w, occ = F.oc
-      const periodIncome = F.inc, periodExpense = F.exp, periodSalary = F.sal, periodExtra = F.ext, periodFees = F.fee
+      const periodIncome = F.inc, periodExpense = F.exp, periodSalary = F.sal, periodExtra = F.ext, periodFees = F.fee, periodSalFee = F.salFee
       const periodOutgoing = F.outg, periodNet = F.net, runRate = F.rr
       const catChartColored = F.cc, trend = F.tr, projRows = F.pr
 
@@ -342,6 +348,7 @@ export default function Finance() {
             ["Manual expenses", periodExpense],
             ["Salary cost (period)", periodSalary],
             ["Extra staff costs (period)", periodExtra],
+            ["Salary fees (period)", periodSalFee],
             ["Fees & charges (period)", periodFees],
             ["Total outgoing", periodOutgoing],
             ["Net profit", periodNet],
@@ -352,9 +359,9 @@ export default function Finance() {
         })
         ws.getColumn(1).width = 32; ws.getColumn(1).alignment = { indent: 1 }
         ws.getColumn(2).width = 20; ws.getColumn(2).numFmt = MONEY; ws.getColumn(2).alignment = { horizontal: "right", indent: 1 }
-        ws.getCell("B12").numFmt = "0.0%"   // margin
-        ws.getCell("B14").numFmt = "#,##0"  // tx count
-        ws.getCell("B11").font = { bold: true, color: { argb: periodNet < 0 ? RED : GREEN } }  // net
+        ws.getCell("B13").numFmt = "0.0%"   // margin
+        ws.getCell("B15").numFmt = "#,##0"  // tx count
+        ws.getCell("B12").font = { bold: true, color: { argb: periodNet < 0 ? RED : GREEN } }  // net
         ws.views = [{ state: "frozen", ySplit: 4, showGridLines: false }]
       }
 
@@ -371,12 +378,13 @@ export default function Finance() {
         }
         const rows = []; let assignedSal = 0, assignedExt = 0
         for (const b of (allView ? db.businesses : db.businesses.filter(x => selIds.includes(x.id)))) {
-          const sal = periodSalaryCost(db.employees, toUsd, win, b.id); assignedSal += sal
+          // salary column includes the salary fee for that business
+          const sal = periodSalaryCost(db.employees, toUsd, win, b.id) + periodSalaryFee(db.employees, toUsd, win, b.id); assignedSal += sal
           const ext = periodExtraCost(db.employees, toUsd, win, b.id); assignedExt += ext
           const a = agg[b.id] || { inc: 0, exp: 0, fee: 0 }
           rows.push([b.name, a.inc, a.exp, sal, ext, a.fee, a.inc - a.exp - sal - ext - a.fee])
         }
-        const un = agg[""]; const unSal = Math.max(0, periodSalary - assignedSal); const unExt = Math.max(0, periodExtra - assignedExt)
+        const un = agg[""]; const unSal = Math.max(0, (periodSalary + periodSalFee) - assignedSal); const unExt = Math.max(0, periodExtra - assignedExt)
         if ((un && (un.inc || un.exp || un.fee)) || unSal || unExt) {
           const a = un || { inc: 0, exp: 0, fee: 0 }
           rows.push(["Unassigned", a.inc, a.exp, unSal, unExt, a.fee, a.inc - a.exp - unSal - unExt - a.fee])
@@ -435,12 +443,14 @@ export default function Finance() {
         { name: "Teams", width: 20 }, { name: "Status", width: 10 }, { name: "Pay day", width: 9, numFmt: "#,##0" },
         { name: "Currency", width: 10 }, { name: "Salary (orig)", width: 14, numFmt: "#,##0.00" },
         { name: "Salary (USD/mo)", width: 15, numFmt: MONEY }, { name: "Extra (USD/mo)", width: 14, numFmt: MONEY },
+        { name: "Salary fee %", width: 11, numFmt: '0.0"%"' }, { name: "Salary fee (USD/mo)", width: 16, numFmt: MONEY },
         { name: "Hire date", width: 13, numFmt: "yyyy-mm-dd" }, { name: "Card number", width: 20 },
         { name: "IBAN / Sheba", width: 26 }, { name: "Bank", width: 14 }, { name: "Notes", width: 28 },
       ], db.employees.filter(inBiz).map(e => [
         e.name, e.role || "", e.country || "", e.email || "", e.phone || "", bizName(e.business),
         teamsOf(e.id), e.status || "", Number(e.payDay) || "", e.currency || "USD", Number(e.salary) || 0,
-        toUsd(e.salary, e.currency), toUsd(employeeExtraMonthly(e), e.currency), D(e.hireDate),
+        toUsd(e.salary, e.currency), toUsd(employeeExtraMonthly(e), e.currency),
+        Number(e.salaryFeePct) || 0, toUsd(employeeSalaryFeeMonthly(e), e.currency), D(e.hireDate),
         e.cardNumber || "", e.iban || "", e.bankName || "", e.notes || "",
       ]))
 
@@ -697,7 +707,7 @@ export default function Finance() {
         {/* F10: profit by project */}
         <div className="panel">
           <div className="panel-h"><span className="hicon"><Icon name="projects" size={16} /></span><h2>Profit by project</h2></div>
-          {(realProjRows.length || unalloc || periodSalary > 0 || periodExtra > 0) ? (
+          {(realProjRows.length || unalloc || periodSalary > 0 || periodExtra > 0 || periodSalFee > 0) ? (
             <table className={styles.plTable}>
               <thead><tr><th>Project</th><th className="right">Income</th><th className="right">Outgoing</th><th className="right">Net</th></tr></thead>
               <tbody>
@@ -733,6 +743,14 @@ export default function Finance() {
                     <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodExtra} align="flex-end" /></td>
                   </tr>
                 )}
+                {periodSalFee > 0 && (
+                  <tr>
+                    <td className="muted">Salary fees</td>
+                    <td className="right">—</td>
+                    <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodSalFee} align="flex-end" /></td>
+                    <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodSalFee} align="flex-end" /></td>
+                  </tr>
+                )}
                 <tr className={styles.plTotal}>
                   <td><b>Net profit</b></td><td className="right" /><td className="right" />
                   <td className="right" style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><b><Money value={periodNet} align="flex-end" /></b></td>
@@ -761,6 +779,7 @@ export default function Finance() {
           ))}
           <div className={styles.plRow}><span className="muted">Salaries (active staff)</span><span><Money value={periodSalary} align="flex-end" /></span></div>
           {periodExtra > 0 && <div className={styles.plRow}><span className="muted">Extra staff costs</span><span><Money value={periodExtra} align="flex-end" /></span></div>}
+          {periodSalFee > 0 && <div className={styles.plRow}><span className="muted">Salary fees</span><span><Money value={periodSalFee} align="flex-end" /></span></div>}
           {periodFees > 0 && <div className={styles.plRow}><span className="muted">Fees &amp; charges</span><span><Money value={periodFees} align="flex-end" /></span></div>}
           <div className={`${styles.plRow} ${styles.plSub}`}><span>Total expenses</span><span style={{ color: "var(--red-ink)" }}><Money value={periodOutgoing} align="flex-end" /></span></div>
           <div className={`${styles.plRow} ${styles.plTotal}`}><span><b>Net profit</b></span><span style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><b><Money value={periodNet} align="flex-end" /></b></span></div>
