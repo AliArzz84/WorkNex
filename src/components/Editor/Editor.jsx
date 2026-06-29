@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
-import { CURRENCIES } from '../../lib/data.js'
+import { CURRENCIES, uid } from '../../lib/data.js'
 import { isSalaryCategory } from '../../lib/finance.js'
 import { Icon, Avatar } from '../ui/ui.jsx'
 import styles from './Editor.module.css'
@@ -114,9 +114,19 @@ function Footer({ onSave, close }) {
 
 function EmployeeForm({ existing, id, onSave, close }) {
   const { t, db } = useStore()
-  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", currency: "USD", payDay: 1, hireDate: todayISO(), status: "active", business: "", notes: "" })
+  const [f, setF] = useState(existing || { name: "", role: "", country: "", email: "", phone: "", salary: "", currency: "USD", payDay: 1, hireDate: todayISO(), status: "active", business: "", notes: "", extras: [], accountHolder: "", cardNumber: "", iban: "", bankName: "" })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
-  const submit = () => { if (!f.name.trim()) return; onSave("employee", { ...f, id, salary: Number(f.salary || 0), payDay: Number(f.payDay || 1) }); close() }
+  const extras = f.extras || []
+  const addExtra = () => setF(s => ({ ...s, extras: [...(s.extras || []), { id: uid("x"), label: "", amount: "" }] }))
+  const setExtra = (xid, k, v) => setF(s => ({ ...s, extras: (s.extras || []).map(x => x.id === xid ? { ...x, [k]: v } : x) }))
+  const delExtra = (xid) => setF(s => ({ ...s, extras: (s.extras || []).filter(x => x.id !== xid) }))
+  const extraTotal = extras.reduce((sm, x) => sm + Number(x.amount || 0), 0)
+  const submit = () => {
+    if (!f.name.trim()) return
+    const cleanExtras = (f.extras || []).map(x => ({ id: x.id, label: (x.label || "").trim(), amount: Number(x.amount || 0) })).filter(x => x.amount > 0)
+    onSave("employee", { ...f, id, salary: Number(f.salary || 0), payDay: Number(f.payDay || 1), extras: cleanExtras })
+    close()
+  }
   const curSym = (CURRENCIES.find(c => c.code === (f.currency || "USD")) || {}).symbol || "$"
   return (
     <>
@@ -131,7 +141,7 @@ function EmployeeForm({ existing, id, onSave, close }) {
           <Field label={t("phone")}><input value={f.phone} onChange={e => set("phone", e.target.value)} /></Field>
         </div>
         <div className="two">
-          <Field label={`${t("salary")} (${curSym})`}><input type="number" value={f.salary} onChange={e => set("salary", e.target.value)} /></Field>
+          <Field label={`${t("salary")} (${curSym})`}><input type="number" step="0.01" value={f.salary} onChange={e => set("salary", e.target.value)} /></Field>
           <Field label="Paid in"><select value={f.currency || "USD"} onChange={e => set("currency", e.target.value)}>
             {CURRENCIES.filter(c => ["USD", "GBP", "EUR"].includes(c.code)).map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
           </select></Field>
@@ -150,6 +160,42 @@ function EmployeeForm({ existing, id, onSave, close }) {
           </select></Field>
         </div>
         <Field label={t("notes")}><textarea value={f.notes || ""} onChange={e => set("notes", e.target.value)} placeholder="Any extra info about this employee…" /></Field>
+
+        <div className={styles.formSection}>
+          <div className={styles.sectionHead}>Extra monthly costs <small>· in {curSym} · counted in Finance, not payroll</small></div>
+          <div className={styles.extraCard}>
+            {extras.length === 0 && (
+              <div className={styles.extraEmpty}>
+                <Icon name="wallet" size={18} />
+                <span>Benefits, tools, insurance, bonuses… added on top of salary.</span>
+              </div>
+            )}
+            {extras.map(x => (
+              <div className={styles.extraRow} key={x.id}>
+                <input value={x.label} onChange={e => setExtra(x.id, "label", e.target.value)} placeholder="What for? (e.g. Insurance, Tools)" />
+                <div className={styles.amtWrap}>
+                  <span className={styles.amtSym}>{curSym}</span>
+                  <input type="number" step="0.01" value={x.amount} onChange={e => setExtra(x.id, "amount", e.target.value)} placeholder="0" className={styles.extraAmt} />
+                </div>
+                <button type="button" className={styles.extraDel} onClick={() => delExtra(x.id)} title="Remove"><Icon name="trash" size={15} /></button>
+              </div>
+            ))}
+            <div className={styles.extraFoot}>
+              <button type="button" className={styles.addRowBtn} onClick={addExtra}><Icon name="plus" size={14} /> Add a cost</button>
+              {extraTotal > 0 && <span className={styles.extraTotal}>+ {curSym}{extraTotal.toLocaleString()} / mo</span>}
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.formSection}>
+          <div className={styles.sectionHead}>Bank details <small>· for payroll payments</small></div>
+          <Field label="Account holder"><input value={f.accountHolder || ""} onChange={e => set("accountHolder", e.target.value)} placeholder="Name on the account" /></Field>
+          <div className="two">
+            <Field label="Card number"><input value={f.cardNumber || ""} onChange={e => set("cardNumber", e.target.value)} placeholder="6037 xxxx xxxx xxxx" inputMode="numeric" /></Field>
+            <Field label="Bank"><input value={f.bankName || ""} onChange={e => set("bankName", e.target.value)} placeholder="e.g. Mellat" /></Field>
+          </div>
+          <Field label="IBAN / Sheba"><input value={f.iban || ""} onChange={e => set("iban", e.target.value)} placeholder="IR…" /></Field>
+        </div>
       </div>
       <Footer onSave={submit} close={close} />
     </>
@@ -176,7 +222,7 @@ function ProjectForm({ existing, id, onSave, close }) {
           <Field label={t("deadline")}><input type="date" value={f.deadline} onChange={e => set("deadline", e.target.value)} /></Field>
         </div>
         <div className="two">
-          <Field label={`${t("budget")} ($)`}><input type="number" value={f.budget} onChange={e => set("budget", e.target.value)} /></Field>
+          <Field label={`${t("budget")} ($)`}><input type="number" step="0.01" value={f.budget} onChange={e => set("budget", e.target.value)} /></Field>
           <Field label={`${t("progress")} (%)`}><input type="number" min="0" max="100" value={f.progress} onChange={e => set("progress", e.target.value)} /></Field>
         </div>
         <div className="two">
@@ -283,10 +329,21 @@ function TaskForm({ existing, id, onSave, close }) {
 }
 
 function TransactionForm({ existing, id, onSave, close }) {
-  const { t, db } = useStore()
+  const { t, db, toUsd, toGbp } = useStore()
   const [f, setF] = useState(existing || { business: db.businesses[0]?.id || "", type: "income", amount: "", date: todayISO(), category: "", note: "", recurring: "none", recurrenceEnd: "", project: "" })
+  // currency the amount is being ENTERED in (USD or GBP). Stored value is always USD base,
+  // so existing transactions open in USD; display elsewhere follows the global currency toggle.
+  const [inCur, setInCur] = useState("USD")
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
-  const submit = () => { if (!f.business) return; onSave("transaction", { ...f, id, amount: Number(f.amount || 0) }); close() }
+  const round2 = (n) => Math.round(n * 100) / 100
+  // switching the entry currency re-expresses the number already typed, so its value stays the same
+  const changeCur = (next) => {
+    if (next === inCur) return
+    const usd = toUsd(Number(f.amount || 0), inCur)
+    set("amount", f.amount === "" ? "" : round2(next === "GBP" ? toGbp(usd, "USD") : usd))
+    setInCur(next)
+  }
+  const submit = () => { if (!f.business) return; onSave("transaction", { ...f, id, amount: round2(toUsd(Number(f.amount || 0), inCur)) }); close() }
   const cats = [...new Set(db.transactions.map(x => x.category).filter(Boolean))].sort()
   const salaryWarn = f.type === "expense" && isSalaryCategory(f.category)
   return (
@@ -301,7 +358,15 @@ function TransactionForm({ existing, id, onSave, close }) {
           </select></Field>
         </div>
         <div className="two">
-          <Field label="Amount ($)"><input type="number" value={f.amount} onChange={e => set("amount", e.target.value)} autoFocus /></Field>
+          <Field label="Amount">
+            <div style={{ display: "flex", gap: 8 }}>
+              <input type="number" step="0.01" value={f.amount} onChange={e => set("amount", e.target.value)} autoFocus style={{ flex: 1, minWidth: 0 }} />
+              <select value={inCur} onChange={e => changeCur(e.target.value)} style={{ width: 84, flex: "0 0 auto" }}>
+                <option value="USD">USD $</option>
+                <option value="GBP">GBP £</option>
+              </select>
+            </div>
+          </Field>
           <Field label="Date"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} /></Field>
         </div>
         <div className="two">

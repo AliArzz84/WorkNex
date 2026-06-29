@@ -58,19 +58,31 @@ function CLegend({ color, label }) {
     <span style={{ width: 10, height: 10, borderRadius: 3, background: color }} />{label}</span>
 }
 export function ColumnsV({ data, fmt = v => v, height = 150 }) {
-  const max = Math.max(1, ...data.map(d => Math.max(d.income || 0, (d.expense || 0) + (d.salary || 0))))
+  const hasExtra = data.some(d => d.extra)
+  const max = Math.max(1, ...data.map(d => Math.max(d.income || 0, (d.expense || 0) + (d.salary || 0) + (d.extra || 0))))
   const h = (v) => `${Math.max(0, (v / max) * 100)}%`
+  // four faint horizontal reference lines behind the columns (a "report" look)
+  const ticks = [1, 0.75, 0.5, 0.25]
   return (
     <div>
       <div style={{ display: "flex", gap: 16, fontSize: 12, marginBottom: 12, flexWrap: "wrap" }}>
         <CLegend color="#34c759" label="Income" />
         <CLegend color="#ff6b6b" label="Expenses" />
         <CLegend color="#ff9f0a" label="Salaries" />
+        {hasExtra && <CLegend color="#a78bfa" label="Extra costs" />}
       </div>
       <div style={{ overflowX: "auto" }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 12, minWidth: "100%", padding: "0 2px" }}>
+        <div style={{ position: "relative", minWidth: "100%" }}>
+          {/* gridlines + the top value label, sitting behind the bars */}
+          <div style={{ position: "absolute", inset: `0 0 42px 0`, pointerEvents: "none" }}>
+            {ticks.map((t, i) => (
+              <div key={i} style={{ position: "absolute", left: 0, right: 0, bottom: `${t * height}px`, height: 1, background: "var(--line)", opacity: t === 1 ? 0 : 1 }} />
+            ))}
+            <span style={{ position: "absolute", top: 0, insetInlineEnd: 0, fontSize: 10.5, color: "var(--muted)", background: "var(--panel)", padding: "0 4px" }}>{fmt(max)}</span>
+          </div>
+        <div style={{ position: "relative", display: "flex", alignItems: "flex-end", gap: 12, minWidth: "100%", padding: "0 2px" }}>
           {data.map((d, i) => {
-            const out = (d.expense || 0) + (d.salary || 0)
+            const out = (d.expense || 0) + (d.salary || 0) + (d.extra || 0)
             return (
               <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: "1 0 40px", minWidth: 40 }}>
                 <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 4, height, width: "100%" }}>
@@ -79,8 +91,10 @@ export function ColumnsV({ data, fmt = v => v, height = 150 }) {
                       style={{ width: "100%", background: "#34c759", borderRadius: "4px 4px 0 0" }} />
                   </div>
                   <div title={`Outgoing ${fmt(out)}`} style={{ width: 13, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: "100%" }}>
+                    {(d.extra || 0) > 0 && <motion.div initial={{ height: 0 }} animate={{ height: h(d.extra || 0) }} transition={{ duration: 0.6, delay: i * 0.03 }}
+                      style={{ width: "100%", background: "#a78bfa", borderRadius: "4px 4px 0 0" }} />}
                     <motion.div initial={{ height: 0 }} animate={{ height: h(d.salary || 0) }} transition={{ duration: 0.6, delay: i * 0.03 }}
-                      style={{ width: "100%", background: "#ff9f0a", borderRadius: "4px 4px 0 0" }} />
+                      style={{ width: "100%", background: "#ff9f0a", borderRadius: (d.extra || 0) > 0 ? 0 : "4px 4px 0 0" }} />
                     <motion.div initial={{ height: 0 }} animate={{ height: h(d.expense || 0) }} transition={{ duration: 0.6, delay: i * 0.03 }}
                       style={{ width: "100%", background: "#ff6b6b" }} />
                   </div>
@@ -90,6 +104,7 @@ export function ColumnsV({ data, fmt = v => v, height = 150 }) {
               </div>
             )
           })}
+        </div>
         </div>
       </div>
     </div>

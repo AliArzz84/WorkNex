@@ -54,7 +54,8 @@ const DELETE_KEYS = ["Backspace", "Delete"]
 const PRO_OPTIONS = { hideAttribution: true }
 
 function DiagramCanvas() {
-  const { db, saveDiagram, theme, askText, ask } = useStore()
+  const { db, saveDiagram, theme, askText, ask, isGuest } = useStore()
+  const editable = !isGuest   // guests (shared view-only links) get a read-only canvas
   const { screenToFlowPosition, fitView } = useReactFlow()
   const wrapRef = useRef(null)
   const menuRef = useRef(null)
@@ -142,6 +143,7 @@ function DiagramCanvas() {
   /* keyboard undo / redo (ignored while typing in a dialog field) */
   useEffect(() => {
     const onKey = (e) => {
+      if (isGuest) return
       if (e.target?.matches?.("input, textarea")) return
       const z = e.key === "z" || e.key === "Z"
       if ((e.ctrlKey || e.metaKey) && z && !e.shiftKey) { e.preventDefault(); undo() }
@@ -224,21 +226,27 @@ function DiagramCanvas() {
   return (
     <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
       <div className={styles.toolbar}>
-        <span className={styles.palette}>
-          {KINDS.map(k => (
-            <button key={k.kind} className={`${styles.tool} ${styles[k.kind]}`} title={k.hint} onClick={() => addNode(k.kind)}>
-              <i className={styles.swatch} /> {k.label}
-            </button>
-          ))}
-        </span>
+        {editable && (
+          <span className={styles.palette}>
+            {KINDS.map(k => (
+              <button key={k.kind} className={`${styles.tool} ${styles[k.kind]}`} title={k.hint} onClick={() => addNode(k.kind)}>
+                <i className={styles.swatch} /> {k.label}
+              </button>
+            ))}
+          </span>
+        )}
         <span className={styles.legend}>
-          <button className={styles.toolBtn} onClick={undo} disabled={!hist.canUndo} title="Undo (Ctrl+Z)"><Icon name="undo" size={15} /></button>
-          <button className={styles.toolBtn} onClick={redo} disabled={!hist.canRedo} title="Redo (Ctrl+Shift+Z)"><Icon name="redo" size={15} /></button>
+          {editable && <>
+            <button className={styles.toolBtn} onClick={undo} disabled={!hist.canUndo} title="Undo (Ctrl+Z)"><Icon name="undo" size={15} /></button>
+            <button className={styles.toolBtn} onClick={redo} disabled={!hist.canRedo} title="Redo (Ctrl+Shift+Z)"><Icon name="redo" size={15} /></button>
+          </>}
           <button className={styles.toolBtn} onClick={() => fitView({ duration: 400, padding: 0.2 })} title="Fit to screen"><Icon name="expand" size={15} /></button>
-          <button className={styles.toolBtn} onClick={selectAll} title="Select all"><Icon name="check" size={15} /></button>
-          <button className={`${styles.toolBtn} ${styles.danger}`} onClick={clearCanvas} title="Clear canvas"><Icon name="trash" size={15} /></button>
+          {editable && <>
+            <button className={styles.toolBtn} onClick={selectAll} title="Select all"><Icon name="check" size={15} /></button>
+            <button className={`${styles.toolBtn} ${styles.danger}`} onClick={clearCanvas} title="Clear canvas"><Icon name="trash" size={15} /></button>
+          </>}
         </span>
-        <span className={`muted ${styles.hint}`}>Right-click for actions • drag a dot to connect • double-click to rename • Ctrl+Z to undo</span>
+        <span className={`muted ${styles.hint}`}>{editable ? "Right-click for actions • drag a dot to connect • double-click to rename • Ctrl+Z to undo" : "Read-only view — drag the canvas to pan, scroll to zoom"}</span>
       </div>
 
       <div className={styles.canvas} ref={wrapRef} onContextMenu={(e) => e.preventDefault()}>
@@ -248,21 +256,24 @@ function DiagramCanvas() {
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeDoubleClick={(_, n) => renameNode(n.id)}
-          onEdgeDoubleClick={(_, e) => editEdgeLabel(e.id)}
+          onConnect={editable ? onConnect : undefined}
+          onNodeDoubleClick={editable ? (_, n) => renameNode(n.id) : undefined}
+          onEdgeDoubleClick={editable ? (_, e) => editEdgeLabel(e.id) : undefined}
           onNodeDragStop={() => { dragging.current = false }}
-          onPaneContextMenu={(e) => openMenu(e, { kind: "pane" })}
-          onNodeContextMenu={(e, n) => openMenu(e, { kind: "node", id: n.id })}
-          onEdgeContextMenu={(e, ed) => openMenu(e, { kind: "edge", id: ed.id })}
+          onPaneContextMenu={editable ? (e) => openMenu(e, { kind: "pane" }) : (e) => e.preventDefault()}
+          onNodeContextMenu={editable ? (e, n) => openMenu(e, { kind: "node", id: n.id }) : (e) => e.preventDefault()}
+          onEdgeContextMenu={editable ? (e, ed) => openMenu(e, { kind: "edge", id: ed.id }) : (e) => e.preventDefault()}
           onPaneClick={() => setMenu(null)}
+          nodesDraggable={editable}
+          nodesConnectable={editable}
+          elementsSelectable={editable}
           connectionMode={ConnectionMode.Loose}
           connectionLineType={ConnectionLineType.SmoothStep}
           defaultEdgeOptions={EDGE_OPTS}
           colorMode={theme === "dark" ? "dark" : "light"}
           snapToGrid snapGrid={SNAP_GRID}
           zoomOnDoubleClick={false}
-          deleteKeyCode={DELETE_KEYS}
+          deleteKeyCode={editable ? DELETE_KEYS : null}
           minZoom={0.3} maxZoom={2}
           proOptions={PRO_OPTIONS}
           fitView

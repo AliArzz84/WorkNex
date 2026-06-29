@@ -72,6 +72,27 @@ export function periodWindow(period, custom, now, scopeTx) {
 /* Number of whole calendar months the window covers (for salary scaling). */
 export const windowMonths = (win) => monthsInclusive(win.startIdx, win.endIdx)
 
+/* The comparable window immediately BEFORE the current period — used for the
+   "vs last month / quarter / year" deltas on the Overview KPIs.
+   Returns null when there's no sensible comparison (All time, or a custom range
+   missing one of its endpoints). */
+export function previousWindow(period, custom, now, scopeTx) {
+  if (period === "month")   return periodWindow("month",   null, new Date(now.getFullYear(), now.getMonth() - 1, 15), scopeTx)
+  if (period === "quarter") return periodWindow("quarter", null, new Date(now.getFullYear(), now.getMonth() - 3, 15), scopeTx)
+  if (period === "year")    return periodWindow("year",    null, new Date(now.getFullYear() - 1, 6, 1), scopeTx)
+  if (period === "custom") {
+    const a = parseLocalDate(custom && custom.from), b = parseLocalDate(custom && custom.to)
+    if (!a || !b) return null
+    const lenDays = Math.round((b - a) / 86400000) + 1
+    const pe = new Date(a); pe.setDate(pe.getDate() - 1)                 // day before the range starts
+    const ps = new Date(pe); ps.setDate(ps.getDate() - lenDays + 1)      // same length, immediately before
+    return periodWindow("custom",
+      { from: isoOf(ps.getFullYear(), ps.getMonth(), ps.getDate()), to: isoOf(pe.getFullYear(), pe.getMonth(), pe.getDate()) },
+      now, scopeTx)
+  }
+  return null
+}
+
 const OCC_CAP = 120   // safety cap: never expand more than 120 monthly occurrences per template
 
 function mkOcc(tx, dateIso, source) {
@@ -135,6 +156,37 @@ export function salaryForMonth(employees, toGbp, monthIdx, bizId) {
     .reduce((s, e) => {
       const hireIdx = e.hireDate ? (monthIndexOf(e.hireDate) ?? -Infinity) : -Infinity
       return monthIdx >= hireIdx ? s + toGbp(Number(e.salary || 0), e.currency) : s
+    }, 0)
+}
+
+/* ---- Per-employee EXTRA monthly costs (benefits, tools, allowances, insurance…).
+   Not payroll — never shown on the Payroll page or counted in a salary payment —
+   but they're a real recurring company outgoing, so Finance counts them.
+   Stored as a list on each employee: e.extras = [{ id, label, amount }] (in e.currency). */
+export const employeeExtraMonthly = (emp) => (emp.extras || []).reduce((s, x) => s + Number(x.amount || 0), 0)
+
+/* Extra-cost twins of the salary helpers — same active + hire-date gating. */
+export function periodExtraCost(employees, toGbp, win, bizId) {
+  return employees
+    .filter(e => e.status === "active" && (bizId == null || (e.business || "") === bizId))
+    .reduce((s, e) => {
+      const hireIdx = e.hireDate ? (monthIndexOf(e.hireDate) ?? win.startIdx) : win.startIdx
+      const from = Math.max(win.startIdx, hireIdx)
+      const months = Math.max(0, win.endIdx - from + 1)
+      return s + toGbp(employeeExtraMonthly(e), e.currency) * months
+    }, 0)
+}
+export function monthlyExtraRate(employees, toGbp, bizId) {
+  return employees
+    .filter(e => e.status === "active" && (bizId == null || (e.business || "") === bizId))
+    .reduce((s, e) => s + toGbp(employeeExtraMonthly(e), e.currency), 0)
+}
+export function extraForMonth(employees, toGbp, monthIdx, bizId) {
+  return employees
+    .filter(e => e.status === "active" && (bizId == null || (e.business || "") === bizId))
+    .reduce((s, e) => {
+      const hireIdx = e.hireDate ? (monthIndexOf(e.hireDate) ?? -Infinity) : -Infinity
+      return monthIdx >= hireIdx ? s + toGbp(employeeExtraMonthly(e), e.currency) : s
     }, 0)
 }
 

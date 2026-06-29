@@ -96,7 +96,7 @@ export default function App() {
   const switchRole = (r) => setRole(r)
 
   return (
-    <div className="app" data-role={role} data-collapsed={effectiveCollapsed ? "true" : "false"}>
+    <div className="app" data-role={role} data-guest={isGuest ? "true" : "false"} data-collapsed={effectiveCollapsed ? "true" : "false"}>
       <aside className={"sidebar" + (mobileNav ? " open" : "")}>
         <div className="brand">
           <Logo size={30} />

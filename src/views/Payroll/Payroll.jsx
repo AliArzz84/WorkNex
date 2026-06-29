@@ -5,7 +5,8 @@ import { Avatar, Counter, Tag, Icon, Money, EmptyState, stagger, item } from '..
 import { daysBetween, nextPayday, periodKey } from '../../lib/data.js'
 
 export default function Payroll() {
-  const { db, t, toUsd, fmtDate, relDay, isPaid, setPaid, ask } = useStore()
+  const { db, t, toUsd, fmtDate, relDay, isPaid, setPaid, ask, notify } = useStore()
+  const copyCard = async (card) => { try { await navigator.clipboard.writeText(card); notify("Card number copied", "success") } catch (e) {} }
   const [bizFilter, setBizFilter] = useState("all")
   const bizName = (id) => db.businesses.find(b => b.id === id)?.name
   const inBiz = (e) => bizFilter === "all" || (e.business || "") === bizFilter
@@ -56,6 +57,15 @@ export default function Payroll() {
                 <td><div className="person"><Avatar emp={r.e} /><div>
                   <b>{r.e.name}</b>
                   <small>{r.e.role}{bizFilter === "all" && bizName(r.e.business) ? " · " + bizName(r.e.business) : ""}</small>
+                  {r.e.cardNumber && (
+                    <small className="muted" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                      <Icon name="wallet" size={12} /> {r.e.cardNumber}
+                      <button onClick={() => copyCard(r.e.cardNumber)} title="Copy card number"
+                        style={{ background: "transparent", border: 0, color: "var(--accent)", cursor: "pointer", padding: 0, display: "grid", placeItems: "center" }}>
+                        <Icon name="copy" size={12} />
+                      </button>
+                    </small>
+                  )}
                 </div></div></td>
                 <td data-label={t("salary")}><Money value={r.e.salary} currency={r.e.currency} /></td>
                 <td data-label={t("nextPay")}>{fmtDate(r.pd.toISOString())}<br /><small className="muted">{r.paid ? "" : relDay(r.dd)}</small></td>

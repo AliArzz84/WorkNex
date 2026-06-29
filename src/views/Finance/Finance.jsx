@@ -6,10 +6,31 @@ import { BarsH, ColumnsV } from '../../components/Charts/Charts.jsx'
 import {
   isSalaryCategory, periodWindow, windowMonths, txOccurrences, expandAll,
   monthlyRunRate, periodSalaryCost, salaryForMonth, monthLabel, monthIndexOf,
+  periodExtraCost, extraForMonth, employeeExtraMonthly, previousWindow,
 } from '../../lib/finance.js'
 import styles from './Finance.module.css'
 
 const CAT_COLORS =["#6c8cff", "#9b6cff", "#34d399", "#fbbf24", "#f472b6", "#60a5fa", "#22d3ee", "#fb923c", "#a78bfa", "#f87171", "#2dd4bf", "#facc15"]
+
+const PREV_LABEL = { month: "last month", quarter: "last quarter", year: "last year", custom: "prior period" }
+
+// Period-over-period change pill. `goodWhen` flips the colour so that a falling
+// "outgoing" reads green (good) while falling income reads red (bad).
+function Delta({ cur, prev, goodWhen = "up" }) {
+  if (prev == null) return null
+  const diff = cur - prev
+  const eps = Math.max(0.5, Math.abs(prev) * 0.005)
+  if (Math.abs(diff) < eps) return <span className={`${styles.delta} ${styles.deltaFlat}`}>no change</span>
+  const up = diff > 0
+  const good = goodWhen === "up" ? up : !up
+  const pct = prev !== 0 ? Math.round(Math.abs(diff / prev) * 100) : null
+  const txt = pct == null ? "new" : (pct >= 1000 ? "10×+" : pct + "%")
+  return (
+    <span className={`${styles.delta} ${good ? styles.deltaGood : styles.deltaBad}`} title={`vs ${PREV_LABEL.custom}`}>
+      <Icon name={up ? "arrowUp" : "arrowDown"} size={11} /> {txt}
+    </span>
+  )
+}
 
 const PERIODS = [["all", "All time"], ["month", "This month"], ["quarter", "This quarter"], ["year", "This year"], ["custom", "Custom"]]
 
@@ -71,9 +92,24 @@ export default function Finance() {
   const periodIncome = sum(occ, "income")
   const periodExpense = sum(occ, "expense", true)                       // manual expenses, excl reserved "Salaries"
   const periodSalary = periodSalaryCost(db.employees, toUsd, win, bizId)
-  const periodOutgoing = periodExpense + periodSalary
+  const periodExtra = periodExtraCost(db.employees, toUsd, win, bizId)   // per-employee extra costs (not payroll)
+  const periodOutgoing = periodExpense + periodSalary + periodExtra
   const periodNet = periodIncome - periodOutgoing
   const runRate = monthlyRunRate(db.employees, toUsd, bizId)
+  const margin = periodIncome > 0 ? periodNet / periodIncome : null
+
+  // --- period-over-period comparison (drives the "vs last month/…" delta pills)
+  const prevWin = previousWindow(period, { from, to }, now, scopeTx)
+  let prev = null
+  if (prevWin) {
+    const pocc = expandAll(scopeTx, prevWin, now)
+    const pInc = sum(pocc, "income")
+    const pOut = sum(pocc, "expense", true)
+      + periodSalaryCost(db.employees, toUsd, prevWin, bizId)
+      + periodExtraCost(db.employees, toUsd, prevWin, bizId)
+    prev = { income: pInc, outgoing: pOut, net: pInc - pOut, salary: periodSalaryCost(db.employees, toUsd, prevWin, bizId) }
+  }
+  const prevLabel = PREV_LABEL[period] || null
 
   // --- F3: spending by category (expenses excl Salaries) + synthetic Salaries line
   const catMap = new Map()
@@ -88,6 +124,7 @@ export default function Finance() {
   const expenseCats = [...catMap.values()].sort((a, b) => b.value - a.value)
   const catChart = [...expenseCats]
   if (periodSalary > 0) catChart.push({ label: "Salaries (from active staff)", value: periodSalary })
+  if (periodExtra > 0) catChart.push({ label: "Extra staff costs", value: periodExtra })
   const catChartColored = catChart.map((r, i) => ({ ...r, color: CAT_COLORS[i % CAT_COLORS.length] }))
 
   // --- F2: monthly trend (last <=12 months of the window)
@@ -103,9 +140,10 @@ export default function Finance() {
     const inc = incByM[idx] || 0
     const exp = expByM[idx] || 0
     const sal = salaryForMonth(db.employees, toUsd, idx, bizId)
-    trend.push({ label: monthLabel(idx), income: inc, expense: exp, salary: sal, net: inc - exp - sal })
+    const ext = extraForMonth(db.employees, toUsd, idx, bizId)
+    trend.push({ label: monthLabel(idx), income: inc, expense: exp, salary: sal, extra: ext, net: inc - exp - sal - ext })
   }
-  const trendHasData = trend.some(m => m.income || m.expense || m.salary)
+  const trendHasData = trend.some(m => m.income || m.expense || m.salary || m.extra)
 
   // --- F10: profit by project (income - expense excl Salaries); salaries stay company-level
   const projMap = new Map()
@@ -118,6 +156,10 @@ export default function Finance() {
     projMap.set(key, row)
   }
   const projRows = [...projMap.values()].map(r => ({ ...r, net: r.income - r.expense })).sort((a, b) => b.net - a.net)
+  // transactions with no project chosen are NOT shown as a project — they live in a
+  // separate company-level "Other (no project)" line, next to salaries.
+  const realProjRows = projRows.filter(r => r.key)
+  const unalloc = projRows.find(r => !r.key) || null
 
   // --- transactions table: ONE row per template (recurring collapsed to a badge)
   const tableRows = scopeTx
@@ -129,8 +171,8 @@ export default function Finance() {
   if (import.meta.env.DEV) {
     const catSum = catChartColored.reduce((s, r) => s + r.value, 0)
     console.assert(Math.abs(catSum - periodOutgoing) < 0.01, "[finance] category breakdown != periodOutgoing", catSum, periodOutgoing)
-    const projSum = projRows.reduce((s, r) => s + r.net, 0) - periodSalary
-    console.assert(Math.abs(projSum - periodNet) < 0.01, "[finance] project profit + salaries != periodNet", projSum, periodNet)
+    const projSum = projRows.reduce((s, r) => s + r.net, 0) - periodSalary - periodExtra
+    console.assert(Math.abs(projSum - periodNet) < 0.01, "[finance] project profit + salaries + extra != periodNet", projSum, periodNet)
   }
 
   const periodLabel = PERIODS.find(p => p[0] === period)?.[1] || "All time"
@@ -163,6 +205,7 @@ export default function Finance() {
         const inc = sum(oc, "income")
         const exp = sum(oc, "expense", true)
         const sal = salFor(id => periodSalaryCost(db.employees, toUsd, w, id))
+        const ext = salFor(id => periodExtraCost(db.employees, toUsd, w, id))
         const rr = salFor(id => monthlyRunRate(db.employees, toUsd, id))
         // category breakdown
         const cm = new Map()
@@ -175,6 +218,7 @@ export default function Finance() {
         }
         const cc = [...cm.values()].sort((a, b) => b.value - a.value)
         if (sal > 0) cc.push({ label: "Salaries (from active staff)", value: sal })
+        if (ext > 0) cc.push({ label: "Extra staff costs", value: ext })
         // monthly trend
         const lo = Math.max(w.startIdx, w.endIdx - 11); const iBy = {}, eBy = {}
         for (const o of oc) {
@@ -186,7 +230,8 @@ export default function Finance() {
         for (let i = lo; i <= w.endIdx; i++) {
           const ii = iBy[i] || 0, ee = eBy[i] || 0
           const ss = salFor(id => salaryForMonth(db.employees, toUsd, i, id))
-          tr.push({ label: monthLabel(i), income: ii, expense: ee, salary: ss, net: ii - ee - ss })
+          const xx = salFor(id => extraForMonth(db.employees, toUsd, i, id))
+          tr.push({ label: monthLabel(i), income: ii, expense: ee, salary: ss, extra: xx, net: ii - ee - ss - xx })
         }
         // profit by project
         const pm = new Map()
@@ -199,12 +244,12 @@ export default function Finance() {
           pm.set(key, r)
         }
         const pr = [...pm.values()].map(r => ({ ...r, net: r.income - r.expense })).sort((a, b) => b.net - a.net)
-        return { av, ids, w, oc, inc, exp, sal, outg: exp + sal, net: inc - (exp + sal), rr, cc, tr, pr }
+        return { av, ids, w, oc, inc, exp, sal, ext, outg: exp + sal + ext, net: inc - (exp + sal + ext), rr, cc, tr, pr }
       }
 
       const F = fin(sel)
       const allView = F.av, selIds = F.ids, win = F.w, occ = F.oc
-      const periodIncome = F.inc, periodExpense = F.exp, periodSalary = F.sal
+      const periodIncome = F.inc, periodExpense = F.exp, periodSalary = F.sal, periodExtra = F.ext
       const periodOutgoing = F.outg, periodNet = F.net, runRate = F.rr
       const catChartColored = F.cc, trend = F.tr, projRows = F.pr
 
@@ -287,6 +332,7 @@ export default function Finance() {
             ["Total income", periodIncome],
             ["Manual expenses", periodExpense],
             ["Salary cost (period)", periodSalary],
+            ["Extra staff costs (period)", periodExtra],
             ["Total outgoing", periodOutgoing],
             ["Net profit", periodNet],
             ["Profit margin", periodIncome ? periodNet / periodIncome : 0],
@@ -296,9 +342,9 @@ export default function Finance() {
         })
         ws.getColumn(1).width = 32; ws.getColumn(1).alignment = { indent: 1 }
         ws.getColumn(2).width = 20; ws.getColumn(2).numFmt = MONEY; ws.getColumn(2).alignment = { horizontal: "right", indent: 1 }
-        ws.getCell("B10").numFmt = "0.0%"   // margin
-        ws.getCell("B12").numFmt = "#,##0"  // tx count
-        ws.getCell("B9").font = { bold: true, color: { argb: periodNet < 0 ? RED : GREEN } }  // net
+        ws.getCell("B11").numFmt = "0.0%"   // margin
+        ws.getCell("B13").numFmt = "#,##0"  // tx count
+        ws.getCell("B10").font = { bold: true, color: { argb: periodNet < 0 ? RED : GREEN } }  // net
         ws.views = [{ state: "frozen", ySplit: 4, showGridLines: false }]
       }
 
@@ -312,30 +358,31 @@ export default function Finance() {
           if (o.type === "income") a.inc += amt
           else if (!isSalaryCategory(o.category)) a.exp += amt
         }
-        const rows = []; let assignedSal = 0
+        const rows = []; let assignedSal = 0, assignedExt = 0
         for (const b of (allView ? db.businesses : db.businesses.filter(x => selIds.includes(x.id)))) {
           const sal = periodSalaryCost(db.employees, toUsd, win, b.id); assignedSal += sal
+          const ext = periodExtraCost(db.employees, toUsd, win, b.id); assignedExt += ext
           const a = agg[b.id] || { inc: 0, exp: 0 }
-          rows.push([b.name, a.inc, a.exp, sal, a.inc - a.exp - sal])
+          rows.push([b.name, a.inc, a.exp, sal, ext, a.inc - a.exp - sal - ext])
         }
-        const un = agg[""]; const unSal = Math.max(0, periodSalary - assignedSal)
-        if ((un && (un.inc || un.exp)) || unSal) {
+        const un = agg[""]; const unSal = Math.max(0, periodSalary - assignedSal); const unExt = Math.max(0, periodExtra - assignedExt)
+        if ((un && (un.inc || un.exp)) || unSal || unExt) {
           const a = un || { inc: 0, exp: 0 }
-          rows.push(["Unassigned", a.inc, a.exp, unSal, a.inc - a.exp - unSal])
+          rows.push(["Unassigned", a.inc, a.exp, unSal, unExt, a.inc - a.exp - unSal - unExt])
         }
         sheet("By business", [
           { name: "Business", width: 26 }, { name: "Income", width: 15, numFmt: MONEY },
           { name: "Expenses", width: 15, numFmt: MONEY }, { name: "Salaries", width: 15, numFmt: MONEY },
-          { name: "Net", width: 15, numFmt: MONEY },
-        ], rows, { neg: [4] })
+          { name: "Extra", width: 15, numFmt: MONEY }, { name: "Net", width: 15, numFmt: MONEY },
+        ], rows, { neg: [5] })
       }
 
       // ---- Monthly trend
       want("trend") && sheet("Trend", [
         { name: "Month", width: 14 }, { name: "Income", width: 15, numFmt: MONEY },
         { name: "Expenses", width: 15, numFmt: MONEY }, { name: "Salaries", width: 15, numFmt: MONEY },
-        { name: "Net", width: 15, numFmt: MONEY },
-      ], trend.map(m => [m.label, m.income, m.expense, m.salary, m.net]), { neg: [4] })
+        { name: "Extra", width: 15, numFmt: MONEY }, { name: "Net", width: 15, numFmt: MONEY },
+      ], trend.map(m => [m.label, m.income, m.expense, m.salary, m.extra || 0, m.net]), { neg: [5] })
 
       // ---- Spending by category
       want("categories") && sheet("Categories", [
@@ -375,12 +422,14 @@ export default function Finance() {
         { name: "Email", width: 24 }, { name: "Phone", width: 16 }, { name: "Business", width: 16 },
         { name: "Teams", width: 20 }, { name: "Status", width: 10 }, { name: "Pay day", width: 9, numFmt: "#,##0" },
         { name: "Currency", width: 10 }, { name: "Salary (orig)", width: 14, numFmt: "#,##0.00" },
-        { name: "Salary (USD/mo)", width: 15, numFmt: MONEY }, { name: "Hire date", width: 13, numFmt: "yyyy-mm-dd" },
-        { name: "Notes", width: 28 },
+        { name: "Salary (USD/mo)", width: 15, numFmt: MONEY }, { name: "Extra (USD/mo)", width: 14, numFmt: MONEY },
+        { name: "Hire date", width: 13, numFmt: "yyyy-mm-dd" }, { name: "Card number", width: 20 },
+        { name: "IBAN / Sheba", width: 26 }, { name: "Bank", width: 14 }, { name: "Notes", width: 28 },
       ], db.employees.filter(inBiz).map(e => [
         e.name, e.role || "", e.country || "", e.email || "", e.phone || "", bizName(e.business),
         teamsOf(e.id), e.status || "", Number(e.payDay) || "", e.currency || "USD", Number(e.salary) || 0,
-        toUsd(e.salary, e.currency), D(e.hireDate), e.notes || "",
+        toUsd(e.salary, e.currency), toUsd(employeeExtraMonthly(e), e.currency), D(e.hireDate),
+        e.cardNumber || "", e.iban || "", e.bankName || "", e.notes || "",
       ]))
 
       // ---- Projects (full directory)
@@ -545,18 +594,31 @@ export default function Finance() {
       </div>
 
       {tab === "overview" && (<>
-      <motion.div className="kpis" variants={stagger} initial="initial" animate="animate">
+      {prev && (
+        <div className={styles.cmpNote}>
+          <Icon name="finance" size={13} /> Compared with <b>{prevLabel}</b>
+        </div>
+      )}
+      <motion.div className={`kpis ${styles.finKpis}`} variants={stagger} initial="initial" animate="animate">
         <motion.div className="kpi k2" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="arrowUp" size={20} /></div>
-          <h3><Money value={periodIncome} /></h3><p>Total income</p>
+          <h3><Money value={periodIncome} /></h3>
+          <p>Total income {prev && <Delta cur={periodIncome} prev={prev.income} goodWhen="up" />}</p>
         </motion.div>
         <motion.div className="kpi k4" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="arrowDown" size={20} /></div>
-          <h3><Money value={periodOutgoing} /></h3><p>Total outgoing</p>
+          <h3><Money value={periodOutgoing} /></h3>
+          <p>Total outgoing {prev && <Delta cur={periodOutgoing} prev={prev.outgoing} goodWhen="down" />}</p>
         </motion.div>
         <motion.div className="kpi k1" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="finance" size={20} /></div>
-          <h3 style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet} /></h3><p>Net profit</p>
+          <h3 style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet} /></h3>
+          <p>Net profit {prev && <Delta cur={periodNet} prev={prev.net} goodWhen="up" />}</p>
+          {margin != null && (
+            <small style={{ color: "var(--muted)", fontSize: 11 }}>
+              {(margin * 100).toFixed(margin >= 0.1 || margin <= -0.1 ? 0 : 1)}% profit margin
+            </small>
+          )}
         </motion.div>
         <motion.div className="kpi k3" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="wallet" size={20} /></div>
@@ -564,6 +626,46 @@ export default function Finance() {
           <small style={{ color: "var(--muted)", fontSize: 11 }}>≈ {fmtBase(Math.round(runRate))}/mo · {months} mo</small>
         </motion.div>
       </motion.div>
+
+      {/* at-a-glance highlights — the facts a boss scans first */}
+      {(catChartColored.length > 0 || projRows.length > 0) && (
+        <div className={styles.insights}>
+          {catChartColored.length > 0 && (() => {
+            const top = catChartColored[0]
+            return (
+              <div className={styles.insight}>
+                <span className={styles.insIc} style={{ background: "rgba(255,59,48,.14)", color: "var(--red-ink)" }}><Icon name="arrowDown" size={16} /></span>
+                <div className={styles.insBody}>
+                  <small>Biggest cost</small>
+                  <b>{top.label}</b>
+                  <span className={styles.insVal}><Money value={top.value} /> · {periodOutgoing ? Math.round(top.value / periodOutgoing * 100) : 0}% of outgoing</span>
+                </div>
+              </div>
+            )
+          })()}
+          {(() => {
+            const best = projRows.filter(p => p.key && p.net > 0)[0]
+            return best ? (
+              <div className={styles.insight}>
+                <span className={styles.insIc} style={{ background: "rgba(52,199,89,.14)", color: "var(--green-ink)" }}><Icon name="projects" size={16} /></span>
+                <div className={styles.insBody}>
+                  <small>Most profitable project</small>
+                  <b>{best.label}</b>
+                  <span className={styles.insVal} style={{ color: "var(--green-ink)" }}>+<Money value={best.net} /> net</span>
+                </div>
+              </div>
+            ) : null
+          })()}
+          <div className={styles.insight}>
+            <span className={styles.insIc} style={{ background: "rgba(0,113,227,.12)", color: "var(--blue-ink)" }}><Icon name="finance" size={16} /></span>
+            <div className={styles.insBody}>
+              <small>Average per month</small>
+              <b style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet / months} /></b>
+              <span className={styles.insVal}>net over {months} month{months > 1 ? "s" : ""}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* F2: monthly trend */}
       <div className="panel">
@@ -582,24 +684,40 @@ export default function Finance() {
         {/* F10: profit by project */}
         <div className="panel">
           <div className="panel-h"><span className="hicon"><Icon name="projects" size={16} /></span><h2>Profit by project</h2></div>
-          {(projRows.length || periodSalary > 0) ? (
+          {(realProjRows.length || unalloc || periodSalary > 0 || periodExtra > 0) ? (
             <table className={styles.plTable}>
               <thead><tr><th>Project</th><th className="right">Income</th><th className="right">Outgoing</th><th className="right">Net</th></tr></thead>
               <tbody>
-                {projRows.map(r => (
-                  <tr key={r.key || "unallocated"}>
+                {realProjRows.map(r => (
+                  <tr key={r.key}>
                     <td>{r.label}</td>
                     <td className="right" style={{ color: "var(--green-ink)" }}><Money value={r.income} align="flex-end" /></td>
                     <td className="right" style={{ color: "var(--red-ink)" }}><Money value={r.expense} align="flex-end" /></td>
                     <td className="right" style={{ color: r.net < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={r.net} align="flex-end" /></td>
                   </tr>
                 ))}
+                {unalloc && (unalloc.income > 0 || unalloc.expense > 0) && (
+                  <tr>
+                    <td className="muted">Other (not tied to a project)</td>
+                    <td className="right" style={{ color: "var(--green-ink)" }}>{unalloc.income > 0 ? <Money value={unalloc.income} align="flex-end" /> : "—"}</td>
+                    <td className="right" style={{ color: "var(--red-ink)" }}>{unalloc.expense > 0 ? <Money value={unalloc.expense} align="flex-end" /> : "—"}</td>
+                    <td className="right" style={{ color: unalloc.net < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={unalloc.net} align="flex-end" /></td>
+                  </tr>
+                )}
                 {periodSalary > 0 && (
                   <tr>
                     <td className="muted">Salaries (not allocated to projects)</td>
                     <td className="right">—</td>
                     <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodSalary} align="flex-end" /></td>
                     <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodSalary} align="flex-end" /></td>
+                  </tr>
+                )}
+                {periodExtra > 0 && (
+                  <tr>
+                    <td className="muted">Extra staff costs</td>
+                    <td className="right">—</td>
+                    <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodExtra} align="flex-end" /></td>
+                    <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodExtra} align="flex-end" /></td>
                   </tr>
                 )}
                 <tr className={styles.plTotal}>
@@ -629,6 +747,7 @@ export default function Finance() {
             <div className={styles.plRow} key={i}><span className="muted">{c.label}</span><span><Money value={c.value} align="flex-end" /></span></div>
           ))}
           <div className={styles.plRow}><span className="muted">Salaries (active staff)</span><span><Money value={periodSalary} align="flex-end" /></span></div>
+          {periodExtra > 0 && <div className={styles.plRow}><span className="muted">Extra staff costs</span><span><Money value={periodExtra} align="flex-end" /></span></div>}
           <div className={`${styles.plRow} ${styles.plSub}`}><span>Total expenses</span><span style={{ color: "var(--red-ink)" }}><Money value={periodOutgoing} align="flex-end" /></span></div>
           <div className={`${styles.plRow} ${styles.plTotal}`}><span><b>Net profit</b></span><span style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><b><Money value={periodNet} align="flex-end" /></b></span></div>
         </div>

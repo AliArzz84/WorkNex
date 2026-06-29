@@ -1,19 +1,153 @@
-.empNote {
-    display: block;
-    margin-top: 5px;
+.pmain {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.nameRow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+/* expand toggle that reveals the email + phone — a clean inline chevron, no boxy border */
+.expandBtn {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 0;
+    padding: 0;
+    background: transparent;
     color: var(--muted);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    transition: background .15s ease, color .15s ease, transform .22s ease;
+}
+
+.expandBtn:hover {
+    background: var(--hover);
+    color: var(--txt);
+}
+
+.expandOn {
+    color: var(--accent);
+    transform: rotate(180deg);
+}
+
+/* role — now a clear accent pill instead of muted inline text */
+.role {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    margin-top: 4px;
+    padding: 2px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(0, 113, 227, .1);
+}
+
+.roleNone {
+    align-self: flex-start;
+    margin-top: 4px;
+    font-size: 11px;
     font-style: italic;
-    font-size: 11.5px;
-    max-width: 340px
+    color: var(--muted);
 }
 
 .empTeams {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-    margin-top: 5px
+    margin-top: 6px;
 }
 
 .empTeams :global(.tag) {
-    font-size: 10.5px
+    font-size: 10.5px;
+}
+
+/* notes — now a readable note card with an accent edge instead of tiny italics */
+.empNote {
+    display: flex;
+    gap: 7px;
+    margin-top: 7px;
+    padding: 7px 10px;
+    max-width: 360px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--txt);
+    background: var(--panel-2);
+    border-inline-start: 3px solid var(--amber);
+    border-radius: 8px;
+}
+
+.noteIcon {
+    flex: 0 0 auto;
+}
+
+/* expandable contact panel */
+.details {
+    overflow: hidden;
+}
+
+.detailsInner {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 9px 11px;
+    max-width: 360px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+}
+
+.detailRow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--txt);
+    text-decoration: none;
+}
+
+.detailRow:hover {
+    color: var(--accent);
+}
+
+.detailMuted {
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.detailNum {
+    font-variant-numeric: tabular-nums;
+    word-break: break-all;
+}
+
+.copyBtn {
+    flex: 0 0 auto;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+}
+
+.copyBtn:hover {
+    color: var(--accent);
+    background: var(--hover);
+}
+
+.bankDiv {
+    height: 1px;
+    background: var(--line);
+    margin: 3px 0;
 }

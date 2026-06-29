@@ -126,3 +126,162 @@
     border-color: transparent;
     color: var(--amber-ink)
 }
+
+/* form sub-sections (extra costs, bank details) */
+.formSection {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.sectionHead {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--txt);
+    margin-bottom: 10px;
+}
+
+.sectionHead small {
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+/* the extra-costs card */
+.extraCard {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel-2);
+}
+
+.extraEmpty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 14px 10px;
+    color: var(--muted);
+    font-size: 12.5px;
+    text-align: center;
+}
+
+.extraRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* these inputs live outside .field, so give them the same themed look as the rest of the form */
+.extraRow input,
+.amtWrap input {
+    background: var(--input-bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    padding: 9px 11px;
+    color: var(--txt);
+    font-family: inherit;
+    font-size: 13px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.extraRow input:focus,
+.amtWrap input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, .15);
+}
+
+.extraRow input::placeholder {
+    color: var(--muted);
+}
+
+.extraRow > input {
+    flex: 1;
+    min-width: 0;
+}
+
+.amtWrap {
+    position: relative;
+    flex: 0 0 124px;
+    display: flex;
+    align-items: center;
+}
+
+.amtSym {
+    position: absolute;
+    inset-inline-start: 11px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.extraAmt {
+    width: 100%;
+    padding-inline-start: 24px !important;
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+}
+
+.extraDel {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: #e5484d;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.extraDel:hover {
+    background: rgba(229, 72, 77, .12);
+    border-color: rgba(229, 72, 77, .4);
+}
+
+.extraFoot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.addRowBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px dashed var(--line-strong);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.addRowBtn:hover {
+    background: var(--hover);
+    color: var(--txt);
+    border-color: var(--accent);
+}
+
+.extraTotal {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--amber-ink);
+    background: rgba(255, 159, 10, .14);
+    font-variant-numeric: tabular-nums;
+}

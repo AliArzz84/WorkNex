@@ -10,7 +10,7 @@ const PW = { high: 0, med: 1, low: 2 }
 const byPri = (a, b) => (PW[a.priority] - PW[b.priority]) || ((a.title || "").localeCompare(b.title || ""))
 
 function TaskRow({ k }) {
-  const { db, relDay, empById, openEditor, removeItem, toggleTask, ask } = useStore()
+  const { db, relDay, empById, openEditor, removeItem, toggleTask, ask, isGuest } = useStore()
   const [completing, setCompleting] = useState(false)
   const showDone = k.done || completing
   const dd = k.due ? daysBetween(k.due) : null
@@ -25,7 +25,8 @@ function TaskRow({ k }) {
   return (
     <motion.div className={styles.taskRow} variants={item} layout
       exit={{ opacity: 0, x: 26, transition: { duration: 0.25 } }}>
-      <button className={`${styles.check} ${showDone ? styles.on : ""}`} onClick={onCheck} title="Toggle done">
+      <button className={`${styles.check} ${showDone ? styles.on : ""}`} onClick={isGuest ? undefined : onCheck}
+        title={isGuest ? "" : "Toggle done"} style={{ cursor: isGuest ? "default" : "pointer" }}>
         <AnimatePresence>
           {showDone && (
             <motion.span key="c" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}

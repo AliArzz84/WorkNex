@@ -152,6 +152,37 @@ export function StoreProvider({ children }) {
     return () => { cancelled = true }
   }, [])
 
+  // Live USD -> GBP forex rate. Frankfurter (European Central Bank reference rates,
+  // key-free + CORS-friendly) is primary; open.er-api is the fallback. Cached 6h.
+  // This is the real forex rate — far more accurate for USD↔GBP than deriving it
+  // from the Iranian toman prices, which is only used as a last resort.
+  const [fxUsdGbp, setFxUsdGbp] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("bm_usdgbp")).value } catch (e) { return 0 }
+  })
+  useEffect(() => {
+    let cached; try { cached = JSON.parse(localStorage.getItem("bm_usdgbp")) } catch (e) {}
+    if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return
+    let cancelled = false
+    const apply = (r) => {
+      if (!r || cancelled) return
+      setFxUsdGbp(r)
+      localStorage.setItem("bm_usdgbp", JSON.stringify({ value: r, ts: Date.now() }))
+    }
+    ;(async () => {
+      // primary: Frankfurter (ECB rates, no key needed)
+      try {
+        const d = await (await fetch("https://api.frankfurter.app/latest?from=USD&to=GBP")).json()
+        if (d && d.rates && d.rates.GBP) { apply(Number(d.rates.GBP)); return }
+      } catch (e) {}
+      // fallback: open.er-api (no key, CORS-friendly)
+      try {
+        const d = await (await fetch("https://open.er-api.com/v6/latest/USD")).json()
+        if (d && d.rates && d.rates.GBP) apply(Number(d.rates.GBP))
+      } catch (e) {}
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   /* local persistence */
   useEffect(() => { if (!cloud) localStorage.setItem(KEY, JSON.stringify(db)) }, [db, cloud])
 
@@ -368,7 +399,9 @@ export function StoreProvider({ children }) {
   const money = useCallback((n, code = "USD") => {
     const amt = Number(n || 0)
     if (code === "IRR") return amt.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " تومان"
-    return (CUR_SYMBOL[code] || "$") + amt.toLocaleString("en-GB", { maximumFractionDigits: 0 })
+    // show cents only when the amount actually has them, so $4,500 stays clean but $123.23 keeps its cents
+    const dp = Math.round(amt * 100) % 100 === 0 ? 0 : 2
+    return (CUR_SYMBOL[code] || "$") + amt.toLocaleString("en-GB", { minimumFractionDigits: dp, maximumFractionDigits: dp })
   }, [])
   // prefer the live nerkh GBP price; fall back to the exchangerate.host value
   const gbpToman = (currencyRates && currencyRates.GBP) || tomanPerGbp
@@ -379,19 +412,25 @@ export function StoreProvider({ children }) {
         : (currencyRates && currencyRates[code]) ? amt * currencyRates[code] : amt * gbpToman
     return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Math.round(toman)) + " تومان"
   }, [gbpToman, currencyRates])
+  // USD↔GBP uses the real forex feed (ECB via Frankfurter) when available; otherwise it
+  // falls back to the Iranian toman ratios, then a static 0.79. Defined before the
+  // converters below so they can lean on it for an accurate USD/GBP cross-rate.
+  const usdToGbp = fxUsdGbp || ((currencyRates && currencyRates.USD && gbpToman) ? currencyRates.USD / gbpToman : 0.79)
   // convert an amount in `code` currency to GBP (used for mixed-currency totals)
   const toGbp = useCallback((n, code = "GBP") => {
     const amt = Number(n || 0)
     if (!code || code === "GBP") return amt
+    if (code === "USD") return amt * usdToGbp                  // accurate forex cross-rate
     if (code === "IRR") return gbpToman ? amt / gbpToman : amt
-    const r = currencyRates && currencyRates[code]
+    const r = currencyRates && currencyRates[code]             // EUR / AED / TRY via toman ratios
     return (r && gbpToman) ? amt * r / gbpToman : amt
-  }, [gbpToman, currencyRates])
-  // USD is the base currency; GBP is an optional display. Derive USD↔GBP from the live Toman rates.
-  const usdToGbp = (currencyRates && currencyRates.USD && gbpToman) ? currencyRates.USD / gbpToman : 0.79
+  }, [gbpToman, currencyRates, usdToGbp])
   const toUsd = useCallback((n, code = "USD") => {
-    const inGbp = toGbp(n, code)                 // any currency → GBP
-    return usdToGbp ? inGbp / usdToGbp : inGbp   // GBP → USD (base)
+    const amt = Number(n || 0)
+    if (!code || code === "USD") return amt                    // already the base currency
+    if (code === "GBP") return usdToGbp ? amt / usdToGbp : amt // accurate forex cross-rate
+    const inGbp = toGbp(n, code)                               // any other currency → GBP …
+    return usdToGbp ? inGbp / usdToGbp : inGbp                 // … → USD (base)
   }, [toGbp, usdToGbp])
   // format a USD-base amount in the currently selected display currency
   const fmtBase = useCallback((n) => displayCurrency === "GBP" ? money(Number(n || 0) * usdToGbp, "GBP") : money(n, "USD"), [displayCurrency, usdToGbp, money])

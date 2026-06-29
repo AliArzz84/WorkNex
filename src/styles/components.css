@@ -450,6 +450,14 @@ tr:hover td {
   padding: 20px
 }
 
+/* guests open a read-only shared link — hide every editing affordance so the
+   view is genuinely view-only (no edit/delete/pay/check buttons that don't persist) */
+.app[data-guest="true"] .row-actions,
+.app[data-guest="true"] .pay-action,
+.app[data-guest="true"] .tcheck {
+  display: none !important;
+}
+
 /* the confirm/prompt dialog is summoned from inside other modals (e.g. Backups),
    so it must always sit above them — not just whatever renders last in the DOM */
 .modal-bg.confirm-bg {
