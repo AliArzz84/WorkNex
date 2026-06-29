@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
-import { Avatar, Counter, Tag, Icon, Money, EmptyState, stagger, item } from '../../components/ui/ui.jsx'
+import { Avatar, Counter, Tag, Icon, Money, CurrencyToggle, EmptyState, stagger, item } from '../../components/ui/ui.jsx'
 import { daysBetween, nextPayday, periodKey } from '../../lib/data.js'
 
 export default function Payroll() {
@@ -28,14 +28,15 @@ export default function Payroll() {
 
   return (
     <div>
-      {db.businesses.length > 0 && (
-        <div className="pill-row">
+      <div className="pill-row" style={{ alignItems: "center" }}>
+        {db.businesses.length > 0 && (<>
           <span className={`pill ${bizFilter === "all" ? "on" : ""}`} onClick={() => setBizFilter("all")}>{t("all")} businesses</span>
           {db.businesses.map(b => (
             <span key={b.id} className={`pill ${bizFilter === b.id ? "on" : ""}`} onClick={() => setBizFilter(b.id)}>{b.name}</span>
           ))}
-        </div>
-      )}
+        </>)}
+        <span style={{ marginInlineStart: "auto" }}><CurrencyToggle /></span>
+      </div>
 
       <motion.div className="kpis" variants={stagger} initial="initial" animate="animate">
         {kpis.map((k, i) => (
@@ -67,7 +68,10 @@ export default function Payroll() {
                     </small>
                   )}
                 </div></div></td>
-                <td data-label={t("salary")}><Money value={r.e.salary} currency={r.e.currency} /></td>
+                <td data-label={t("salary")}>
+                  <Money value={toUsd(r.e.salary, r.e.currency)} />
+                  {r.e.currency !== "USD" && <small className="muted" style={{ display: "block", fontSize: 11 }}><Money value={r.e.salary} currency={r.e.currency} /></small>}
+                </td>
                 <td data-label={t("nextPay")}>{fmtDate(r.pd.toISOString())}<br /><small className="muted">{r.paid ? "" : relDay(r.dd)}</small></td>
                 <td data-label={t("status")}>
                   {r.paid ? <Tag color="green">✓ {t("paid")}</Tag>
