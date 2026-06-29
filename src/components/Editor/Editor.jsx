@@ -330,20 +330,37 @@ function TaskForm({ existing, id, onSave, close }) {
 
 function TransactionForm({ existing, id, onSave, close }) {
   const { t, db, toUsd, toGbp } = useStore()
-  const [f, setF] = useState(existing || { business: db.businesses[0]?.id || "", type: "income", amount: "", date: todayISO(), category: "", note: "", recurring: "none", recurrenceEnd: "", project: "" })
-  // currency the amount is being ENTERED in (USD or GBP). Stored value is always USD base,
+  const [f, setF] = useState(existing || { business: db.businesses[0]?.id || "", type: "income", amount: "", fee: "", feePct: "", date: todayISO(), category: "", note: "", recurring: "none", recurrenceEnd: "", project: "" })
+  // currency the amount + fee are being ENTERED in (USD or GBP). Stored values are always USD base,
   // so existing transactions open in USD; display elsewhere follows the global currency toggle.
   const [inCur, setInCur] = useState("USD")
+  // fee can be a flat amount or a percentage of the amount; % is restored when re-editing
+  const [feeMode, setFeeMode] = useState((existing?.feePct || 0) > 0 ? "pct" : "amount")
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
   const round2 = (n) => Math.round(n * 100) / 100
-  // switching the entry currency re-expresses the number already typed, so its value stays the same
+  // re-express a typed value into the new entry currency so its real value stays the same
+  const reExpress = (val, next) => {
+    if (val === "" || val == null) return ""
+    const usd = toUsd(Number(val || 0), inCur)
+    return round2(next === "GBP" ? toGbp(usd, "USD") : usd)
+  }
   const changeCur = (next) => {
     if (next === inCur) return
-    const usd = toUsd(Number(f.amount || 0), inCur)
-    set("amount", f.amount === "" ? "" : round2(next === "GBP" ? toGbp(usd, "USD") : usd))
+    set("amount", reExpress(f.amount, next))
+    if (feeMode === "amount") set("fee", reExpress(f.fee, next))   // a % fee is currency-agnostic
     setInCur(next)
   }
-  const submit = () => { if (!f.business) return; onSave("transaction", { ...f, id, amount: round2(toUsd(Number(f.amount || 0), inCur)) }); close() }
+  const sym = inCur === "GBP" ? "£" : "$"
+  const feePreview = feeMode === "pct" ? round2(Number(f.amount || 0) * Number(f.feePct || 0) / 100) : 0
+  const submit = () => {
+    if (!f.business) return
+    const amountUsd = round2(toUsd(Number(f.amount || 0), inCur))
+    const feeUsd = feeMode === "pct"
+      ? round2(amountUsd * Number(f.feePct || 0) / 100)
+      : round2(toUsd(Number(f.fee || 0), inCur))
+    onSave("transaction", { ...f, id, amount: amountUsd, fee: feeUsd, feePct: feeMode === "pct" ? Number(f.feePct || 0) : 0 })
+    close()
+  }
   const cats = [...new Set(db.transactions.map(x => x.category).filter(Boolean))].sort()
   const salaryWarn = f.type === "expense" && isSalaryCategory(f.category)
   return (
@@ -368,6 +385,26 @@ function TransactionForm({ existing, id, onSave, close }) {
             </div>
           </Field>
           <Field label="Date"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} /></Field>
+        </div>
+        <div className="two">
+          <Field label="Fee (optional)">
+            <div style={{ display: "flex", gap: 8 }}>
+              <input type="number" step={feeMode === "pct" ? "0.1" : "0.01"} min="0"
+                value={feeMode === "pct" ? (f.feePct || "") : (f.fee || "")}
+                onChange={e => set(feeMode === "pct" ? "feePct" : "fee", e.target.value)}
+                placeholder={feeMode === "pct" ? "0" : "0.00"} style={{ flex: 1, minWidth: 0 }} />
+              <select value={feeMode} onChange={e => setFeeMode(e.target.value)} style={{ width: 84, flex: "0 0 auto" }}>
+                <option value="amount">{sym}</option>
+                <option value="pct">%</option>
+              </select>
+            </div>
+          </Field>
+          <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 10 }}>
+            <small className="muted" style={{ lineHeight: 1.45 }}>
+              Always counted as a cost — e.g. payment-gateway or bank fee. Reduces net profit.
+              {feeMode === "pct" && Number(f.feePct) > 0 && <> ≈ <b>{sym}{feePreview.toLocaleString("en-GB", { minimumFractionDigits: 2 })}</b> of this transaction.</>}
+            </small>
+          </div>
         </div>
         <div className="two">
           <Field label="Category">
