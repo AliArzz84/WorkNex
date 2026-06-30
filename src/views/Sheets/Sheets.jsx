@@ -95,6 +95,13 @@ const cfRuleMatches = (rule, text) => {
     case "cellIs":
       if (rule.operator === "notEqual") return t !== unquote(rule.formulae?.[0])
       return rule.operator === "equal" && t === unquote(rule.formulae?.[0])
+    case "expression": {
+      // Google Sheets exports value-based colours as a formula (e.g. =$P4="Done" or
+      // =REGEXMATCH($P4,"Done")). Pull the quoted literals and match the cell text.
+      const f = String(rule.formulae?.[0] || "").replace(/""/g, '"')
+      const lits = (f.match(/"([^"]+)"/g) || []).map(l => l.replace(/"/g, ""))
+      return lits.length > 0 && lits.some(l => t.includes(l))
+    }
     default: return false
   }
 }
@@ -105,7 +112,19 @@ export default function Sheets() {
   const fileRef = useRef(null)
 
   const commit = (next) => saveSheets(next)
-  const patch = (sid, fn) => commit(sheets.map(s => s.id === sid ? fn(s) : s))
+  // per-table undo history (in-memory, this session). every edit snapshots that table first.
+  const histRef = useRef({})
+  const patch = (sid, fn) => {
+    const cur = sheets.find(s => s.id === sid)
+    if (cur) { const st = histRef.current[sid] || (histRef.current[sid] = []); st.push(cur); if (st.length > 80) st.shift() }
+    commit(sheets.map(s => s.id === sid ? fn(s) : s))
+  }
+  const undo = (sid) => {
+    const st = histRef.current[sid]; if (!st || !st.length) return
+    const prev = st.pop()
+    commit(sheets.map(s => s.id === sid ? prev : s))
+  }
+  const canUndo = (sid) => !!(histRef.current[sid] && histRef.current[sid].length)
 
   const addTable = () => commit([...sheets, mkSheet()])
   const delTable = async (sid) => {
@@ -292,6 +311,8 @@ export default function Sheets() {
           {s.rich
             ? <button className="btn ghost sm" onClick={() => addRichRow(s.id)}><Icon name="plus" size={13} /> Row</button>
             : <button className="btn ghost sm" onClick={() => addCol(s.id)}><Icon name="columns" size={13} /> Column</button>}
+          <button className="iconbtn" onClick={() => undo(s.id)} disabled={!canUndo(s.id)} title="Undo last change in this table"
+            style={{ opacity: canUndo(s.id) ? 1 : 0.4 }}><Icon name="undo" size={16} /></button>
           <button className="iconbtn del" onClick={() => delTable(s.id)} title="Delete table"><Icon name="trash" size={16} /></button>
         </div>
       )}
@@ -314,22 +335,28 @@ export default function Sheets() {
         <div className="panel">
           <EmptyState icon="table" text={readOnly ? "No tables here yet" : "No tables yet — add one or import an Excel file"} />
         </div>
-      ) : sheets.map(s => s.rich ? (
+      ) : sheets.map(s => s.rich ? (() => {
         /* ── faithful imported grid: merged headers, colours, widths, multi-line ── */
+        // force the table to the full sum of its column widths so columns never compress
+        // to fit the panel — that keeps them wide (short rows) and makes the grid scroll sideways
+        const tableW = 46 + (s.widths || []).reduce((a, b) => a + (b || 0), 0)
+        return (
         <div className="panel" key={s.id}>
           {headOf(s)}
           <div className={styles.richScroll}>
-            <table className={styles.richTable}>
+            <table className={styles.richTable} style={{ width: tableW, minWidth: tableW }}>
               <colgroup><col style={{ width: 46 }} />{(s.widths || []).map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
               <tbody>
                 {(s.grid || []).map((row, ri) => (
                   <tr key={ri} className={styles.richRow}>
                     <td className={styles.richIdx}>
                       <span className={styles.idxNum}>{ri + 1}</span>
-                      {!readOnly && (<>
-                        <button className={styles.rowDel} onClick={() => delRichRow(s.id, ri)} title="Delete row"><Icon name="trash" size={12} /></button>
-                        <button className={styles.rowIns} onClick={() => insertRichRow(s.id, ri + 1)} title="Insert row below"><Icon name="plus" size={12} /></button>
-                      </>)}
+                      {!readOnly && (
+                        <div className={styles.rowTools}>
+                          <button className={styles.rtIns} onClick={() => insertRichRow(s.id, ri + 1)} title="Insert row below"><Icon name="plus" size={12} /></button>
+                          <button className={styles.rtDel} onClick={() => delRichRow(s.id, ri)} title="Delete row"><Icon name="trash" size={12} /></button>
+                        </div>
+                      )}
                     </td>
                     {row.map((cell, ci) => {
                       if (cell === null) return null
@@ -363,7 +390,8 @@ export default function Sheets() {
           </div>
           {!readOnly && <button className={styles.addRow} onClick={() => addRichRow(s.id)}><Icon name="plus" size={14} /> Add row</button>}
         </div>
-      ) : (
+        )
+      })() : (
         /* ── hand-made simple table ── */
         <div className="panel" key={s.id}>
           {headOf(s)}

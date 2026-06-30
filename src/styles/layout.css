@@ -214,7 +214,10 @@
 /* Main */
 .main {
     padding: 24px 30px;
-    width: 100%
+    width: 100%;
+    /* a grid item defaults to min-width:auto — without this a very wide child (e.g. an
+       imported table) stretches the whole page instead of scrolling inside its own box */
+    min-width: 0
 }
 
 .topbar {

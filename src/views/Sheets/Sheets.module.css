@@ -24,10 +24,12 @@
     background: transparent;
     border: 0;
     border-bottom: 1.5px solid transparent;
-    padding: 4px 4px;
+    padding: 4px 6px;
     border-radius: 6px 6px 0 0;
-    min-width: 0;
-    flex: 0 1 320px;
+    flex: 0 1 auto;
+    min-width: 140px;
+    max-width: 760px;
+    field-sizing: content;   /* grow the field to fit the name (long titles fit) */
     transition: background .15s ease, border-color .15s ease;
 }
 .titleInput:hover { background: var(--hover); }
@@ -264,6 +266,15 @@
     border-radius: 12px;
     background: #ffffff;
 }
+/* a clear, draggable horizontal scrollbar at the bottom (like Google Sheets) */
+.richScroll::-webkit-scrollbar { height: 15px; width: 13px; }
+.richScroll::-webkit-scrollbar-track { background: #eef1f4; border-radius: 10px; }
+.richScroll::-webkit-scrollbar-thumb {
+    background: #b4bdc6;
+    border-radius: 10px;
+    border: 3px solid #eef1f4;
+}
+.richScroll::-webkit-scrollbar-thumb:hover { background: #97a2ad; }
 .richTable {
     width: auto;
     border-collapse: collapse;
@@ -278,6 +289,9 @@
     vertical-align: middle;
 }
 .richTable td::before { content: none; }   /* cancel the global mobile data-label pseudo */
+/* the global `tr:hover td { background: var(--hover) }` is dark — override it so the
+   light spreadsheet surface doesn't turn black on hover (coloured cells keep their colour) */
+.richScroll tr:hover td { background: #f0f4f8; }
 /* keep it a real table even on mobile (global rules otherwise reflow tables into cards) */
 .richScroll table,
 .richScroll thead,
@@ -326,7 +340,28 @@
     font-variant-numeric: tabular-nums;
     overflow: visible;
 }
-.richRow:hover .rowDel,
-.richRow:hover .rowIns { opacity: 1; }
-.richIdx .rowDel { background: #f3f5f8; width: 100%; height: 24px; }
-.richIdx .rowIns { box-shadow: 0 0 0 2px #fff; }
+/* gutter hover controls: insert + delete side-by-side, covering the number (no overlap) */
+.rowTools {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: #f0f4f8;
+    opacity: 0;
+    transition: opacity .12s ease;
+}
+.richRow:hover .rowTools { opacity: 1; }
+.rowTools button {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    padding: 3px;
+    display: grid;
+    place-items: center;
+    border-radius: 5px;
+}
+.rtIns { color: var(--accent); }
+.rtDel { color: #c0392b; }
+.rowTools button:hover { background: rgba(0, 0, 0, .08); }
