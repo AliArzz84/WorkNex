@@ -15,6 +15,7 @@ import Payroll from './views/Payroll/Payroll.jsx'
 import Teams from './views/Teams/Teams.jsx'
 import Activity from './views/Activity/Activity.jsx'
 import Requests from './views/Requests/Requests.jsx'
+import Sheets from './views/Sheets/Sheets.jsx'
 import Editor from './components/Editor/Editor.jsx'
 import Login from './components/Login/Login.jsx'
 import RequestForm from './components/RequestForm/RequestForm.jsx'
@@ -31,11 +32,12 @@ const NAV = [
   { key: "teams", icon: "teams" },
   { key: "payroll", icon: "payroll" },
   { key: "finance", icon: "finance" },
+  { key: "sheets", icon: "table" },
   { key: "diagram", icon: "diagram" },
   { key: "requests", icon: "chat" },
   { key: "activity", icon: "history" },
 ]
-const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, requests: Requests, finance: Finance, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
+const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, requests: Requests, finance: Finance, sheets: Sheets, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
 const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting", teams: "team", tasks: "task", finance: "transaction", businesses: "business" }
 // only the views that use the *topbar* search box (Projects has its own in-section search)
 const SEARCHABLE = new Set(["tasks", "employees", "meetings", "activity"])

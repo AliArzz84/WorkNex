@@ -6,12 +6,13 @@ import { supabase, isSupabaseConfigured } from './supabaseClient.js'
 
 const KEY = "bm_react_v2"
 const MAX_LOG = 250   // how many activity entries we keep in the shared workspace
-const EMPTY = { teams: [], employees: [], projects: [], meetings: [], businesses: [], transactions: [], tasks: [], diagram: { nodes: [], edges: [] }, payments: {}, activity: [], seen: {}, currency: "£" }
+const EMPTY = { teams: [], employees: [], projects: [], meetings: [], businesses: [], transactions: [], tasks: [], diagram: { nodes: [], edges: [] }, sheets: [], payments: {}, activity: [], seen: {}, currency: "£" }
 // Always guarantee the collections exist so views never crash on missing arrays.
 const norm = (d) => ({
   ...EMPTY, ...(d || {}),
   payments: (d && d.payments) || {},
   activity: (d && Array.isArray(d.activity)) ? d.activity : [],
+  sheets: (d && Array.isArray(d.sheets)) ? d.sheets : [],
   seen: (d && d.seen) || {},
   diagram: { nodes: [], edges: [], ...((d && d.diagram) || {}) },
 })
@@ -525,6 +526,18 @@ export function StoreProvider({ children }) {
       return { ...prev, diagram, activity }
     })
   }, [])
+  const saveSheets = useCallback((sheets) => {
+    setDb(prev => {
+      // tables autosave on every keystroke — coalesce a burst of edits into one log line
+      const a = actorRef.current
+      const last = (prev.activity || [])[0]
+      const merge = last && last.entity === "sheet" && last.userId === a.userId && (Date.now() - last.ts) < 5 * 60 * 1000
+      const activity = merge
+        ? [{ ...last, ts: Date.now() }, ...prev.activity.slice(1)]
+        : [logEntry("update", "sheet", "Tables"), ...(prev.activity || [])].slice(0, MAX_LOG)
+      return { ...prev, sheets, activity }
+    })
+  }, [])
 
   /* reminders */
   const reminders = useMemo(() => {
@@ -647,7 +660,7 @@ export function StoreProvider({ children }) {
     editing, openEditor: (type, id) => { if (!isGuest) setEditing({ type, id }) }, closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, askType, resolveDialog, notify,
     money, fmtToman, toGbp, toUsd, fmtBase, displayCurrency, setDisplayCurrency, usdToGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
-    empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram,
+    empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram, saveSheets,
     exportData, importData, clearAll,
     listSnapshots, restoreSnapshot, enableNotifications,
   }

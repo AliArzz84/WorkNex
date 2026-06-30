@@ -1,0 +1,332 @@
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* table card header */
+.head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+.titleInput {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--txt);
+    background: transparent;
+    border: 0;
+    border-bottom: 1.5px solid transparent;
+    padding: 4px 4px;
+    border-radius: 6px 6px 0 0;
+    min-width: 0;
+    flex: 0 1 320px;
+    transition: background .15s ease, border-color .15s ease;
+}
+.titleInput:hover { background: var(--hover); }
+.titleInput:focus { outline: none; border-bottom-color: var(--accent); background: transparent; }
+.headActions {
+    margin-inline-start: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* the grid itself — light separators only, no heavy Excel boxes */
+.scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+}
+.grid {
+    min-width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.row {
+    display: flex;
+    min-width: 100%;
+    border-bottom: 1px solid var(--line);
+}
+.row:last-child { border-bottom: 0; }
+.header {
+    background: var(--panel-2);
+    border-radius: 12px 12px 0 0;
+}
+
+.cell {
+    flex: 1 0 170px;
+    min-width: 170px;
+    display: flex;
+    align-items: stretch;
+    border-inline-end: 1px solid var(--line);
+}
+.cell:last-child { border-inline-end: 0; }
+.cell input {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--txt);
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    transition: box-shadow .12s ease, background .12s ease;
+}
+.cell input:focus {
+    outline: none;
+    background: var(--input-bg);
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+/* dropdown cell (imported Excel data-validation list) */
+.cellSelect {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--txt);
+    font-size: 13px;
+    padding: 9px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.cellSelect:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+.lightSurface .cellSelect { color: #1f2328; }
+.lightSurface .cellSelect option { color: #1f2328; }
+/* keep focused cells on a light background so typed text stays readable (even in dark mode) */
+.lightSurface .cell input:focus,
+.lightSurface .cellSelect:focus {
+    background: #ffffff;
+    color: #1f2328;
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+.val, .colName {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    min-height: 19px;
+}
+.colName { font-weight: 600; color: var(--muted); }
+
+/* column header cell: editable name + a delete that shows on hover */
+.colHead {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.colHead input {
+    font-weight: 600;
+    color: var(--muted);
+}
+.colDel {
+    flex: 0 0 auto;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    transition: opacity .15s ease, color .15s ease;
+}
+.cell:hover .colDel { opacity: .75; }
+.colDel:hover { color: var(--red-ink); opacity: 1; }
+
+/* zebra striping — every other data row gets the alternate shade */
+.alt { background: var(--panel-2); }
+
+/* imported tables sit on a fixed light "spreadsheet" surface so Excel's colours
+   stay accurate and readable even when the app is in dark mode */
+.lightSurface { background: #ffffff; }
+.lightSurface .header { background: #eef2f6; }
+.lightSurface .idxHead,
+.lightSurface .idx { background: #f3f5f8; color: #57606a; border-color: #d8dee4; }
+.lightSurface .row { border-color: #d8dee4; }
+.lightSurface .cell { border-color: #e6e9ee; }
+.lightSurface .alt { background: #f6f8fa; }
+.lightSurface .cell input,
+.lightSurface .val,
+.lightSurface .colName { color: #1f2328; }
+.lightSurface .cell input::placeholder { color: #8c959f; }
+
+/* row-number column (Excel-style) + a delete that slides over it on hover */
+.idxHead,
+.idx {
+    flex: 0 0 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-inline-end: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.idx { position: relative; font-weight: 500; }
+.idxNum { transition: opacity .12s ease; }
+/* on an editable row, hovering hides the number and reveals the controls */
+.idxEdit:hover .idxNum { opacity: 0; }
+.rowDel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s ease, color .12s ease;
+}
+.row:hover .rowDel { opacity: 1; }
+.rowDel:hover { color: var(--red-ink); }
+
+/* "+" insert handle on the bottom border of each row → inserts a row below */
+.rowIns {
+    position: absolute;
+    left: 50%;
+    bottom: -9px;
+    transform: translateX(-50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    box-shadow: 0 0 0 2px var(--panel);
+    cursor: pointer;
+    opacity: 0;
+    z-index: 4;
+    transition: opacity .12s ease, transform .1s ease;
+}
+.row:hover .rowIns { opacity: 1; }
+.rowIns:hover { transform: translateX(-50%) scale(1.12); }
+.lightSurface .rowIns { box-shadow: 0 0 0 2px #fff; }
+
+.emptyRow {
+    padding: 16px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.addRow {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px dashed var(--line-strong);
+    color: var(--muted);
+    border-radius: 9px;
+    padding: 8px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.addRow:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--hover);
+}
+
+.tag {
+    margin-inline-start: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    vertical-align: middle;
+}
+
+/* ── imported tables: a faithful Google-Sheets-style grid on a fixed light canvas ── */
+.richScroll {
+    overflow: auto;
+    max-height: 80vh;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #ffffff;
+}
+.richTable {
+    width: auto;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #ffffff;
+    color: #1f2328;
+    font-size: 12.5px;
+}
+.richTable td {
+    border: 1px solid #d6dbe1;
+    padding: 0;
+    vertical-align: middle;
+}
+.richTable td::before { content: none; }   /* cancel the global mobile data-label pseudo */
+/* keep it a real table even on mobile (global rules otherwise reflow tables into cards) */
+.richScroll table,
+.richScroll thead,
+.richScroll tbody,
+.richScroll tr,
+.richScroll td,
+.richScroll col,
+.richScroll colgroup { display: revert; }
+
+.richCellBox {
+    padding: 3px 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.25;
+    min-height: 15px;
+    outline: none;
+}
+.richCellBox:focus {
+    background: #fff;
+    box-shadow: inset 0 0 0 2px var(--accent);
+    border-radius: 2px;
+}
+.richSelect {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    padding: 3px 6px;
+    cursor: pointer;
+}
+.richSelect:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.richSelect option { color: #1f2328; }
+
+/* sticky row-number gutter (like Google Sheets) */
+.richIdx {
+    width: 46px;
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    background: #f3f5f8;
+    color: #57606a;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow: visible;
+}
+.richRow:hover .rowDel,
+.richRow:hover .rowIns { opacity: 1; }
+.richIdx .rowDel { background: #f3f5f8; width: 100%; height: 24px; }
+.richIdx .rowIns { box-shadow: 0 0 0 2px #fff; }
