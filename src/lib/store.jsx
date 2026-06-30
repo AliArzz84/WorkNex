@@ -184,6 +184,27 @@ export function StoreProvider({ children }) {
     return () => { cancelled = true }
   }, [])
 
+  // Live USD -> AMD (Armenian Dram) rate for the Tables section. open.er-api is key-free and
+  // CORS-friendly; Frankfurter/ECB doesn't cover AMD. Cached 6h, static fallback ~388.
+  const [fxUsdAmd, setFxUsdAmd] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("bm_usdamd")).value } catch (e) { return 0 }
+  })
+  useEffect(() => {
+    let cached; try { cached = JSON.parse(localStorage.getItem("bm_usdamd")) } catch (e) {}
+    if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const d = await (await fetch("https://open.er-api.com/v6/latest/USD")).json()
+        if (d && d.rates && d.rates.AMD && !cancelled) {
+          setFxUsdAmd(Number(d.rates.AMD))
+          localStorage.setItem("bm_usdamd", JSON.stringify({ value: Number(d.rates.AMD), ts: Date.now() }))
+        }
+      } catch (e) {}
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   /* local persistence */
   useEffect(() => { if (!cloud) localStorage.setItem(KEY, JSON.stringify(db)) }, [db, cloud])
 
@@ -417,6 +438,7 @@ export function StoreProvider({ children }) {
   // falls back to the Iranian toman ratios, then a static 0.79. Defined before the
   // converters below so they can lean on it for an accurate USD/GBP cross-rate.
   const usdToGbp = fxUsdGbp || ((currencyRates && currencyRates.USD && gbpToman) ? currencyRates.USD / gbpToman : 0.79)
+  const usdToAmd = fxUsdAmd || 388                              // 1 USD ≈ 388 AMD (live, falls back to a recent rate)
   // convert an amount in `code` currency to GBP (used for mixed-currency totals)
   const toGbp = useCallback((n, code = "GBP") => {
     const amt = Number(n || 0)
@@ -659,7 +681,7 @@ export function StoreProvider({ children }) {
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => { if (!isGuest) setEditing({ type, id }) }, closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, askType, resolveDialog, notify,
-    money, fmtToman, toGbp, toUsd, fmtBase, displayCurrency, setDisplayCurrency, usdToGbp, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
+    money, fmtToman, toGbp, toUsd, fmtBase, displayCurrency, setDisplayCurrency, usdToGbp, usdToAmd, tomanPerGbp: gbpToman, currencyRates, fmtDate, fmtDateTime, fmtTime, timeAgo, relDay, daysBetween, nextPayday, periodKey, isPaid,
     empById, teamById, teamMembers, reminders, todayExtras, saveItem, removeItem, setPaid, toggleMeetDone, toggleTask, saveDiagram, saveSheets,
     exportData, importData, clearAll,
     listSnapshots, restoreSnapshot, enableNotifications,

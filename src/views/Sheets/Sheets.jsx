@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useStore } from '../../lib/store.jsx'
 import { Icon, EmptyState } from '../../components/ui/ui.jsx'
 import { uid } from '../../lib/data.js'
@@ -106,10 +106,46 @@ const cfRuleMatches = (rule, text) => {
   }
 }
 
+// every currency amount that appears *anywhere* inside a cell — either symbol-first ($1,000 /
+// £3,000) or code-after (5,000 AMD / 3,000 GBP / 1,000 USD). We re-express each amount in the
+// chosen currency in place, so a mixed cell like "316,000 AMD personal + $1,000 +VAT" converts
+// every figure while keeping the words around them.
+const MONEY_RE = /([£$])\s*([\d,]+(?:\.\d+)?)|([\d,]+(?:\.\d+)?)\s*(AMD|GBP|USD)\b/gi
+const SYM2CODE = { "£": "GBP", "$": "USD" }
+const fmtCur = (v, code) => {
+  const r = Math.round(v * 100) / 100
+  const dp = Math.round(r * 100) % 100 === 0 ? 0 : 2          // cents only when needed
+  const num = r.toLocaleString("en-GB", { minimumFractionDigits: dp, maximumFractionDigits: dp })
+  return code === "GBP" ? "£" + num : code === "USD" ? "$" + num : num + " AMD"
+}
+
 export default function Sheets() {
-  const { db, saveSheets, readOnly, ask, notify } = useStore()
+  const { db, saveSheets, readOnly, ask, notify, usdToGbp, usdToAmd } = useStore()
   const sheets = db.sheets || []
   const fileRef = useRef(null)
+
+  // currency toggle for the Tables section (USD / GBP / AMD — independent of the Finance toggle).
+  // every money amount inside a cell re-displays in the chosen currency; the stored value stays
+  // in its native currency, and while a cell is being edited we show its native value so editing
+  // never corrupts the data.
+  const [editKey, setEditKey] = useState(null)
+  const [cur, setCurState] = useState(() => localStorage.getItem("bm_sheets_cur") || "")   // "" = Original (no conversion)
+  const setCur = (c) => { setCurState(c); localStorage.setItem("bm_sheets_cur", c) }
+  const RATE = { USD: 1, GBP: usdToGbp || 0.79, AMD: usdToAmd || 388 }   // 1 USD = RATE[code] units
+  const convOf = (raw) => {
+    if (!cur) return null                                    // Original mode → leave every cell exactly as imported
+    const t = String(raw ?? "")
+    if (!t || !/[£$]|AMD|GBP|USD/i.test(t)) return null      // no money mentioned → show original
+    let changed = false
+    const out = t.replace(MONEY_RE, (m, sym, n1, n2, code) => {
+      const from = sym ? SYM2CODE[sym] : String(code).toUpperCase()
+      const num = parseFloat(String(sym ? n1 : n2).replace(/,/g, ""))
+      if (!isFinite(num)) return m
+      if (from !== cur) changed = true
+      return fmtCur(num / (RATE[from] || 1) * (RATE[cur] || 1), cur)
+    })
+    return changed ? out : null                              // nothing actually converted → keep original formatting
+  }
 
   const commit = (next) => saveSheets(next)
   // per-table undo history (in-memory, this session). every edit snapshots that table first.
@@ -292,6 +328,7 @@ export default function Sheets() {
       })
 
       if (!made.length) { notify?.("Couldn’t find any data in that file.", "info"); return }
+      setCur("")                                             // a fresh import shows its original values until a currency is picked
       commit([...sheets, ...made])
       notify?.(`Imported ${made.length} table${made.length > 1 ? "s" : ""} from ${file.name}.`, "success")
     } catch (e) {
@@ -321,13 +358,28 @@ export default function Sheets() {
 
   return (
     <div>
-      {!readOnly && (
+      {(!readOnly || sheets.length > 0) && (
         <div className={styles.topbar}>
-          <button className="btn" onClick={addTable}><Icon name="plus" size={16} /> Add table</button>
-          <button className="btn ghost" onClick={() => fileRef.current?.click()}><Icon name="upload" size={15} /> Import Excel</button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xlsm" style={{ display: "none" }}
-            onChange={e => { importExcel(e.target.files[0]); e.target.value = "" }} />
-          {sheets.length > 0 && <span className="muted" style={{ fontSize: 12.5, marginInlineStart: "auto" }}>{sheets.length} table{sheets.length > 1 ? "s" : ""}</span>}
+          {!readOnly && (<>
+            <button className="btn" onClick={addTable}><Icon name="plus" size={16} /> Add table</button>
+            <button className="btn ghost" onClick={() => fileRef.current?.click()}><Icon name="upload" size={15} /> Import Excel</button>
+            <input ref={fileRef} type="file" accept=".xlsx,.xlsm" style={{ display: "none" }}
+              onChange={e => { importExcel(e.target.files[0]); e.target.value = "" }} />
+          </>)}
+          <span style={{ marginInlineStart: "auto", display: "inline-flex", alignItems: "center", gap: 12 }}>
+            {sheets.length > 0 && <span className="muted" style={{ fontSize: 12.5 }}>{sheets.length} table{sheets.length > 1 ? "s" : ""}</span>}
+            <span style={{ display: "inline-flex", border: "1px solid var(--line-strong)", borderRadius: 10, overflow: "hidden" }}
+              title="Original keeps the imported values; pick a currency to convert every amount">
+              {[["", "Original"], ["USD", "$ USD"], ["GBP", "£ GBP"], ["AMD", "֏ AMD"]].map(([code, label]) => (
+                <button key={code || "orig"} onClick={() => setCur(code)}
+                  style={{
+                    padding: "6px 12px", fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer",
+                    background: cur === code ? "var(--accent)" : "transparent",
+                    color: cur === code ? "#fff" : "var(--muted)",
+                  }}>{label}</button>
+              ))}
+            </span>
+          </span>
         </div>
       )}
 
@@ -366,10 +418,13 @@ export default function Sheets() {
                       const fg = cm?.fg || cell.fg
                       const ink = { color: fg || (bg ? "#1f2328" : undefined), fontWeight: cell.b ? 700 : undefined, textAlign: cell.al || undefined }
                       const cs = Math.min(cell.cs || 1, (s.widths || []).length - ci)
+                      const conv = isDrop ? null : convOf(cell.v)
+                      const ekey = s.id + ":" + ri + ":" + ci
+                      const shown = (conv && editKey !== ekey) ? conv : cell.v
                       return (
                         <td key={ci} colSpan={cs} rowSpan={cell.rs || 1} style={bg ? { background: bg } : undefined}>
                           {readOnly
-                            ? <div className={styles.richCellBox} style={ink}>{cell.v}</div>
+                            ? <div className={styles.richCellBox} style={ink}>{conv || cell.v}</div>
                             : isDrop
                               ? (
                                 <select className={styles.richSelect} value={cell.v || ""} style={ink} onChange={e => setRichCell(s.id, ri, ci, e.target.value)}>
@@ -379,7 +434,8 @@ export default function Sheets() {
                                 </select>
                               )
                               : <div className={styles.richCellBox} style={ink} contentEditable suppressContentEditableWarning
-                                  onBlur={e => setRichCell(s.id, ri, ci, e.currentTarget.innerText.replace(/\n$/, ""))}>{cell.v}</div>}
+                                  onFocus={() => { if (conv) setEditKey(ekey) }}
+                                  onBlur={e => { if (conv) setEditKey(k => k === ekey ? null : k); setRichCell(s.id, ri, ci, e.currentTarget.innerText.replace(/\n$/, "")) }}>{shown}</div>}
                         </td>
                       )
                     })}
@@ -424,11 +480,16 @@ export default function Sheets() {
                   {(s.columns || []).map(c => {
                     const raw = (r.cells || {})[c.id]
                     const txt = cellText(raw)
+                    const conv = convOf(txt)
+                    const ekey = s.id + ":" + r.id + ":" + c.id
                     return (
                       <div className={styles.cell} key={c.id}>
                         {readOnly
-                          ? <span className={styles.val}>{txt}</span>
-                          : <input value={txt} onChange={e => setCell(s.id, r.id, c.id, e.target.value)} />}
+                          ? <span className={styles.val}>{conv || txt}</span>
+                          : <input value={(conv && editKey !== ekey) ? conv : txt}
+                              onFocus={() => { if (conv) setEditKey(ekey) }}
+                              onBlur={() => { if (conv) setEditKey(k => k === ekey ? null : k) }}
+                              onChange={e => setCell(s.id, r.id, c.id, e.target.value)} />}
                       </div>
                     )
                   })}
