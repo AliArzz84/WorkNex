@@ -27,11 +27,12 @@ const emailInitials = (e) => {
 const SHARE_SECTIONS = [
   ["dashboard", "Dashboard"], ["tasks", "Tasks"], ["meetings", "Meetings"], ["projects", "Projects"],
   ["businesses", "Businesses"], ["employees", "Employees"], ["teams", "Teams"], ["payroll", "Payroll"],
-  ["finance", "Finance"], ["diagram", "Diagram"], ["activity", "Activity"],
+  ["finance", "Finance"], ["sheets", "Tables"], ["diagram", "Diagram"], ["activity", "Activity"],
 ]
 const SHARE_DURATIONS = [["forever", "Forever"], ["1h", "1 hour"], ["1d", "1 day"], ["7d", "7 days"], ["30d", "30 days"]]
-// Activity exposes staff emails + the full change log, so flag it as sensitive too
-const SHARE_SENSITIVE = new Set(["payroll", "finance", "employees", "activity"])
+// Activity exposes staff emails + the full change log; Tables often hold salaries/financial data —
+// so flag those sensitive too
+const SHARE_SENSITIVE = new Set(["payroll", "finance", "employees", "activity", "sheets"])
 const expiresFromChoice = (c) => {
   if (c === "forever") return null
   const ms = { "1h": 3600e3, "1d": 86400e3, "7d": 7 * 86400e3, "30d": 30 * 86400e3 }[c]

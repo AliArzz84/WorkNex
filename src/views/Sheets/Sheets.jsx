@@ -129,11 +129,15 @@ export default function Sheets() {
   // in its native currency, and while a cell is being edited we show its native value so editing
   // never corrupts the data.
   const [editKey, setEditKey] = useState(null)
-  const [cur, setCurState] = useState(() => localStorage.getItem("bm_sheets_cur") || "")   // "" = Original (no conversion)
-  const setCur = (c) => { setCurState(c); localStorage.setItem("bm_sheets_cur", c) }
+  // currency is chosen *per table* (default "" = Original → the file's own values, untouched).
+  // kept in session state keyed by table id, so each table converts independently and a freshly
+  // imported table starts in Original.
+  const [curMap, setCurMap] = useState({})
+  const setCur = (sid, c) => setCurMap(m => ({ ...m, [sid]: c }))
   const RATE = { USD: 1, GBP: usdToGbp || 0.79, AMD: usdToAmd || 388 }   // 1 USD = RATE[code] units
-  const convOf = (raw) => {
-    if (!cur) return null                                    // Original mode → leave every cell exactly as imported
+  // re-express every money amount inside a cell in `target` currency (display only); null → as-is.
+  const convOf = (raw, target) => {
+    if (!target) return null                                 // Original mode → leave every cell exactly as imported
     const t = String(raw ?? "")
     if (!t || !/[£$]|AMD|GBP|USD/i.test(t)) return null      // no money mentioned → show original
     let changed = false
@@ -141,8 +145,8 @@ export default function Sheets() {
       const from = sym ? SYM2CODE[sym] : String(code).toUpperCase()
       const num = parseFloat(String(sym ? n1 : n2).replace(/,/g, ""))
       if (!isFinite(num)) return m
-      if (from !== cur) changed = true
-      return fmtCur(num / (RATE[from] || 1) * (RATE[cur] || 1), cur)
+      if (from !== target) changed = true
+      return fmtCur(num / (RATE[from] || 1) * (RATE[target] || 1), target)
     })
     return changed ? out : null                              // nothing actually converted → keep original formatting
   }
@@ -328,13 +332,30 @@ export default function Sheets() {
       })
 
       if (!made.length) { notify?.("Couldn’t find any data in that file.", "info"); return }
-      setCur("")                                             // a fresh import shows its original values until a currency is picked
-      commit([...sheets, ...made])
+      commit([...sheets, ...made])                           // new tables aren't in curMap → they start in Original automatically
       notify?.(`Imported ${made.length} table${made.length > 1 ? "s" : ""} from ${file.name}.`, "success")
     } catch (e) {
       console.error("Excel import failed:", e)
       notify?.("Couldn’t read that file — make sure it’s a .xlsx spreadsheet.", "error")
     }
+  }
+
+  // per-table currency switcher (Original = the file's own values; pick one to convert all amounts)
+  const curSeg = (sid) => {
+    const active = curMap[sid] || ""
+    return (
+      <span style={{ display: "inline-flex", border: "1px solid var(--line-strong)", borderRadius: 9, overflow: "hidden" }}
+        title="Original keeps this table's imported values; pick a currency to convert every amount in it">
+        {[["", "Original"], ["USD", "$ USD"], ["GBP", "£ GBP"], ["AMD", "֏ AMD"]].map(([code, label]) => (
+          <button key={code || "orig"} onClick={() => setCur(sid, code)}
+            style={{
+              padding: "5px 10px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", whiteSpace: "nowrap",
+              background: active === code ? "var(--accent)" : "transparent",
+              color: active === code ? "#fff" : "var(--muted)",
+            }}>{label}</button>
+        ))}
+      </span>
+    )
   }
 
   // head markup for a table card — a plain element (not a nested component, which would remount)
@@ -343,43 +364,29 @@ export default function Sheets() {
       {readOnly
         ? <h2 className={styles.title}>{s.name || "Untitled table"}{s.imported && <span className={styles.tag}>imported</span>}</h2>
         : <input className={styles.titleInput} value={s.name} onChange={e => renameTable(s.id, e.target.value)} placeholder="Table name" />}
-      {!readOnly && (
-        <div className={styles.headActions}>
+      <div className={styles.headActions}>
+        {curSeg(s.id)}
+        {!readOnly && (<>
           {s.rich
             ? <button className="btn ghost sm" onClick={() => addRichRow(s.id)}><Icon name="plus" size={13} /> Row</button>
             : <button className="btn ghost sm" onClick={() => addCol(s.id)}><Icon name="columns" size={13} /> Column</button>}
           <button className="iconbtn" onClick={() => undo(s.id)} disabled={!canUndo(s.id)} title="Undo last change in this table"
             style={{ opacity: canUndo(s.id) ? 1 : 0.4 }}><Icon name="undo" size={16} /></button>
           <button className="iconbtn del" onClick={() => delTable(s.id)} title="Delete table"><Icon name="trash" size={16} /></button>
-        </div>
-      )}
+        </>)}
+      </div>
     </div>
   )
 
   return (
     <div>
-      {(!readOnly || sheets.length > 0) && (
+      {!readOnly && (
         <div className={styles.topbar}>
-          {!readOnly && (<>
-            <button className="btn" onClick={addTable}><Icon name="plus" size={16} /> Add table</button>
-            <button className="btn ghost" onClick={() => fileRef.current?.click()}><Icon name="upload" size={15} /> Import Excel</button>
-            <input ref={fileRef} type="file" accept=".xlsx,.xlsm" style={{ display: "none" }}
-              onChange={e => { importExcel(e.target.files[0]); e.target.value = "" }} />
-          </>)}
-          <span style={{ marginInlineStart: "auto", display: "inline-flex", alignItems: "center", gap: 12 }}>
-            {sheets.length > 0 && <span className="muted" style={{ fontSize: 12.5 }}>{sheets.length} table{sheets.length > 1 ? "s" : ""}</span>}
-            <span style={{ display: "inline-flex", border: "1px solid var(--line-strong)", borderRadius: 10, overflow: "hidden" }}
-              title="Original keeps the imported values; pick a currency to convert every amount">
-              {[["", "Original"], ["USD", "$ USD"], ["GBP", "£ GBP"], ["AMD", "֏ AMD"]].map(([code, label]) => (
-                <button key={code || "orig"} onClick={() => setCur(code)}
-                  style={{
-                    padding: "6px 12px", fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer",
-                    background: cur === code ? "var(--accent)" : "transparent",
-                    color: cur === code ? "#fff" : "var(--muted)",
-                  }}>{label}</button>
-              ))}
-            </span>
-          </span>
+          <button className="btn" onClick={addTable}><Icon name="plus" size={16} /> Add table</button>
+          <button className="btn ghost" onClick={() => fileRef.current?.click()}><Icon name="upload" size={15} /> Import Excel</button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xlsm" style={{ display: "none" }}
+            onChange={e => { importExcel(e.target.files[0]); e.target.value = "" }} />
+          {sheets.length > 0 && <span className="muted" style={{ fontSize: 12.5, marginInlineStart: "auto" }}>{sheets.length} table{sheets.length > 1 ? "s" : ""}</span>}
         </div>
       )}
 
@@ -418,7 +425,7 @@ export default function Sheets() {
                       const fg = cm?.fg || cell.fg
                       const ink = { color: fg || (bg ? "#1f2328" : undefined), fontWeight: cell.b ? 700 : undefined, textAlign: cell.al || undefined }
                       const cs = Math.min(cell.cs || 1, (s.widths || []).length - ci)
-                      const conv = isDrop ? null : convOf(cell.v)
+                      const conv = isDrop ? null : convOf(cell.v, curMap[s.id] || "")
                       const ekey = s.id + ":" + ri + ":" + ci
                       const shown = (conv && editKey !== ekey) ? conv : cell.v
                       return (
@@ -435,7 +442,12 @@ export default function Sheets() {
                               )
                               : <div className={styles.richCellBox} style={ink} contentEditable suppressContentEditableWarning
                                   onFocus={() => { if (conv) setEditKey(ekey) }}
-                                  onBlur={e => { if (conv) setEditKey(k => k === ekey ? null : k); setRichCell(s.id, ri, ci, e.currentTarget.innerText.replace(/\n$/, "")) }}>{shown}</div>}
+                                  onBlur={e => {
+                                    setEditKey(k => k === ekey ? null : k)
+                                    const v = e.currentTarget.innerText.replace(/\n$/, "")
+                                    if (conv && v === conv) return   // not edited (still the converted display) → keep the native value, never overwrite with the converted text
+                                    setRichCell(s.id, ri, ci, v)
+                                  }}>{shown}</div>}
                         </td>
                       )
                     })}
@@ -480,7 +492,7 @@ export default function Sheets() {
                   {(s.columns || []).map(c => {
                     const raw = (r.cells || {})[c.id]
                     const txt = cellText(raw)
-                    const conv = convOf(txt)
+                    const conv = convOf(txt, curMap[s.id] || "")
                     const ekey = s.id + ":" + r.id + ":" + c.id
                     return (
                       <div className={styles.cell} key={c.id}>
@@ -488,7 +500,7 @@ export default function Sheets() {
                           ? <span className={styles.val}>{conv || txt}</span>
                           : <input value={(conv && editKey !== ekey) ? conv : txt}
                               onFocus={() => { if (conv) setEditKey(ekey) }}
-                              onBlur={() => { if (conv) setEditKey(k => k === ekey ? null : k) }}
+                              onBlur={() => setEditKey(k => k === ekey ? null : k)}
                               onChange={e => setCell(s.id, r.id, c.id, e.target.value)} />}
                       </div>
                     )
