@@ -17,7 +17,7 @@ const PREV_LABEL = { month: "last month", quarter: "last quarter", year: "last y
 
 // Period-over-period change pill. `goodWhen` flips the colour so that a falling
 // "outgoing" reads green (good) while falling income reads red (bad).
-function Delta({ cur, prev, goodWhen = "up" }) {
+function Delta({ cur, prev, goodWhen = "up", label = "last period" }) {
   if (prev == null) return null
   const diff = cur - prev
   const eps = Math.max(0.5, Math.abs(prev) * 0.005)
@@ -27,7 +27,7 @@ function Delta({ cur, prev, goodWhen = "up" }) {
   const pct = prev !== 0 ? Math.round(Math.abs(diff / prev) * 100) : null
   const txt = pct == null ? "new" : (pct >= 1000 ? "10×+" : pct + "%")
   return (
-    <span className={`${styles.delta} ${good ? styles.deltaGood : styles.deltaBad}`} title={`vs ${PREV_LABEL.custom}`}>
+    <span className={`${styles.delta} ${good ? styles.deltaGood : styles.deltaBad}`} title={`vs ${label}`}>
       <Icon name={up ? "arrowUp" : "arrowDown"} size={11} /> {txt}
     </span>
   )
@@ -626,17 +626,17 @@ export default function Finance() {
         <motion.div className="kpi k2" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="arrowUp" size={20} /></div>
           <h3><Money value={periodIncome} /></h3>
-          <p>Total income {prev && <Delta cur={periodIncome} prev={prev.income} goodWhen="up" />}</p>
+          <p>Total income {prev && <Delta cur={periodIncome} prev={prev.income} goodWhen="up" label={prevLabel} />}</p>
         </motion.div>
         <motion.div className="kpi k4" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="arrowDown" size={20} /></div>
           <h3><Money value={periodOutgoing} /></h3>
-          <p>Total outgoing {prev && <Delta cur={periodOutgoing} prev={prev.outgoing} goodWhen="down" />}</p>
+          <p>Total outgoing {prev && <Delta cur={periodOutgoing} prev={prev.outgoing} goodWhen="down" label={prevLabel} />}</p>
         </motion.div>
         <motion.div className="kpi k1" variants={item} whileHover={{ y: -3 }}>
           <div className="ic"><Icon name="finance" size={20} /></div>
           <h3 style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet} /></h3>
-          <p>Net profit {prev && <Delta cur={periodNet} prev={prev.net} goodWhen="up" />}</p>
+          <p>Net profit {prev && <Delta cur={periodNet} prev={prev.net} goodWhen="up" label={prevLabel} />}</p>
           {margin != null && (
             <small style={{ color: "var(--muted)", fontSize: 11 }}>
               {(margin * 100).toFixed(margin >= 0.1 || margin <= -0.1 ? 0 : 1)}% profit margin

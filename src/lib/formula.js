@@ -115,6 +115,8 @@ const asNum = (x) => {
 const asStr = (x) => x == null ? "" : (typeof x === "boolean" ? (x ? "TRUE" : "FALSE") : String(x))
 const asBool = (x) => { if (typeof x === "boolean") return x; if (typeof x === "number") return x !== 0; const s = String(x).trim().toUpperCase(); if (s === "TRUE") return true; if (s === "FALSE" || s === "") return false; return true }
 const nums = (args) => { const o = []; for (const a of args) { if (a instanceof Rng) { for (const v of a.flat()) if (isNum(v)) o.push(v) } else if (isNum(a)) o.push(a); else if (typeof a === "string" && a.trim() !== "") { const n = Number(a.replace(/,/g, "")); if (isFinite(n)) o.push(n) } else if (typeof a === "boolean") o.push(a ? 1 : 0) } return o }
+// wrap a scalar arg as a 1×1 range so the *IF/*IFS helpers accept single cells too (like COUNTIF does)
+const asRng = (x) => x instanceof Rng ? x : new Rng([[x]])
 
 // COUNTIF/SUMIF criteria: exact (case-insensitive), number, comparison (>5, <>0…), or wildcard
 const matchCrit = (val, crit) => {
@@ -137,11 +139,13 @@ const matchCrit = (val, crit) => {
   return String(val ?? "").trim().toLowerCase() === c.toLowerCase()
 }
 const ifSum = (pairs, target) => {
-  // pairs: [[Rng, crit], …]; target: Rng to aggregate (or null → count). returns matching values of target
-  const base = pairs[0][0].flat()
+  // pairs: [[Rng|cell, crit], …]; target: Rng|cell to aggregate (or null → count). returns matching values of target
+  const flats = pairs.map(([rg, cr]) => [asRng(rg).flat(), cr])   // flatten once; accept single cells
+  const base = flats[0][0]
+  const tf = target ? asRng(target).flat() : null
   const out = []
   for (let i = 0; i < base.length; i++) {
-    if (pairs.every(([rg, cr]) => matchCrit(rg.flat()[i], cr))) out.push(target ? target.flat()[i] : 1)
+    if (flats.every(([f, cr]) => matchCrit(f[i], cr))) out.push(tf ? tf[i] : 1)
   }
   return out
 }
@@ -158,16 +162,16 @@ const FN = {
   COUNTBLANK: (a) => { let n = 0; for (const v of (a[0] instanceof Rng ? a[0].flat() : a)) if (v === "" || v == null) n++; return n },
   COUNTIF: (a) => { const r = a[0] instanceof Rng ? a[0] : new Rng([[a[0]]]); return r.flat().filter(v => matchCrit(v, a[1])).length },
   COUNTIFS: (a) => { const pairs = []; for (let i = 0; i + 1 < a.length; i += 2) pairs.push([a[i], a[i + 1]]); return ifSum(pairs, null).length },
-  SUMIF: (a) => { const rg = a[0], crit = a[1], sr = a[2] || a[0]; const rf = rg.flat(), sf = sr.flat(); let s = 0; for (let i = 0; i < rf.length; i++) if (matchCrit(rf[i], crit) && isNum(sf[i])) s += sf[i]; return s },
+  SUMIF: (a) => { const rg = asRng(a[0]), crit = a[1], sr = asRng(a[2] || a[0]); const rf = rg.flat(), sf = sr.flat(); let s = 0; for (let i = 0; i < rf.length; i++) if (matchCrit(rf[i], crit) && isNum(sf[i])) s += sf[i]; return s },
   SUMIFS: (a) => { const target = a[0]; const pairs = []; for (let i = 1; i + 1 < a.length; i += 2) pairs.push([a[i], a[i + 1]]); return nums([new Rng([ifSum(pairs, target)])]).reduce((x, y) => x + y, 0) },
-  AVERAGEIF: (a) => { const rg = a[0], crit = a[1], sr = a[2] || a[0]; const rf = rg.flat(), sf = sr.flat(); const picked = []; for (let i = 0; i < rf.length; i++) if (matchCrit(rf[i], crit) && isNum(sf[i])) picked.push(sf[i]); if (!picked.length) throw new Error("div0"); return picked.reduce((x, y) => x + y, 0) / picked.length },
+  AVERAGEIF: (a) => { const rg = asRng(a[0]), crit = a[1], sr = asRng(a[2] || a[0]); const rf = rg.flat(), sf = sr.flat(); const picked = []; for (let i = 0; i < rf.length; i++) if (matchCrit(rf[i], crit) && isNum(sf[i])) picked.push(sf[i]); if (!picked.length) throw new Error("div0"); return picked.reduce((x, y) => x + y, 0) / picked.length },
   MAXIFS: (a) => { const target = a[0]; const pairs = []; for (let i = 1; i + 1 < a.length; i += 2) pairs.push([a[i], a[i + 1]]); const v = nums([new Rng([ifSum(pairs, target)])]); return v.length ? Math.max(...v) : 0 },
   MINIFS: (a) => { const target = a[0]; const pairs = []; for (let i = 1; i + 1 < a.length; i += 2) pairs.push([a[i], a[i + 1]]); const v = nums([new Rng([ifSum(pairs, target)])]); return v.length ? Math.min(...v) : 0 },
   IF: (a) => asBool(scalar(a[0])) ? a[1] : (a.length > 2 ? a[2] : false),
   IFS: (a) => { for (let i = 0; i + 1 < a.length; i += 2) if (asBool(scalar(a[i]))) return a[i + 1]; throw new Error("n/a") },
   IFERROR: (a) => a[0],   // errors are caught before args resolve; see eval wrapper
   IFNA: (a) => a[0],
-  AND: (a) => nums.length ? a.every(x => asBool(x instanceof Rng ? x.flat().every(asBool) : x)) : true,
+  AND: (a) => a.length ? a.every(x => asBool(x instanceof Rng ? x.flat().every(asBool) : x)) : true,
   OR: (a) => a.some(x => x instanceof Rng ? x.flat().some(asBool) : asBool(x)),
   NOT: (a) => !asBool(scalar(a[0])),
   XOR: (a) => a.reduce((acc, x) => acc ^ (asBool(scalar(x)) ? 1 : 0), 0) === 1,
@@ -292,11 +296,22 @@ function evalNode(node, getVal) {
   }
 }
 
+// parsed-AST cache: imported formulas are static strings, so tokenize+parse once and reuse it
+// across re-renders and identical formulas (the AST is only read during eval, never mutated).
+// This is what stops every cell re-parsing on each render. Keyed by sheet name + formula text.
+const astCache = new Map()
+
 // evaluate a formula string against a value getter; getVal(r,c) → scalar (1-based coords).
 // sheetName lets same-sheet qualifiers resolve while genuine cross-sheet refs bail.
 export function evalFormula(src, getVal, sheetName) {
   const f = String(src).trim().replace(/^=/, "")
-  const ast = parse(tokenize(f, sheetName))
+  const key = (sheetName || "") + " " + f
+  let ast = astCache.get(key)
+  if (!ast) {
+    ast = parse(tokenize(f, sheetName))
+    if (astCache.size > 5000) astCache.clear()   // bound memory across many imports
+    astCache.set(key, ast)
+  }
   const out = evalNode(ast, getVal)
   return out instanceof Rng ? scalar(out) : out
 }
