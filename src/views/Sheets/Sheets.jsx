@@ -119,6 +119,103 @@ const fmtCur = (v, code) => {
   return code === "GBP" ? "£" + num : code === "USD" ? "$" + num : num + " AMD"
 }
 
+// ── live recompute of COUNT-style summary formulas, so changing a dropdown updates the totals
+//    exactly like Excel. Only COUNT/COUNTA/COUNTIF/COUNTIFS are evaluated; every other formula
+//    keeps the value Excel cached at import. Cell refs map straight to grid coords: grid[0] is
+//    Excel row 1, column index 0 is Excel column A. ──
+const cellValAt = (grid, r, c) => {
+  const row = grid && grid[r - 1]; if (!row) return ""
+  const cell = row[c - 1]
+  return cell ? (cell.v ?? "") : ""
+}
+const refToRC = (ref) => {
+  const m = /^\$?([A-Z]+)\$?(\d+)$/.exec(String(ref).trim())
+  return m ? { r: +m[2], c: colToNum(m[1]) } : null
+}
+const rangeValues = (grid, rangeStr) => {
+  const clean = String(rangeStr).replace(/^'?[^'!]+'?!/, "")     // drop a leading 'Sheet'! qualifier
+  const [aS, bS] = clean.split(":")
+  const a = refToRC(aS), b = refToRC(bS || aS)
+  if (!a || !b) return []
+  const out = []
+  for (let r = Math.min(a.r, b.r); r <= Math.max(a.r, b.r); r++)
+    for (let c = Math.min(a.c, b.c); c <= Math.max(a.c, b.c); c++) out.push(cellValAt(grid, r, c))
+  return out
+}
+const numOf = (v) => {
+  if (typeof v === "number") return v
+  const s = String(v ?? "").replace(/,/g, "").trim()
+  if (!s) return null
+  const n = Number(s)
+  return isFinite(n) ? n : null
+}
+// COUNTIF criteria: exact match (case-insensitive), number equality, comparison (>5, <>0…), or wildcard
+const matchCriteria = (val, crit) => {
+  const c = String(crit).trim()
+  const cmp = /^(<=|>=|<>|<|>|=)(.*)$/.exec(c)
+  if (cmp) {
+    const op = cmp[1], rhs = cmp[2].trim(), rn = numOf(rhs), vn = numOf(val)
+    if (rn !== null && vn !== null) {
+      if (op === ">") return vn > rn
+      if (op === "<") return vn < rn
+      if (op === ">=") return vn >= rn
+      if (op === "<=") return vn <= rn
+      if (op === "<>") return vn !== rn
+      return vn === rn
+    }
+    const vs = String(val).trim().toLowerCase(), rs = rhs.toLowerCase()
+    return op === "<>" ? vs !== rs : op === "=" ? vs === rs : false
+  }
+  const vn = numOf(val), cn = numOf(c)
+  if (vn !== null && cn !== null) return vn === cn
+  if (/[*?]/.test(c)) {
+    const re = new RegExp("^" + c.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$", "i")
+    return re.test(String(val).trim())
+  }
+  return String(val).trim().toLowerCase() === c.toLowerCase()
+}
+const splitArgs = (s) => {
+  const args = []; let depth = 0, inStr = false, cur = ""
+  for (const ch of s) {
+    if (ch === '"') { inStr = !inStr; cur += ch; continue }
+    if (inStr) { cur += ch; continue }
+    if (ch === "(") depth++
+    else if (ch === ")") depth--
+    if (ch === "," && depth === 0) { args.push(cur.trim()); cur = ""; continue }
+    cur += ch
+  }
+  if (cur.trim() !== "") args.push(cur.trim())
+  return args
+}
+// a criteria argument is a quoted literal, a cell reference (→ that cell's value), or bare text
+const resolveArg = (grid, arg) => {
+  const a = String(arg).trim()
+  if (/^".*"$/.test(a)) return a.slice(1, -1).replace(/""/g, '"')
+  const rc = refToRC(a)
+  if (rc) return cellValAt(grid, rc.r, rc.c)
+  return a
+}
+const evalCount = (grid, formula) => {
+  const f = String(formula).trim().replace(/^=/, "")
+  const m = /^(COUNTIFS|COUNTIF|COUNTA|COUNT)\s*\(([\s\S]*)\)\s*$/i.exec(f)
+  if (!m) return null
+  const fn = m[1].toUpperCase(), args = splitArgs(m[2])
+  try {
+    if (fn === "COUNTIF") return rangeValues(grid, args[0]).filter(v => matchCriteria(v, resolveArg(grid, args[1]))).length
+    if (fn === "COUNTIFS") {
+      const pairs = []
+      for (let i = 0; i + 1 < args.length; i += 2) pairs.push([rangeValues(grid, args[i]), resolveArg(grid, args[i + 1])])
+      if (!pairs.length) return null
+      let count = 0
+      for (let i = 0; i < pairs[0][0].length; i++) if (pairs.every(([rg, cr]) => matchCriteria(rg[i], cr))) count++
+      return count
+    }
+    if (fn === "COUNTA") return rangeValues(grid, args[0]).filter(v => String(v ?? "").trim() !== "").length
+    if (fn === "COUNT") return rangeValues(grid, args[0]).filter(v => numOf(v) !== null).length
+  } catch (e) { return null }
+  return null
+}
+
 export default function Sheets() {
   const { db, saveSheets, readOnly, ask, notify, usdToGbp, usdToAmd } = useStore()
   const sheets = db.sheets || []
@@ -277,6 +374,11 @@ export default function Sheets() {
             if (covered.has(r + "_" + c)) { row.push(null); continue }
             const cell = ws.getCell(r, c)
             const o = { v: cellTextAt(r, c), ...styleOf(cell) }
+            // keep the formula so COUNT-style summaries can recompute live (like Excel); the
+            // cached result stays in o.v as the fallback for formulas we don't re-evaluate
+            let fml = null
+            try { fml = cell.formula || ((cell.value && typeof cell.value === "object") ? cell.value.formula : null) || null } catch (e) {}
+            if (fml) o.f = String(fml)
             const cf = cfMap.get(r + "_" + c)
             if (cf) { if (cf.bg) o.bg = cf.bg; if (cf.fg) o.fg = cf.fg }
             if (o.fg && !o.bg) o.bg = lighten(o.fg)
@@ -420,34 +522,39 @@ export default function Sheets() {
                     {row.map((cell, ci) => {
                       if (cell === null) return null
                       const isDrop = cell.opts && cell.opts.length
+                      const hasFormula = !isDrop && !!cell.f
+                      const live = hasFormula ? evalCount(s.grid, cell.f) : null   // COUNT-style → recomputed live
                       const cm = (isDrop && s.colColors?.[ci]) ? s.colColors[ci][(cell.v || "").trim()] : null
                       const bg = cm?.bg || cell.bg
                       const fg = cm?.fg || cell.fg
                       const ink = { color: fg || (bg ? "#1f2328" : undefined), fontWeight: cell.b ? 700 : undefined, textAlign: cell.al || undefined }
                       const cs = Math.min(cell.cs || 1, (s.widths || []).length - ci)
-                      const conv = isDrop ? null : convOf(cell.v, curMap[s.id] || "")
+                      const conv = (isDrop || hasFormula) ? null : convOf(cell.v, curMap[s.id] || "")
                       const ekey = s.id + ":" + ri + ":" + ci
                       const shown = (conv && editKey !== ekey) ? conv : cell.v
+                      const display = live != null ? String(live) : (conv || cell.v)
                       return (
                         <td key={ci} colSpan={cs} rowSpan={cell.rs || 1} style={bg ? { background: bg } : undefined}>
                           {readOnly
-                            ? <div className={styles.richCellBox} style={ink}>{conv || cell.v}</div>
-                            : isDrop
-                              ? (
-                                <select className={styles.richSelect} value={cell.v || ""} style={ink} onChange={e => setRichCell(s.id, ri, ci, e.target.value)}>
-                                  <option value=""></option>
-                                  {cell.v && !cell.opts.includes(cell.v) && <option value={cell.v}>{cell.v}</option>}
-                                  {cell.opts.map(op => <option key={op} value={op}>{op}</option>)}
-                                </select>
-                              )
-                              : <div className={styles.richCellBox} style={ink} contentEditable suppressContentEditableWarning
-                                  onFocus={() => { if (conv) setEditKey(ekey) }}
-                                  onBlur={e => {
-                                    setEditKey(k => k === ekey ? null : k)
-                                    const v = e.currentTarget.innerText.replace(/\n$/, "")
-                                    if (conv && v === conv) return   // not edited (still the converted display) → keep the native value, never overwrite with the converted text
-                                    setRichCell(s.id, ri, ci, v)
-                                  }}>{shown}</div>}
+                            ? <div className={styles.richCellBox} style={ink}>{display}</div>
+                            : hasFormula
+                              ? <div className={styles.richCellBox} style={ink} title={live != null ? "Calculated automatically — updates when values change" : "Imported formula result"}>{display}</div>
+                              : isDrop
+                                ? (
+                                  <select className={styles.richSelect} value={cell.v || ""} style={ink} onChange={e => setRichCell(s.id, ri, ci, e.target.value)}>
+                                    <option value=""></option>
+                                    {cell.v && !cell.opts.includes(cell.v) && <option value={cell.v}>{cell.v}</option>}
+                                    {cell.opts.map(op => <option key={op} value={op}>{op}</option>)}
+                                  </select>
+                                )
+                                : <div className={styles.richCellBox} style={ink} contentEditable suppressContentEditableWarning
+                                    onFocus={() => { if (conv) setEditKey(ekey) }}
+                                    onBlur={e => {
+                                      setEditKey(k => k === ekey ? null : k)
+                                      const v = e.currentTarget.innerText.replace(/\n$/, "")
+                                      if (conv && v === conv) return   // not edited (still the converted display) → keep the native value, never overwrite with the converted text
+                                      setRichCell(s.id, ri, ci, v)
+                                    }}>{shown}</div>}
                         </td>
                       )
                     })}
