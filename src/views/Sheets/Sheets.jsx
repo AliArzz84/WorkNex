@@ -119,6 +119,12 @@ const fmtCur = (v, code) => {
   const num = r.toLocaleString("en-GB", { minimumFractionDigits: dp, maximumFractionDigits: dp })
   return code === "GBP" ? "£" + num : code === "USD" ? "$" + num : num + " AMD"
 }
+// numeric value of an edited cell (plain number or a single currency amount) so formulas that
+// reference it — SUM, totals, … — pick up the change; null when it's no longer a number
+const numFromEdit = (v) => {
+  const s = String(v ?? "").replace(/,/g, "").replace(/[£$]/g, "").replace(/\b(?:GBP|USD|AMD)\b/gi, "").trim()
+  return /^-?\d*\.?\d+$/.test(s) ? parseFloat(s) : null
+}
 
 export default function Sheets() {
   const { db, saveSheets, readOnly, ask, notify, usdToGbp, usdToAmd } = useStore()
@@ -199,7 +205,13 @@ export default function Sheets() {
   const setRichCell = (sid, ri, ci, v) => {
     const s = sheets.find(x => x.id === sid); if (!s || !s.grid) return
     const cur = s.grid[ri]?.[ci]; if (!cur || (cur.v ?? "") === v) return
-    patch(sid, s => ({ ...s, grid: s.grid.map((row, r) => r !== ri ? row : row.map((cell, c) => (c !== ci || !cell) ? cell : { ...cell, v })) }))
+    const n = numFromEdit(v)
+    patch(sid, s => ({ ...s, grid: s.grid.map((row, r) => r !== ri ? row : row.map((cell, c) => {
+      if (c !== ci || !cell) return cell
+      const nc = { ...cell, v }
+      if (n != null) nc.n = n; else delete nc.n   // keep the numeric value in sync so SUM/totals update
+      return nc
+    })) }))
   }
   const emptyRichRow = (s) => (s.widths || []).map(() => ({ v: "" }))
   const addRichRow = (sid) => patch(sid, s => ({ ...s, grid: [...s.grid, emptyRichRow(s)] }))
@@ -339,14 +351,15 @@ export default function Sheets() {
         }
 
         made.push({
-          id: uid("sh"), name: ws.name || fileBase || "Imported table", imported: true, rich: true,
+          id: uid("sh"), name: ws.name || fileBase || "Imported table", wsName: ws.name || "", imported: true, rich: true,
           widths: widths.slice(0, cols), grid: grid.map(row => row.slice(0, cols)), colColors,
         })
       })
 
       if (!made.length) { notify?.("Couldn’t find any data in that file.", "info"); return }
       commit([...sheets, ...made])                           // new tables aren't in curMap → they start in Original automatically
-      notify?.(`Imported ${made.length} table${made.length > 1 ? "s" : ""} from ${file.name}.`, "success")
+      const fCount = made.reduce((n, t) => n + (t.grid || []).reduce((m, row) => m + row.filter(c => c && c.f).length, 0), 0)
+      notify?.(`Imported ${made.length} table${made.length > 1 ? "s" : ""}${fCount ? ` · ${fCount} live formula${fCount > 1 ? "s" : ""}` : ""}.`, "success")
     } catch (e) {
       console.error("Excel import failed:", e)
       notify?.("Couldn’t read that file — make sure it’s a .xlsx spreadsheet.", "error")
@@ -412,7 +425,7 @@ export default function Sheets() {
         // force the table to the full sum of its column widths so columns never compress
         // to fit the panel — that keeps them wide (short rows) and makes the grid scroll sideways
         const tableW = 46 + (s.widths || []).reduce((a, b) => a + (b || 0), 0)
-        const sheet = makeSheet(s.grid)   // live formula engine for this table (recomputed each render)
+        const sheet = makeSheet(s.grid, s.wsName)   // live formula engine for this table (recomputed each render)
         return (
         <div className="panel" key={s.id}>
           {headOf(s)}

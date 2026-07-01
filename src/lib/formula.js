@@ -6,10 +6,13 @@
 const colToNum = (s) => { let n = 0; for (const ch of s) n = n * 26 + (ch.toUpperCase().charCodeAt(0) - 64); return n }
 
 // ── tokenizer ──
-const tokenize = (src) => {
+const tokenize = (src, sheetName) => {
   const toks = []; let i = 0; const s = src
   const isD = (c) => c >= "0" && c <= "9"
   const isA = (c) => (c >= "A" && c <= "Z") || (c >= "a" && c <= "z") || c === "_"
+  // a qualifier resolves locally only if it names *this* sheet; a real other-sheet ref bails
+  // (→ caller keeps Excel's cached value). Unknown sheet name → resolve locally (best effort).
+  const sameSheet = (nm) => !sheetName || String(nm).trim().toLowerCase() === String(sheetName).trim().toLowerCase()
   while (i < s.length) {
     const c = s[i]
     if (c === " " || c === "\t" || c === "\n" || c === "\r") { i++; continue }
@@ -24,12 +27,18 @@ const tokenize = (src) => {
       if (s[j] === "e" || s[j] === "E") { num += s[j]; j++; if (s[j] === "+" || s[j] === "-") { num += s[j]; j++ } while (j < s.length && isD(s[j])) { num += s[j]; j++ } }
       toks.push({ k: "num", v: parseFloat(num) }); i = j; continue
     }
-    // sheet-qualified refs ('Sheet'!A1 or Sheet!A1) aren't resolvable across tables → bail out
-    if (c === "'") throw new Error("cross-sheet")
+    // a 'Sheet Name'! qualifier — drop it (resolve locally) if it's this sheet, else bail
+    if (c === "'") {
+      let j = i + 1, nm = ""
+      while (j < s.length && s[j] !== "'") { nm += s[j]; j++ }
+      j++                       // past the closing quote
+      if (s[j] === "!") { if (!sameSheet(nm)) throw new Error("cross-sheet"); j++ }
+      i = j; continue
+    }
     if (isA(c) || c === "$") {
       let j = i, name = ""
       while (j < s.length && (isA(s[j]) || isD(s[j]) || s[j] === "$" || s[j] === ".")) { name += s[j]; j++ }
-      if (s[j] === "!") throw new Error("cross-sheet")
+      if (s[j] === "!") { if (!sameSheet(name)) throw new Error("cross-sheet"); i = j + 1; continue }   // Sheet!Ref → drop, resolve locally
       const up = name.toUpperCase()
       if (up === "TRUE") { toks.push({ k: "bool", v: true }); i = j; continue }
       if (up === "FALSE") { toks.push({ k: "bool", v: false }); i = j; continue }
@@ -47,7 +56,8 @@ const tokenize = (src) => {
 
 // ── parser (precedence climbing) ──
 const BIN = { "=": 1, "<": 1, ">": 1, "<=": 1, ">=": 1, "<>": 1, "&": 2, "+": 3, "-": 3, "*": 4, "/": 4, "^": 5 }
-const refRC = (r) => { const m = /^([A-Z]+)(\d+)$/.exec(r); if (!m) throw new Error("bad ref " + r); return { r: +m[2], c: colToNum(m[1]) } }
+// a range endpoint: a full cell (B4), a whole column (B → row null) or a whole row (4 → col null)
+const endpoint = (r) => { const m = /^([A-Z]*)(\d*)$/.exec(r); if (!m || (!m[1] && !m[2])) throw new Error("bad ref " + r); return { col: m[1] ? colToNum(m[1]) : null, row: m[2] ? +m[2] : null } }
 
 function parse(toks) {
   let p = 0
@@ -68,8 +78,9 @@ function parse(toks) {
     }
     if (t.k === "ref") {
       eat()
-      if (peek() && peek().v === ":") { eat(); const b = eat(); if (!b || b.k !== "ref") throw new Error("bad range"); const a = refRC(t.v), z = refRC(b.v); return { k: "range", r1: a.r, c1: a.c, r2: z.r, c2: z.c } }
-      const a = refRC(t.v); return { k: "ref", r: a.r, c: a.c }
+      if (peek() && peek().v === ":") { eat(); const b = eat(); if (!b || b.k !== "ref") throw new Error("bad range"); return { k: "range", a: endpoint(t.v), b: endpoint(b.v) } }
+      const e = endpoint(t.v); if (e.row == null || e.col == null) throw new Error("bad ref " + t.v)
+      return { k: "ref", r: e.row, c: e.col }
     }
     throw new Error("unexpected " + JSON.stringify(t))
   }
@@ -241,7 +252,14 @@ function evalNode(node, getVal) {
     case "str": return node.v
     case "bool": return node.v
     case "ref": return getVal(node.r, node.c)
-    case "range": { const cells = []; for (let r = node.r1; r <= node.r2; r++) { const row = []; for (let c = node.c1; c <= node.c2; c++) row.push(getVal(r, c)); cells.push(row) } return new Rng(cells) }
+    case "range": {
+      // whole-column (B:B) / whole-row (4:4) endpoints clamp to the grid's used size
+      const c1 = node.a.col == null ? 1 : node.a.col, c2 = node.b.col == null ? (getVal.cols || node.a.col || 1) : node.b.col
+      const r1 = node.a.row == null ? 1 : node.a.row, r2 = node.b.row == null ? (getVal.rows || node.a.row || 1) : node.b.row
+      const cells = []
+      for (let r = Math.min(r1, r2); r <= Math.max(r1, r2); r++) { const row = []; for (let c = Math.min(c1, c2); c <= Math.max(c1, c2); c++) row.push(getVal(r, c)); cells.push(row) }
+      return new Rng(cells)
+    }
     case "un": { const v = asNum(scalar(evalNode(node.x, getVal))); return node.op === "-" ? -v : v }
     case "post": return asNum(scalar(evalNode(node.x, getVal))) / 100
     case "bin": {
@@ -274,10 +292,11 @@ function evalNode(node, getVal) {
   }
 }
 
-// evaluate a formula string against a value getter; getVal(r,c) → scalar (1-based coords)
-export function evalFormula(src, getVal) {
+// evaluate a formula string against a value getter; getVal(r,c) → scalar (1-based coords).
+// sheetName lets same-sheet qualifiers resolve while genuine cross-sheet refs bail.
+export function evalFormula(src, getVal, sheetName) {
   const f = String(src).trim().replace(/^=/, "")
-  const ast = parse(tokenize(f))
+  const ast = parse(tokenize(f, sheetName))
   const out = evalNode(ast, getVal)
   return out instanceof Rng ? scalar(out) : out
 }
@@ -295,9 +314,10 @@ const cellLiteral = (cell) => {
 
 // build an evaluator over a grid (rows of {v, f?, n?} cells or null). Handles nested formula
 // cells (with a cycle guard) and caches so a summary block computes in one pass.
-export function makeSheet(grid) {
+export function makeSheet(grid, sheetName) {
   const cache = new Map(), stack = new Set()
   const rawAt = (r, c) => { const row = grid && grid[r - 1]; return row ? (row[c - 1] || null) : null }
+  const dims = { rows: grid ? grid.length : 0, cols: grid ? grid.reduce((m, r) => Math.max(m, r ? r.length : 0), 0) : 0 }
   const valueAt = (r, c) => {
     const key = r + ":" + c
     if (cache.has(key)) return cache.get(key)
@@ -307,14 +327,15 @@ export function makeSheet(grid) {
       if (stack.has(key)) return 0
       stack.add(key)
       let val
-      try { val = evalFormula(String(cell.f), valueAt) } catch (e) { val = cellLiteral(cell) }
+      try { val = evalFormula(String(cell.f), valueAt, sheetName) } catch (e) { val = cellLiteral(cell) }
       stack.delete(key)
       cache.set(key, val); return val
     }
     const lit = cellLiteral(cell); cache.set(key, lit); return lit
   }
+  valueAt.rows = dims.rows; valueAt.cols = dims.cols   // so whole-column/row ranges know the bounds
   // evaluate a top-level formula for display: { ok, v } — ok:false → caller keeps the cached value
-  const tryEval = (f) => { try { return { ok: true, v: evalFormula(String(f), valueAt) } } catch (e) { return { ok: false } } }
+  const tryEval = (f) => { try { return { ok: true, v: evalFormula(String(f), valueAt, sheetName) } } catch (e) { return { ok: false } } }
   return { valueAt, tryEval }
 }
 
