@@ -1,0 +1,102 @@
+<!--
+  WorkNexus — "Confirm signup" email template.
+  Paste the whole thing into: Supabase → Authentication → Emails → "Confirm signup" → Message body (HTML).
+  Suggested Subject:  Confirm your WorkNexus account
+  Supabase fills {{ .ConfirmationURL }} in automatically. Table-based + inline styles for Gmail/Outlook.
+  Change the brand name / colours by editing the CSS vars-like values below (search: WorkNexus, #2d8cff, #0071e3).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>Confirm your email</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f6f9; -webkit-font-smoothing:antialiased; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <!-- hidden preview text shown in the inbox list -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">Confirm your email to finish setting up your WorkNexus account.</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <!-- card -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background:#ffffff; border-radius:16px; border:1px solid #e6e9ee; overflow:hidden;">
+
+          <!-- header / logo -->
+          <tr>
+            <td align="center" style="padding:34px 32px 8px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                <tr>
+                  <td width="52" height="52" align="center" valign="middle" bgcolor="#2d8cff" style="border-radius:14px; color:#ffffff; font-size:28px; font-weight:800; letter-spacing:-1px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">M</td>
+                </tr>
+              </table>
+              <div style="margin-top:12px; font-size:15px; font-weight:700; color:#1d1d1f; letter-spacing:.2px;">WorkNexus</div>
+            </td>
+          </tr>
+
+          <!-- hero -->
+          <tr>
+            <td align="center" style="padding:14px 32px 0;">
+              <h1 style="margin:0; font-size:22px; line-height:1.3; font-weight:700; color:#1d1d1f;">Confirm your email</h1>
+              <p style="margin:12px 0 0; font-size:14.5px; line-height:1.6; color:#57606a;">
+                You’re one step away. Tap the button below to confirm this address and finish setting up your account.
+              </p>
+            </td>
+          </tr>
+
+          <!-- button -->
+          <tr>
+            <td align="center" style="padding:26px 32px 8px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                <tr>
+                  <td align="center" bgcolor="#0071e3" style="border-radius:11px;">
+                    <a href="{{ .ConfirmationURL }}" target="_blank"
+                       style="display:inline-block; padding:14px 34px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:11px;">
+                      Confirm my email
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- fallback link -->
+          <tr>
+            <td align="center" style="padding:14px 32px 6px;">
+              <p style="margin:0; font-size:12.5px; line-height:1.6; color:#8a929c;">
+                Button not working? Copy and paste this link into your browser:
+              </p>
+              <p style="margin:6px 0 0; font-size:12.5px; line-height:1.5; word-break:break-all;">
+                <a href="{{ .ConfirmationURL }}" target="_blank" style="color:#0071e3; text-decoration:underline;">{{ .ConfirmationURL }}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- divider -->
+          <tr>
+            <td style="padding:22px 32px 0;">
+              <div style="height:1px; background:#e6e9ee; line-height:1px; font-size:0;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- footer -->
+          <tr>
+            <td align="center" style="padding:18px 32px 30px;">
+              <p style="margin:0; font-size:12px; line-height:1.6; color:#9aa2ac;">
+                If you didn’t create a WorkNexus account, you can safely ignore this email — nothing will happen.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- outside-card brand line -->
+        <div style="margin-top:16px; font-size:11.5px; color:#aab1bb;">WorkNexus · Business management</div>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
