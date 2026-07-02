@@ -3,6 +3,7 @@ import {
   I18N, uid, daysBetween, nextPayday, periodKey, isPaid as isPaidPure, timeAgo
 } from './data.js'
 import { supabase, isSupabaseConfigured } from './supabaseClient.js'
+import { listAccessRequests } from './portalApi.js'
 
 const KEY = "bm_react_v2"
 const MAX_LOG = 250   // how many activity entries we keep in the shared workspace
@@ -33,6 +34,8 @@ export function StoreProvider({ children }) {
   const isGuest = Boolean(viewToken)
   // public request form: ?request=1 — anyone can submit, no login
   const isRequest = cloud ? Boolean(new URLSearchParams(window.location.search).get("request")) : false
+  // employee invoice portal: ?portal=1 — separate login + invoice UI, no company data
+  const isPortal = cloud ? Boolean(new URLSearchParams(window.location.search).get("portal")) : false
   const [guestMeta, setGuestMeta] = useState(null)                              // { label, role, sections, expires_at }
   const [guestStatus, setGuestStatus] = useState(isGuest ? "loading" : "ok")    // 'loading' | 'ok' | 'invalid'
   const [db, setDb] = useState(() => cloud ? EMPTY : loadLocalDB())
@@ -78,6 +81,7 @@ export function StoreProvider({ children }) {
   const [presence, setPresence] = useState([])        // who else is online/editing
   const [requests, setRequests] = useState([])        // request-form submissions (admin inbox + nav badge)
   const [requestsReady, setRequestsReady] = useState(false)
+  const [accessRequests, setAccessRequests] = useState([])  // employee-portal access requests (manager approves)
   const lastSynced = useRef("")
   const writeTimer = useRef(null)
   const presenceCh = useRef(null)
@@ -229,6 +233,8 @@ export function StoreProvider({ children }) {
       // Each account opens in its own view by default (boss → Boss view).
       // They can still flip it from the top toggle during the session.
       setRole(acct)
+      // employees live in the invoice portal — they never load the company workspace
+      if (acct === "employee") { setDataReady(true); dirty.current = false; return }
 
       const { data: ws } = await supabase.from("workspaces").select("data").eq("id", "default").single()
       let raw = ws?.data
@@ -287,7 +293,7 @@ export function StoreProvider({ children }) {
 
   /* === cloud: live presence — who else is online / editing right now === */
   useEffect(() => {
-    if (!cloud || isGuest || !session) { setPresence([]); return }
+    if (!cloud || isGuest || !session || account === "employee") { setPresence([]); return }
     const me = session.user.id
     const ch = supabase.channel("presence-default", { config: { presence: { key: me } } })
     presenceCh.current = ch
@@ -310,7 +316,7 @@ export function StoreProvider({ children }) {
 
   /* === cloud: write (debounced) when the manager changes data === */
   useEffect(() => {
-    if (!cloud || isGuest || !session || !dataReady) return
+    if (!cloud || isGuest || !session || !dataReady || account === "employee") return
     const str = JSON.stringify(db)
     if (str === lastSynced.current) return
     dirty.current = true   // a local edit is now waiting to be saved
@@ -386,14 +392,28 @@ export function StoreProvider({ children }) {
   }, [cloud])
   // keep the requests inbox + nav badge live: realtime on the table, with a 20s polling fallback
   useEffect(() => {
-    if (!cloud || isGuest || isRequest || !session) { setRequests([]); setRequestsReady(false); return }
+    if (!cloud || isGuest || isRequest || !session || account === "employee") { setRequests([]); setRequestsReady(false); return }
     reloadRequests()
     const ch = supabase.channel("requests-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "requests" }, () => reloadRequests())
       .subscribe()
     const poll = setInterval(reloadRequests, 20000)
     return () => { clearInterval(poll); supabase.removeChannel(ch) }
-  }, [cloud, isGuest, isRequest, session?.user?.id, reloadRequests])
+  }, [cloud, isGuest, isRequest, session?.user?.id, account, reloadRequests])
+
+  /* === employee-portal access requests — managers see + approve (realtime + nav badge) === */
+  const reloadAccessRequests = useCallback(async () => {
+    if (!cloud) return
+    try { setAccessRequests(await listAccessRequests()) } catch (e) {}
+  }, [cloud])
+  useEffect(() => {
+    if (!cloud || isGuest || isPortal || !session || !account || account === "employee") { setAccessRequests([]); return }
+    reloadAccessRequests()
+    const ch = supabase.channel("access-req-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "access_requests" }, () => reloadAccessRequests())
+      .subscribe()
+    return () => supabase.removeChannel(ch)
+  }, [cloud, isGuest, isPortal, session?.user?.id, account, reloadAccessRequests])
 
   /* in-app AI assistant — calls the `assistant` Edge Function (Claude) */
   const askAssistant = useCallback(async (history) => {
@@ -678,6 +698,7 @@ export function StoreProvider({ children }) {
     cloud, session, account, authReady, dataReady, presence, signIn, signUp, signOut,
     isGuest, guestMeta, guestStatus, createViewLink, listViewLinks, revokeViewLink, askAssistant,
     isRequest, submitRequest, listRequests, setRequestStatus, deleteRequest, requests, requestsReady, reloadRequests,
+    isPortal, accessRequests, reloadAccessRequests,
     t, L, view, setView, search, setSearch,
     editing, openEditor: (type, id) => { if (!isGuest) setEditing({ type, id }) }, closeEditor: () => setEditing(null),
     dialog, toast, ask, askText, askType, resolveDialog, notify,

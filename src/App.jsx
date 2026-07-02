@@ -16,9 +16,11 @@ import Teams from './views/Teams/Teams.jsx'
 import Activity from './views/Activity/Activity.jsx'
 import Requests from './views/Requests/Requests.jsx'
 import Sheets from './views/Sheets/Sheets.jsx'
+import Invoices from './views/Invoices/Invoices.jsx'
 import Editor from './components/Editor/Editor.jsx'
 import Login from './components/Login/Login.jsx'
 import RequestForm from './components/RequestForm/RequestForm.jsx'
+import Portal from './components/Portal/Portal.jsx'
 import Assistant from './components/Assistant/Assistant.jsx'
 import { daysBetween, nextPayday, periodKey } from './lib/data.js'
 
@@ -35,9 +37,10 @@ const NAV = [
   { key: "sheets", icon: "table" },
   { key: "diagram", icon: "diagram" },
   { key: "requests", icon: "chat" },
+  { key: "invoices", icon: "invoice" },
   { key: "activity", icon: "history" },
 ]
-const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, requests: Requests, finance: Finance, sheets: Sheets, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
+const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, requests: Requests, invoices: Invoices, finance: Finance, sheets: Sheets, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
 const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting", teams: "team", tasks: "task", finance: "transaction", businesses: "business" }
 // only the views that use the *topbar* search box (Projects has its own in-section search)
 const SEARCHABLE = new Set(["tasks", "employees", "meetings", "activity"])
@@ -45,7 +48,7 @@ const SEARCHABLE = new Set(["tasks", "employees", "meetings", "activity"])
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,
     cloud, session, account, authReady, signOut,
-    isGuest, guestMeta, guestStatus, isRequest, requests,
+    isGuest, guestMeta, guestStatus, isRequest, isPortal, requests, accessRequests,
     view, setView, search, setSearch, openEditor, exportData, importData, clearAll, isPaid } = useStore()
   const fileRef = useRef()
   const [toolsOpen, setToolsOpen] = useState(() => localStorage.getItem("bm_tools_open") !== "0")
@@ -66,6 +69,9 @@ export default function App() {
 
   // Public request form (?request=1) — no login needed
   if (cloud && isRequest) return <RequestForm />
+
+  // Employee invoice portal (?portal=1, or any signed-in employee account) — a separate experience
+  if (cloud && (isPortal || account === "employee")) return <Portal />
 
   // Guest (shared view-only link) gates — checked before auth so guests skip Login
   if (cloud && isGuest && guestStatus === "loading") return <div className="splash"><Logo size={54} className="loading-logo" /></div>
@@ -92,7 +98,9 @@ export default function App() {
   const reqBadge = (requests || []).filter(r => (r.status || "new") !== "done").length
   // projects whose deadline is within a week (or already overdue) and aren't finished
   const projBadge = db.projects.filter(p => p.status !== "done" && p.deadline && daysBetween(p.deadline) <= 7).length
-  const badges = { tasks: taskBadge, meetings: meetBadge, payroll: payBadge, requests: reqBadge, projects: projBadge }
+  // employees waiting for you to approve their portal access
+  const accessBadge = (accessRequests || []).filter(r => (r.status || "pending") === "pending").length
+  const badges = { tasks: taskBadge, meetings: meetBadge, payroll: payBadge, requests: reqBadge, projects: projBadge, invoices: accessBadge }
 
   // Toggle only switches edit mode; it stays on the current page.
   const switchRole = (r) => setRole(r)

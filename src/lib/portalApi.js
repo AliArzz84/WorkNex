@@ -1,0 +1,72 @@
+// Employee-portal + invoices API — thin wrappers over Supabase, kept out of the main
+// store so the battle-tested workspace logic stays untouched. Everything here is
+// gated by RLS (see supabase/invoices.sql): employees only ever touch their own rows.
+import { supabase } from './supabaseClient.js'
+
+const BUCKET = 'invoices'
+
+/* ---------- access requests (public → manager approves) ---------- */
+export async function submitAccessRequest({ name, email, note }) {
+  const { error } = await supabase.from('access_requests')
+    .insert({ name: name.trim(), email: email.trim().toLowerCase(), note: (note || '').trim() || null })
+  if (error) throw error
+}
+export async function listAccessRequests() {
+  const { data, error } = await supabase.from('access_requests').select('*').order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+export async function approveAccessRequest(id) {
+  const { error } = await supabase.rpc('approve_access_request', { p_id: id })
+  if (error) throw error
+}
+export async function rejectAccessRequest(id) {
+  const { error } = await supabase.rpc('reject_access_request', { p_id: id })
+  if (error) throw error
+}
+export async function deleteAccessRequest(id) {
+  const { error } = await supabase.from('access_requests').delete().eq('id', id)
+  if (error) throw error
+}
+
+/* ---------- invoices ---------- */
+// upload an attachment into the caller's own <uid>/ folder; returns the storage path
+export async function uploadAttachment(userId, file) {
+  if (!file) return null
+  const safe = file.name.replace(/[^\w.\-]+/g, '_').slice(-80)
+  const path = `${userId}/${Date.now()}_${safe}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
+  if (error) throw error
+  return path
+}
+// employee submits one invoice (optionally with a file already uploaded → attachment path)
+export async function createInvoice(row) {
+  const { error } = await supabase.from('invoices').insert(row)
+  if (error) throw error
+}
+export async function listMyInvoices() {
+  const { data, error } = await supabase.from('invoices').select('*').order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+export async function listAllInvoices() {
+  const { data, error } = await supabase.from('invoices').select('*').order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+export async function updateInvoice(id, patch) {
+  const { error } = await supabase.from('invoices').update(patch).eq('id', id)
+  if (error) throw error
+}
+export async function deleteInvoice(id, attachment) {
+  if (attachment) { try { await supabase.storage.from(BUCKET).remove([attachment]) } catch (e) {} }
+  const { error } = await supabase.from('invoices').delete().eq('id', id)
+  if (error) throw error
+}
+// short-lived signed URL so a manager (or the owner) can open a private attachment
+export async function attachmentUrl(path) {
+  if (!path) return null
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600)
+  if (error) throw error
+  return data?.signedUrl || null
+}
