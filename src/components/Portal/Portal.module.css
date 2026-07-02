@@ -4,8 +4,8 @@
   display: flex;
   flex-direction: column;
 }
-/* logged-out card is centred; the employee desk fills the page */
-.wrap:has(.card) { display: grid; place-items: center; padding: 20px; }
+/* logged-out / notice states: one centred card */
+.authWrap { flex: 1; display: grid; place-items: center; padding: 20px; }
 
 .card {
   width: 100%;
@@ -46,23 +46,55 @@
 .err { background: rgba(255, 59, 48, .1); color: var(--red-ink); }
 .ok { background: rgba(52, 199, 89, .12); color: var(--green-ink); }
 
+.hintFoot { font-size: 11.5px; text-align: center; margin-top: 12px; color: var(--muted); }
+.linkBtn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--accent); font-size: inherit; font-weight: 600; text-decoration: underline;
+}
+
 .centered { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
 
 /* ── employee desk ── */
 .deskWrap { max-width: 920px; width: 100%; margin: 0 auto; padding: 20px; }
 .deskHead {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+  gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
 }
+
+.summary {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.summaryTotal { margin-inline-start: auto; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
 .deskGrid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 760px) { .deskGrid { grid-template-columns: 1fr; } }
+
+.fileChip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--panel-2); font-size: 12.5px; min-width: 0;
+}
+.fileName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fileClear {
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  font-size: 13px; padding: 2px 4px; border-radius: 6px; flex: 0 0 auto;
+}
+.fileClear:hover { color: var(--red-ink); background: rgba(255, 59, 48, .1); }
 
 .invList { display: flex; flex-direction: column; }
 .invRow {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 4px; border-bottom: 1px solid var(--line);
+  padding: 10px 6px; border-bottom: 1px solid var(--line);
+  border-radius: 8px;
 }
+.invRow:hover { background: var(--panel-2); }
 .invRow:last-child { border-bottom: none; }
 .invMain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .invMain b { font-variant-numeric: tabular-nums; }
 .invMain small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.deskNote {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--muted); margin: 10px 2px 0;
+}

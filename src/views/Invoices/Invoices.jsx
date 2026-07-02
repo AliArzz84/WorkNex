@@ -153,6 +153,8 @@ export default function Invoices() {
                           </div>
                           <select className={styles.proj} value={r.project || ''} onChange={e => setProject(r, e.target.value)} title="Link to a project">
                             <option value="">No project</option>
+                            {/* keep a linked-but-deleted project visible instead of a blank select */}
+                            {r.project && !db.projects.some(p => p.id === r.project) && <option value={r.project}>(deleted project)</option>}
                             {db.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
                           <select className={`${styles.status} ${styles['s_' + (r.status || 'pending')]}`} value={r.status || 'pending'} onChange={e => setStatus(r, e.target.value)}>
