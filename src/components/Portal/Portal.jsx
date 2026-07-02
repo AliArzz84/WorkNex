@@ -6,7 +6,7 @@ import { uid } from '../../lib/data.js'
 import { Icon, Logo, Toast, ConfirmDialog } from '../ui/ui.jsx'
 import {
   submitAccessRequest, uploadAttachment, createInvoice, listMyInvoices,
-  deleteInvoice, attachmentUrl, INVOICE_CURRENCIES, invMoney,
+  deleteInvoice, attachmentUrl, INVOICE_CURRENCIES, invMoney, portalAllowed,
 } from '../../lib/portalApi.js'
 import styles from './Portal.module.css'
 
@@ -149,6 +149,8 @@ function InvoiceDesk() {
   const userId = session.user.id
   const [rows, setRows] = useState(null)          // null = loading
   const [busy, setBusy] = useState(false)
+  const [allowed, setAllowed] = useState(true)    // flips false if a manager closes this employee's access
+  useEffect(() => { portalAllowed().then(setAllowed).catch(() => { }) }, [])
 
   // details that rarely change are remembered on this device, so the employee
   // fills them once and every next invoice is just items + dates
@@ -248,6 +250,28 @@ function InvoiceDesk() {
     for (const r of rows || []) m.set(r.currency, (m.get(r.currency) || 0) + Number(r.amount || 0))
     return [...m.entries()]
   }, [rows])
+
+  // a manager closed this employee's access — show a clear message instead of an empty desk
+  if (!allowed) return (
+    <div className={styles.deskWrap}>
+      <header className={styles.deskHead}>
+        <div className={styles.brand}><Logo size={30} /><div><b>Invoice portal</b></div></div>
+        <div className={styles.headActions}>
+          <ThemeBtn />
+          <button className="btn ghost sm" onClick={signOut}><Icon name="logout" size={15} /> Sign out</button>
+        </div>
+      </header>
+      <div className="panel" style={{ maxWidth: 460, margin: '6vh auto 0' }}>
+        <div className={styles.centered} style={{ padding: '16px 8px' }}>
+          <div className={styles.iconBadge} style={{ background: 'rgba(255,59,48,.12)', color: 'var(--red-ink)' }}><Icon name="alert" size={26} /></div>
+          <h2 style={{ margin: '10px 0 4px' }}>Access closed</h2>
+          <p className="muted" style={{ textAlign: 'center' }}>
+            Your access to the invoice portal has been turned off by your manager. If you think this is a mistake, please get in touch with them.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className={styles.deskWrap}>

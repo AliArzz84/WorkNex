@@ -130,23 +130,26 @@ create table if not exists public.invoices (
 );
 alter table public.invoices enable row level security;
 
+-- NB: the employee branch also requires private.is_allowed(), so removing someone from the
+-- allow-list (Close access) instantly cuts their ability to read or submit invoices, even
+-- though their login still exists. Managers/boss always pass via is_manager().
 drop policy if exists inv_select on public.invoices;
 create policy inv_select on public.invoices for select to authenticated
-  using ( user_id = (select auth.uid()) or private.is_manager() );
+  using ( private.is_manager() or (user_id = (select auth.uid()) and private.is_allowed()) );
 
 drop policy if exists inv_insert on public.invoices;
 create policy inv_insert on public.invoices for insert to authenticated
-  with check ( user_id = (select auth.uid()) );
+  with check ( user_id = (select auth.uid()) and private.is_allowed() );
 
 -- employees may edit/delete only their OWN still-pending invoices; managers can do anything
 drop policy if exists inv_update on public.invoices;
 create policy inv_update on public.invoices for update to authenticated
-  using ( private.is_manager() or (user_id = (select auth.uid()) and status = 'pending') )
-  with check ( private.is_manager() or user_id = (select auth.uid()) );
+  using ( private.is_manager() or (user_id = (select auth.uid()) and status = 'pending' and private.is_allowed()) )
+  with check ( private.is_manager() or (user_id = (select auth.uid()) and private.is_allowed()) );
 
 drop policy if exists inv_delete on public.invoices;
 create policy inv_delete on public.invoices for delete to authenticated
-  using ( private.is_manager() or (user_id = (select auth.uid()) and status = 'pending') );
+  using ( private.is_manager() or (user_id = (select auth.uid()) and status = 'pending' and private.is_allowed()) );
 
 grant select, insert, update, delete on public.invoices to authenticated;
 
@@ -226,6 +229,42 @@ begin
 end; $$;
 revoke all on function public.request_access(text, text, text) from public;
 grant execute on function public.request_access(text, text, text) to anon, authenticated;
+
+-- ── 10) Manage who has access: list current employees + close (revoke) an employee.
+--     allowed_emails is locked, so managers reach it only through these guarded functions.
+create or replace function public.list_employees()
+returns table (email text, added_at timestamptz, signed_up boolean, invoice_count bigint)
+language plpgsql security definer set search_path = public stable as $$
+begin
+  if not private.is_manager() then raise exception 'Not authorised'; end if;
+  return query
+    select ae.email, ae.added_at,
+      exists (select 1 from public.profiles p where lower(p.email) = lower(ae.email)) as signed_up,
+      (select count(*) from public.invoices i where lower(i.email) = lower(ae.email)) as invoice_count
+    from public.allowed_emails ae
+    where ae.role = 'employee'
+    order by ae.added_at desc nulls last;
+end; $$;
+revoke all on function public.list_employees() from public, anon;
+grant execute on function public.list_employees() to authenticated;
+
+-- close an employee's access — removes them from the allow-list (RLS then blocks their
+-- invoices). Never touches a manager/boss. Their past invoices stay for your records.
+create or replace function public.revoke_employee(p_email text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not private.is_manager() then raise exception 'Not authorised'; end if;
+  delete from public.allowed_emails where lower(email) = lower(trim(p_email)) and role = 'employee';
+end; $$;
+revoke all on function public.revoke_employee(text) from public, anon;
+grant execute on function public.revoke_employee(text) to authenticated;
+
+-- lets the portal tell a signed-in employee whether their access is still open
+create or replace function public.portal_allowed()
+returns boolean language sql security definer set search_path = public stable as $$
+  select private.is_allowed();
+$$;
+grant execute on function public.portal_allowed() to authenticated;
 
 -- ============================================================
 -- DONE. Notes:

@@ -226,9 +226,15 @@ export function StoreProvider({ children }) {
     if (!session) { setAccount(null); setDataReady(false); setDb(EMPTY); return }
     let channel, cancelled = false
       ; (async () => {
-        const { data: prof } = await supabase.from("profiles").select("role").eq("id", session.user.id).single()
-        const acct = prof?.role || "boss"
+        const { data: prof, error: profErr } = await supabase.from("profiles").select("role").eq("id", session.user.id).maybeSingle()
         if (cancelled) return
+        // A transient read error: don't grant anything and don't sign out — a refresh retries.
+        if (profErr) { console.error("Profile load failed:", profErr.message); setDataReady(false); return }
+        // No profile row = the account was deleted (or never provisioned) in Supabase. NEVER fall
+        // back to a privileged role — that let a deleted user's still-valid session in as "boss".
+        // Sign the orphaned session out so it carries no access at all.
+        if (!prof) { setAccount(null); setDataReady(false); setDb(EMPTY); await supabase.auth.signOut(); return }
+        const acct = prof.role
         setAccount(acct)
         // Each account opens in its own view by default (boss → Boss view).
         // They can still flip it from the top toggle during the session.

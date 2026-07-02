@@ -48,6 +48,24 @@ export async function deleteAccessRequest(id) {
   if (error) throw error
 }
 
+/* ---------- who currently has access (employees) ---------- */
+export async function listEmployees() {
+  const { data, error } = await supabase.rpc('list_employees')
+  if (error) throw error
+  return data || []
+}
+// close an employee's access — removes them from the allow-list; their invoices stay
+export async function revokeEmployee(email) {
+  const { error } = await supabase.rpc('revoke_employee', { p_email: email })
+  if (error) throw error
+}
+// is the signed-in employee still allowed in? (false after a manager closes their access)
+export async function portalAllowed() {
+  const { data, error } = await supabase.rpc('portal_allowed')
+  if (error) throw error
+  return data === true
+}
+
 /* ---------- invoices ---------- */
 // upload an attachment into the caller's own <uid>/ folder; returns the storage path
 export async function uploadAttachment(userId, file) {

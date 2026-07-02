@@ -6,6 +6,7 @@ import { EmptyState, Icon, Tag, stagger, item } from '../../components/ui/ui.jsx
 import {
   listAllInvoices, updateInvoice, deleteInvoice, attachmentUrl, invMoney,
   approveAccessRequest, rejectAccessRequest, deleteAccessRequest,
+  listEmployees, revokeEmployee,
 } from '../../lib/portalApi.js'
 import styles from './Invoices.module.css'
 
@@ -75,6 +76,66 @@ function AccessRequests() {
   )
 }
 
+/* people who currently have portal access (approved employees) + close-access */
+function EmployeesPanel() {
+  const { accessRequests, notify, ask } = useStore()
+  const [rows, setRows] = useState(null)   // null = loading
+  const [busy, setBusy] = useState(null)
+  const load = async () => { try { setRows(await listEmployees()) } catch (e) { setRows([]) } }
+  useEffect(() => { load() }, [])
+  // when a request gets approved a new employee appears → refresh the list
+  const approvedCount = (accessRequests || []).filter(r => (r.status || 'pending') === 'approved').length
+  useEffect(() => { load() }, [approvedCount])
+
+  const revoke = async (emp) => {
+    const ok = await ask({
+      title: 'Close access',
+      message: `Remove access for ${emp.email}? They won't be able to sign in or submit invoices. Their past invoices stay for your records.`,
+      confirmText: 'Close access', danger: true,
+    })
+    if (!ok) return
+    setBusy(emp.email)
+    try { await revokeEmployee(emp.email); notify?.('Access closed', 'info'); load() }
+    catch (e) { notify?.(e.message || 'Couldn’t close access', 'error') }
+    setBusy(null)
+  }
+
+  return (
+    <div className="panel">
+      <div className="panel-h">
+        <span className="hicon"><Icon name="employees" size={16} /></span>
+        <h2>People with access</h2>
+        {rows && <span className="count">{rows.length}</span>}
+      </div>
+      {rows === null ? <p className="muted" style={{ padding: '8px 2px' }}>Loading…</p>
+        : rows.length === 0 ? <p className="muted" style={{ padding: '8px 2px' }}>No employees have access yet. Approve a request above to add one.</p>
+          : (
+            <motion.div variants={stagger} initial="initial" animate="animate">
+              <AnimatePresence>
+                {rows.map(emp => (
+                  <motion.div key={emp.email} className="alert gray" variants={item} layout exit={{ opacity: 0, x: 24 }}>
+                    <div className="dot" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <b>{emp.email}</b>
+                      <p>
+                        {emp.signed_up
+                          ? <span style={{ color: 'var(--green-ink)' }}>Signed up</span>
+                          : 'Approved · hasn’t signed up yet'}
+                        {emp.invoice_count > 0 ? ` · ${emp.invoice_count} invoice${emp.invoice_count > 1 ? 's' : ''}` : ''}
+                      </p>
+                    </div>
+                    <button className="btn ghost sm danger" disabled={busy === emp.email} onClick={() => revoke(emp)}>
+                      <Icon name="trash" size={14} /> Close access
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+    </div>
+  )
+}
+
 export default function Invoices() {
   const { db, cloud, fmtBase, usdToGbp, usdToAmd, notify, ask } = useStore()
   const [rows, setRows] = useState(null)      // null = loading
@@ -125,6 +186,7 @@ export default function Invoices() {
   return (
     <div>
       <AccessRequests />
+      <EmployeesPanel />
 
       <div className="panel">
         <div className="panel-h">
