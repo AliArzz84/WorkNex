@@ -362,3 +362,12 @@
     opacity: .5;
     cursor: not-allowed;
 }
+
+/* mobile: the export menu never spills off-screen; money tables tighten up */
+@media (max-width: 640px) {
+    .xlsxMenu { width: min(300px, calc(100vw - 28px)) }
+    .plTable th,
+    .plTable td { padding: 6px 4px; font-size: 12px }
+    .pl { font-size: 13px }
+    .recList { max-width: 100% }
+}

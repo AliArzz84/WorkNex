@@ -120,3 +120,19 @@
     font-weight: 700;
     line-height: 1.35
 }
+
+/* mobile: row 1 = checkbox + title, row 2 = meta on the left, actions on the right */
+@media (max-width: 640px) {
+    .taskRow {
+        flex-wrap: wrap;
+        row-gap: 8px;
+        padding: 12px 4px;
+    }
+    .tMain {
+        flex: 1 1 0;
+        min-width: calc(100% - 40px);   /* forces meta + actions onto their own row */
+    }
+    .tMain small { white-space: normal }
+    .tMeta { margin-inline-start: 34px }
+    .taskRow :global(.row-actions) { margin-inline-start: auto }
+}

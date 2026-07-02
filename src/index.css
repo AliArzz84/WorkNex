@@ -3,6 +3,7 @@
 @import "./styles/layout.css";
 @import "./styles/components.css";
 @import "./styles/views.css";
+@import "./styles/mobile.css";   /* keep last — mobile overrides must win the cascade */
 
 /* ---------- Guest (shared view-only link) ---------- */
 .guest-banner {

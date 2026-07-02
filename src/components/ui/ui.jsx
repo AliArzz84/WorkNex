@@ -82,24 +82,6 @@ export function Icon({ name, size = 18, strokeWidth = 1.7, className }) {
   )
 }
 
-/* ---------- World clocks (Iran + UK) ---------- */
-export function Clocks() {
-  const [now, setNow] = useState(new Date())
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  const time = (tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now)
-  const date = (locale, tz) => new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: "short", day: "numeric", month: "short" }).format(now)
-  return (
-    <div className={styles.clocks}>
-      <div className={styles.clock}><span className={styles.flag}>🇮🇷</span><div className={styles.ct}><b>{time("Asia/Tehran")}</b><small>Tehran · {date("fa-IR", "Asia/Tehran")}</small></div></div>
-      <div className={styles.sep} />
-      <div className={styles.clock}><span className={styles.flag}>🇬🇧</span><div className={styles.ct}><b>{time("Europe/London")}</b><small>London · {date("en-GB", "Europe/London")}</small></div></div>
-    </div>
-  )
-}
-
 /* ---------- Money ----------
    No `currency` prop  → a BASE amount (stored in USD): shown in the page's USD/GBP display toggle.
    With a `currency`   → a TAGGED amount (e.g. a salary in its own currency); `convertible` adds the ﷼ Toman toggle. */
@@ -159,7 +141,8 @@ export function RatesMenu() {
   const rows = [["USD", "$"], ["EUR", "€"], ["GBP", "£"]].filter(([k]) => r[k])
   const teaser = r.USD ? `$ ${fmt(r.USD)}` : "Rates"
   return (
-    <div className={styles.rates} ref={ref}>
+    // the extra global "rates" class lets mobile.css hide this on small screens
+    <div className={`${styles.rates} rates`} ref={ref}>
       <button className={`${styles.rateBadge} ${styles.ratesTrigger}`} onClick={() => setOpen(o => !o)} title="Live currency rates">
         <Icon name="trending" size={14} />
         <span>{teaser}</span>
@@ -191,7 +174,8 @@ export function Presence() {
   const total = (presence || []).length || 1   // everyone connected, including me
   // just the online count — the Activity page shows who exactly is online
   return (
-    <div className={styles.presence}>
+    // the extra global "presence" class lets mobile.css hide this on small screens
+    <div className={`${styles.presence} presence`}>
       <button className={styles.presCount} onClick={() => setView("activity")} title="Open activity & access">
         <i className={styles.dot} />{total} online
       </button>

@@ -2,24 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
 import { supabase } from '../../lib/supabaseClient.js'
-import { CURRENCIES } from '../../lib/data.js'
+import { uid } from '../../lib/data.js'
 import { Icon, Logo, Toast, ConfirmDialog } from '../ui/ui.jsx'
 import {
   submitAccessRequest, uploadAttachment, createInvoice, listMyInvoices,
-  deleteInvoice, attachmentUrl,
+  deleteInvoice, attachmentUrl, INVOICE_CURRENCIES, invMoney,
 } from '../../lib/portalApi.js'
 import styles from './Portal.module.css'
 
 const pad = n => String(n).padStart(2, '0')
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
-const CURS = CURRENCIES.filter(c => ['USD', 'GBP', 'EUR', 'IRR', 'AED', 'TRY'].includes(c.code))
-const symOf = (code) => (CURRENCIES.find(c => c.code === code) || {}).symbol || '$'
-const money = (n, code) => {
-  const amt = Number(n || 0)
-  if (code === 'IRR') return amt.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' تومان'
-  const dp = Math.round(amt * 100) % 100 === 0 ? 0 : 2
-  return symOf(code) + amt.toLocaleString('en-GB', { minimumFractionDigits: dp, maximumFractionDigits: dp })
-}
 const STATUS = {
   pending: { tag: 'amber', label: 'Pending', hint: 'Waiting for your manager to review' },
   approved: { tag: 'green', label: 'Approved', hint: 'Approved — payment on the way' },
@@ -28,6 +20,16 @@ const STATUS = {
 }
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 const MAX_FILE_MB = 10
+
+/* little sun/moon button — the app theme is global, the portal just needs its own switch */
+function ThemeBtn() {
+  const { theme, toggleTheme } = useStore()
+  return (
+    <button type="button" className={styles.themeBtn} onClick={toggleTheme} title="Toggle dark mode" aria-label="Toggle theme">
+      <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={16} />
+    </button>
+  )
+}
 
 /* ---------- logged-out: sign in / sign up / request access ---------- */
 function PortalAuth() {
@@ -83,9 +85,10 @@ function PortalAuth() {
   const TABS = [['signin', 'Sign in'], ['signup', 'Sign up'], ['request', 'Request access']]
   return (
     <>
-      <div className={styles.brand}>
+      <div className={styles.brand} style={{ marginBottom: 18 }}>
         <Logo size={40} />
-        <div><b style={{ fontSize: 16 }}>Invoice portal</b><br /><small className="muted">Submit your invoices to the team</small></div>
+        <div style={{ flex: 1 }}><b style={{ fontSize: 16 }}>Invoice portal</b><br /><small className="muted">Submit your invoices to the team</small></div>
+        <ThemeBtn />
       </div>
       <div className={styles.tabs}>
         {TABS.map(([k, l]) => (
@@ -122,21 +125,45 @@ function PortalAuth() {
   )
 }
 
-/* ---------- logged-in employee: submit + list invoices ---------- */
+/* ---------- logged-in employee: a proper invoice form + their history ---------- */
 function InvoiceDesk() {
   const { session, signOut, notify, ask } = useStore()
   const userId = session.user.id
-  const [name, setName] = useState(() => localStorage.getItem('portal_name') || (session.user.email || '').split('@')[0])
   const [rows, setRows] = useState(null)          // null = loading
   const [busy, setBusy] = useState(false)
-  const [f, setF] = useState({ amount: '', currency: 'USD', invoice_date: todayISO(), description: '' })
-  const [file, setFile] = useState(null)
-  const fileRef = useRef(null)
+
+  // details that rarely change are remembered on this device, so the employee
+  // fills them once and every next invoice is just items + dates
+  const [name, setName] = useState(() => localStorage.getItem('portal_name') || (session.user.email || '').split('@')[0])
+  const [phone, setPhone] = useState(() => localStorage.getItem('portal_phone') || '')
+  const [pay, setPay] = useState(() => {
+    try { return { bank_name: '', account_holder: '', iban: '', ...JSON.parse(localStorage.getItem('portal_pay') || '{}') } }
+    catch (e) { return { bank_name: '', account_holder: '', iban: '' } }
+  })
+  const setPayK = (k, v) => setPay(s => ({ ...s, [k]: v }))
+  useEffect(() => { localStorage.setItem('portal_name', name) }, [name])
+  useEffect(() => { localStorage.setItem('portal_phone', phone) }, [phone])
+  useEffect(() => { localStorage.setItem('portal_pay', JSON.stringify(pay)) }, [pay])
+
+  const [f, setF] = useState({ invoice_no: '', currency: 'USD', invoice_date: todayISO(), due_date: '', notes: '' })
   const set = (k, v) => setF(s => ({ ...s, [k]: v }))
 
+  // line items — description × qty × price, like a real invoice
+  const mkItem = () => ({ id: uid('it'), desc: '', qty: 1, rate: '' })
+  const [items, setItems] = useState([mkItem()])
+  const setItem = (id, k, v) => setItems(list => list.map(it => it.id === id ? { ...it, [k]: v } : it))
+  const addItem = () => setItems(list => [...list, mkItem()])
+  const delItem = (id) => setItems(list => list.length > 1 ? list.filter(it => it.id !== id) : list)
+  const lineTotal = (it) => (Number(it.qty) || 0) * (Number(it.rate) || 0)
+  const moneyRows = items.filter(it => lineTotal(it) > 0)
+  const total = moneyRows.reduce((s, it) => s + lineTotal(it), 0)
+  const valid = total > 0 && moneyRows.every(it => (it.desc || '').trim())
+
+  const [file, setFile] = useState(null)
+  const fileRef = useRef(null)
+
   const load = async () => { try { setRows(await listMyInvoices()) } catch (e) { setRows(r => r || []); notify('Couldn’t load your invoices', 'error') } }
-  // realtime (own rows only, thanks to RLS) + a slow poll fallback, so status changes
-  // made by the manager appear without a manual refresh
+  // realtime (own rows only via RLS) + slow poll fallback → manager status changes appear live
   useEffect(() => {
     load()
     const ch = supabase.channel('my-invoices-live')
@@ -145,7 +172,6 @@ function InvoiceDesk() {
     const poll = setInterval(load, 45000)
     return () => { clearInterval(poll); supabase.removeChannel(ch) }
   }, [])
-  useEffect(() => { localStorage.setItem('portal_name', name) }, [name])
 
   const pickFile = (e) => {
     const picked = e.target.files[0] || null
@@ -158,31 +184,42 @@ function InvoiceDesk() {
   }
   const clearFile = () => { setFile(null); if (fileRef.current) fileRef.current.value = '' }
 
-  const valid = Number(f.amount) > 0
+  const suggestNo = 'INV-' + String(((rows && rows.length) || 0) + 1).padStart(3, '0')
+
   const submit = async (e) => {
     e.preventDefault(); if (busy || !valid) return
     setBusy(true)
     try {
       let attachment = null
       if (file) attachment = await uploadAttachment(userId, file)
+      const cleanItems = moneyRows.map(it => ({ desc: it.desc.trim(), qty: Number(it.qty) || 0, rate: Number(it.rate) || 0 }))
       await createInvoice({
-        user_id: userId, email: session.user.email, name: name.trim() || null,
-        amount: Number(f.amount || 0), currency: f.currency, invoice_date: f.invoice_date || null,
-        description: (f.description || '').trim() || null, attachment, status: 'pending',
+        user_id: userId, email: session.user.email,
+        name: name.trim() || null, phone: phone.trim() || null,
+        invoice_no: (f.invoice_no || '').trim() || suggestNo,
+        amount: total, currency: f.currency,
+        invoice_date: f.invoice_date || null, due_date: f.due_date || null,
+        description: cleanItems.map(i => i.desc).join(' · ').slice(0, 300) || null,   // summary for list views
+        items: cleanItems,
+        bank_name: (pay.bank_name || '').trim() || null,
+        account_holder: (pay.account_holder || '').trim() || null,
+        iban: (pay.iban || '').trim() || null,
+        notes: (f.notes || '').trim() || null,
+        attachment, status: 'pending',
       })
-      setF({ amount: '', currency: f.currency, invoice_date: todayISO(), description: '' })
+      setF({ invoice_no: '', currency: f.currency, invoice_date: todayISO(), due_date: '', notes: '' })
+      setItems([mkItem()])
       clearFile()
       notify('Invoice submitted ✅', 'success'); load()
     } catch (err) { notify(err.message || 'Couldn’t submit — try again', 'error') }
     setBusy(false)
   }
   const remove = async (r) => {
-    if (!await ask({ title: 'Delete invoice', message: `Delete the ${money(r.amount, r.currency)} invoice? This can’t be undone.`, confirmText: 'Delete' })) return
+    if (!await ask({ title: 'Delete invoice', message: `Delete the ${invMoney(r.amount, r.currency)} invoice? This can’t be undone.`, confirmText: 'Delete' })) return
     try { await deleteInvoice(r.id, r.attachment); notify('Invoice deleted', 'info'); load() } catch (e) { notify('Couldn’t delete', 'error') }
   }
   const openFile = async (path) => { try { const u = await attachmentUrl(path); if (u) window.open(u, '_blank') } catch (e) { notify('Couldn’t open the file', 'error') } }
 
-  // status counts + a per-currency total, so the employee sees where they stand at a glance
   const counts = useMemo(() => {
     const c = { pending: 0, approved: 0, paid: 0, rejected: 0 }
     for (const r of rows || []) c[r.status || 'pending'] = (c[r.status || 'pending'] || 0) + 1
@@ -201,7 +238,10 @@ function InvoiceDesk() {
           <Logo size={30} />
           <div><b>Invoice portal</b><br /><small className="muted">{session.user.email}</small></div>
         </div>
-        <button className="btn ghost sm" onClick={signOut}><Icon name="logout" size={15} /> Sign out</button>
+        <div className={styles.headActions}>
+          <ThemeBtn />
+          <button className="btn ghost sm" onClick={signOut}><Icon name="logout" size={15} /> Sign out</button>
+        </div>
       </header>
 
       {rows && rows.length > 0 && (
@@ -210,30 +250,75 @@ function InvoiceDesk() {
             <span key={k} className={`tag ${STATUS[k].tag}`} title={STATUS[k].hint}>{STATUS[k].label} · {n}</span>
           ))}
           <span className={styles.summaryTotal}>
-            Total: {totals.map(([code, amt]) => money(amt, code)).join('  +  ')}
+            Total: {totals.map(([code, amt]) => invMoney(amt, code)).join('  +  ')}
           </span>
         </div>
       )}
 
       <div className={styles.deskGrid}>
-        {/* submit */}
+        {/* ── the invoice form ── */}
         <form className="panel" onSubmit={submit} style={{ alignSelf: 'start' }}>
           <div className="panel-h"><span className="hicon"><Icon name="plus" size={16} /></span><h2>New invoice</h2></div>
-          <div className="field"><label>Your name <small className="muted">(shown to your manager)</small></label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" /></div>
+
+          <div className={styles.secHead}>Invoice details</div>
           <div className="two">
-            <div className="field"><label>Amount *</label>
-              <input type="number" step="0.01" min="0.01" value={f.amount} onChange={e => set('amount', e.target.value)} placeholder="0.00" required /></div>
+            <div className="field"><label>Invoice #</label>
+              <input value={f.invoice_no} onChange={e => set('invoice_no', e.target.value)} placeholder={suggestNo} /></div>
             <div className="field"><label>Currency</label>
-              <select value={f.currency} onChange={e => set('currency', e.target.value)}>
-                {CURS.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
-              </select></div>
+              <div className={styles.curSeg}>
+                {INVOICE_CURRENCIES.map(c => (
+                  <button type="button" key={c.code} className={f.currency === c.code ? styles.curOn : ''}
+                    onClick={() => set('currency', c.code)}>{c.label}</button>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="field"><label>Invoice date</label>
-            <input type="date" value={f.invoice_date} onChange={e => set('invoice_date', e.target.value)} /></div>
-          <div className="field"><label>What’s it for?</label>
-            <textarea value={f.description} onChange={e => set('description', e.target.value)} rows={2} placeholder="Describe the work / expense…" /></div>
-          <div className="field"><label>Attachment <small className="muted">(PDF or image, optional, ≤{MAX_FILE_MB} MB)</small></label>
+          <div className="two">
+            <div className="field"><label>Invoice date</label>
+              <input type="date" value={f.invoice_date} onChange={e => set('invoice_date', e.target.value)} /></div>
+            <div className="field"><label>Due date <small className="muted">(optional)</small></label>
+              <input type="date" value={f.due_date} onChange={e => set('due_date', e.target.value)} /></div>
+          </div>
+
+          <div className={styles.secHead}>Items</div>
+          <div className={styles.items}>
+            <div className={styles.itemHead}><span>What did you do?</span><span>Qty</span><span>Price</span><span /></div>
+            {items.map(it => (
+              <div className={styles.itemRow} key={it.id}>
+                <input value={it.desc} onChange={e => setItem(it.id, 'desc', e.target.value)} placeholder="e.g. UI design — landing page" />
+                <input type="number" min="1" step="1" value={it.qty} onChange={e => setItem(it.id, 'qty', e.target.value)} />
+                <input type="number" min="0" step="0.01" value={it.rate} onChange={e => setItem(it.id, 'rate', e.target.value)} placeholder="0.00" />
+                <button type="button" className={styles.itemDel} onClick={() => delItem(it.id)} disabled={items.length === 1} title="Remove item">
+                  <Icon name="trash" size={13} />
+                </button>
+              </div>
+            ))}
+            <button type="button" className={styles.addItem} onClick={addItem}><Icon name="plus" size={13} /> Add item</button>
+            <div className={styles.totalRow}><span>Total</span><b>{invMoney(total, f.currency)}</b></div>
+          </div>
+
+          <div className={styles.secHead}>Your details</div>
+          <div className="two">
+            <div className="field"><label>Full name</label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" /></div>
+            <div className="field"><label>Phone <small className="muted">(optional)</small></label>
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+374 …" /></div>
+          </div>
+
+          <div className={styles.secHead}>Payment details <small className="muted">· how you get paid — saved on this device</small></div>
+          <div className="two">
+            <div className="field"><label>Bank</label>
+              <input value={pay.bank_name} onChange={e => setPayK('bank_name', e.target.value)} placeholder="e.g. Ameriabank" /></div>
+            <div className="field"><label>Account holder</label>
+              <input value={pay.account_holder} onChange={e => setPayK('account_holder', e.target.value)} placeholder="Name on the account" /></div>
+          </div>
+          <div className="field"><label>IBAN / account / card number</label>
+            <input value={pay.iban} onChange={e => setPayK('iban', e.target.value)} placeholder="AM… / GB… / card number" /></div>
+
+          <div className={styles.secHead}>Extras</div>
+          <div className="field"><label>Notes <small className="muted">(optional)</small></label>
+            <textarea value={f.notes} onChange={e => set('notes', e.target.value)} rows={2} placeholder="Anything your manager should know…" /></div>
+          <div className="field"><label>Attachment <small className="muted">(PDF or image, ≤{MAX_FILE_MB} MB)</small></label>
             <input ref={fileRef} type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={pickFile} />
             {file ? (
               <div className={styles.fileChip}>
@@ -247,12 +332,14 @@ function InvoiceDesk() {
               </button>
             )}
           </div>
+
           <button className="btn" type="submit" disabled={busy || !valid} style={{ width: '100%', justifyContent: 'center' }}>
-            {busy ? 'Submitting…' : 'Submit invoice'}
+            {busy ? 'Submitting…' : total > 0 ? `Submit invoice · ${invMoney(total, f.currency)}` : 'Submit invoice'}
           </button>
+          {!valid && total > 0 && <small className={styles.formHint}>Each item with a price needs a description.</small>}
         </form>
 
-        {/* my invoices */}
+        {/* ── their invoice history ── */}
         <div className="panel">
           <div className="panel-h">
             <span className="hicon"><Icon name="invoice" size={16} /></span><h2>Your invoices</h2>
@@ -271,10 +358,16 @@ function InvoiceDesk() {
                   {rows.map(r => {
                     const st = STATUS[r.status] || STATUS.pending
                     return (
-                      <motion.div key={r.id} className={styles.invRow} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                      <motion.div key={r.id} className={`${styles.invRow} ${styles['st_' + (r.status || 'pending')]}`}
+                        layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                         <div className={styles.invMain}>
-                          <b>{money(r.amount, r.currency)}</b>
-                          <small className="muted">{fmtDate(r.invoice_date)}{r.description ? ' · ' + r.description : ''}</small>
+                          <div className={styles.invTop}>
+                            <b>{invMoney(r.amount, r.currency)}</b>
+                            {r.invoice_no && <span className={styles.invNo}>{r.invoice_no}</span>}
+                          </div>
+                          <small className="muted">
+                            {fmtDate(r.invoice_date)}{r.due_date ? ` · due ${fmtDate(r.due_date)}` : ''}{r.description ? ' · ' + r.description : ''}
+                          </small>
                         </div>
                         <span className={`tag ${st.tag}`} title={st.hint}>{st.label}</span>
                         {r.attachment && <button type="button" className="iconbtn" title="View file" onClick={() => openFile(r.attachment)}><Icon name="eye" size={16} /></button>}

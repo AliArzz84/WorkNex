@@ -365,3 +365,18 @@
 .rtIns { color: var(--accent); }
 .rtDel { color: #c0392b; }
 .rowTools button:hover { background: rgba(0, 0, 0, .08); }
+
+/* mobile: header controls wrap under the table name; grid stays scrollable */
+@media (max-width: 640px) {
+    .topbar { flex-wrap: wrap }
+    .head { flex-wrap: wrap }
+    .titleInput { flex: 1 1 160px; min-width: 0; max-width: 100% }
+    .headActions {
+        margin-inline-start: 0;
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    .richScroll { max-height: 68dvh }
+    .cell { flex: 1 0 140px; min-width: 140px }
+}

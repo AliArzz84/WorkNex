@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../lib/store.jsx'
 import { supabase } from '../../lib/supabaseClient.js'
 import { EmptyState, Icon, Tag, stagger, item } from '../../components/ui/ui.jsx'
 import {
-  listAllInvoices, updateInvoice, deleteInvoice, attachmentUrl,
+  listAllInvoices, updateInvoice, deleteInvoice, attachmentUrl, invMoney,
   approveAccessRequest, rejectAccessRequest, deleteAccessRequest,
 } from '../../lib/portalApi.js'
 import styles from './Invoices.module.css'
@@ -76,9 +76,18 @@ function AccessRequests() {
 }
 
 export default function Invoices() {
-  const { db, cloud, money, toUsd, fmtBase, notify, ask } = useStore()
+  const { db, cloud, fmtBase, usdToGbp, usdToAmd, notify, ask } = useStore()
   const [rows, setRows] = useState(null)      // null = loading
   const [filter, setFilter] = useState('all')
+  const [openId, setOpenId] = useState(null)  // expanded invoice (items + payment details)
+
+  // invoice currencies are USD/GBP/AMD — GBP/AMD convert via the store's live rates
+  const toUsdInv = (amt, code) => {
+    const n = Number(amt || 0)
+    if (code === 'GBP') return usdToGbp ? n / usdToGbp : n
+    if (code === 'AMD') return usdToAmd ? n / usdToAmd : n
+    return n
+  }
 
   const load = async () => { try { setRows(await listAllInvoices()) } catch (e) { setRows([]); notify?.('Couldn’t load invoices', 'error') } }
   useEffect(() => {
@@ -89,11 +98,11 @@ export default function Invoices() {
     return () => supabase.removeChannel(ch)
   }, [cloud])
 
-  const projName = (id) => db.projects.find(p => p.id === id)?.name || ''
   const setStatus = async (r, status) => { try { await updateInvoice(r.id, { status }); load() } catch (e) { notify?.('Couldn’t update', 'error') } }
   const setProject = async (r, project) => { try { await updateInvoice(r.id, { project: project || null }); load() } catch (e) { notify?.('Couldn’t update', 'error') } }
   const remove = async (r) => { if (await ask({ title: 'Delete invoice', message: 'Delete this invoice and its file?' })) { try { await deleteInvoice(r.id, r.attachment); load() } catch (e) { notify?.('Couldn’t delete', 'error') } } }
   const openFile = async (path) => { try { const u = await attachmentUrl(path); if (u) window.open(u, '_blank') } catch (e) { notify?.('Couldn’t open the file', 'error') } }
+  const copy = async (text, label = 'Copied') => { try { await navigator.clipboard.writeText(text); notify?.(label, 'success') } catch (e) {} }
 
   const shown = useMemo(() => (rows || []).filter(r => filter === 'all' || (r.status || 'pending') === filter), [rows, filter])
   // group by employee (user_id), newest activity first
@@ -130,7 +139,7 @@ export default function Invoices() {
         {rows === null ? <p className="muted" style={{ padding: '10px 2px' }}>Loading…</p>
           : groups.length === 0 ? <EmptyState icon="invoice" text={filter === 'all' ? 'No invoices submitted yet' : 'None in this status'} />
             : groups.map(g => {
-              const total = g.items.reduce((s, r) => s + toUsd(Number(r.amount || 0), r.currency), 0)
+              const total = g.items.reduce((s, r) => s + toUsdInv(r.amount, r.currency), 0)
               return (
                 <div className={styles.group} key={g.userId}>
                   <div className={styles.groupHead}>
@@ -140,33 +149,86 @@ export default function Invoices() {
                   </div>
                   <div className={styles.table}>
                     {g.items.map(r => {
-                      const st = STATUS[r.status] || STATUS.pending
+                      const open = openId === r.id
+                      const lineItems = Array.isArray(r.items) ? r.items : []
                       return (
-                        <div className={styles.row} key={r.id}>
-                          <div className={styles.amt}>
-                            <b>{money(r.amount, r.currency)}</b>
-                            {r.currency !== 'USD' && <small className="muted">{fmtBase(toUsd(Number(r.amount || 0), r.currency))}</small>}
+                        <Fragment key={r.id}>
+                          <div className={styles.row}>
+                            <div className={styles.amt}>
+                              <b>{invMoney(r.amount, r.currency)}</b>
+                              {r.currency !== 'USD' && <small className="muted">{fmtBase(toUsdInv(r.amount, r.currency))}</small>}
+                            </div>
+                            <div className={styles.desc}>
+                              <span>
+                                {r.invoice_no && <span className={styles.invNo}>{r.invoice_no}</span>}
+                                {r.description || <span className="muted">—</span>}
+                              </span>
+                              <small className="muted">{fmtDate(r.invoice_date)}{r.due_date ? ` · due ${fmtDate(r.due_date)}` : ''}</small>
+                            </div>
+                            <select className={styles.proj} value={r.project || ''} onChange={e => setProject(r, e.target.value)} title="Link to a project">
+                              <option value="">No project</option>
+                              {/* keep a linked-but-deleted project visible instead of a blank select */}
+                              {r.project && !db.projects.some(p => p.id === r.project) && <option value={r.project}>(deleted project)</option>}
+                              {db.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                            <select className={`${styles.status} ${styles['s_' + (r.status || 'pending')]}`} value={r.status || 'pending'} onChange={e => setStatus(r, e.target.value)}>
+                              {STATUS_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                            <div className={styles.rowActions}>
+                              <button className="iconbtn" title={open ? 'Hide details' : 'Details (items, bank info)'} onClick={() => setOpenId(open ? null : r.id)}>
+                                <span style={{ display: 'grid', placeItems: 'center', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+                                  <Icon name="chevron" size={16} />
+                                </span>
+                              </button>
+                              {r.attachment
+                                ? <button className="iconbtn" title="View file" onClick={() => openFile(r.attachment)}><Icon name="eye" size={16} /></button>
+                                : <span className={styles.noFile} title="No attachment"><Icon name="mail" size={15} /></span>}
+                              <button className="iconbtn del" title="Delete" onClick={() => remove(r)}><Icon name="trash" size={16} /></button>
+                            </div>
                           </div>
-                          <div className={styles.desc}>
-                            <span>{r.description || <span className="muted">—</span>}</span>
-                            <small className="muted">{fmtDate(r.invoice_date)}</small>
-                          </div>
-                          <select className={styles.proj} value={r.project || ''} onChange={e => setProject(r, e.target.value)} title="Link to a project">
-                            <option value="">No project</option>
-                            {/* keep a linked-but-deleted project visible instead of a blank select */}
-                            {r.project && !db.projects.some(p => p.id === r.project) && <option value={r.project}>(deleted project)</option>}
-                            {db.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                          </select>
-                          <select className={`${styles.status} ${styles['s_' + (r.status || 'pending')]}`} value={r.status || 'pending'} onChange={e => setStatus(r, e.target.value)}>
-                            {STATUS_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                          </select>
-                          <div className={styles.rowActions}>
-                            {r.attachment
-                              ? <button className="iconbtn" title="View file" onClick={() => openFile(r.attachment)}><Icon name="eye" size={16} /></button>
-                              : <span className={styles.noFile} title="No attachment"><Icon name="mail" size={15} /></span>}
-                            <button className="iconbtn del" title="Delete" onClick={() => remove(r)}><Icon name="trash" size={16} /></button>
-                          </div>
-                        </div>
+                          {open && (
+                            <div className={styles.detail}>
+                              {lineItems.length > 0 && (
+                                <table className={styles.itemsTable}>
+                                  <thead><tr><th>Item</th><th className="right">Qty</th><th className="right">Price</th><th className="right">Total</th></tr></thead>
+                                  <tbody>
+                                    {lineItems.map((it, i) => (
+                                      <tr key={i}>
+                                        <td>{it.desc}</td>
+                                        <td className="right">{it.qty}</td>
+                                        <td className="right">{invMoney(it.rate, r.currency)}</td>
+                                        <td className="right">{invMoney((Number(it.qty) || 0) * (Number(it.rate) || 0), r.currency)}</td>
+                                      </tr>
+                                    ))}
+                                    <tr className={styles.itemsTotal}>
+                                      <td colSpan={3}><b>Total</b></td>
+                                      <td className="right"><b>{invMoney(r.amount, r.currency)}</b></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              )}
+                              <div className={styles.detailGrid}>
+                                {r.phone && <div><small>Phone</small><b>{r.phone}</b></div>}
+                                {r.bank_name && <div><small>Bank</small><b>{r.bank_name}</b></div>}
+                                {r.account_holder && <div><small>Account holder</small><b>{r.account_holder}</b></div>}
+                                {r.iban && (
+                                  <div className={styles.ibanCell}>
+                                    <small>IBAN / account</small>
+                                    <span className={styles.ibanVal}>
+                                      <b>{r.iban}</b>
+                                      <button className={styles.copyBtn} title="Copy" onClick={() => copy(r.iban, 'Account number copied')}><Icon name="copy" size={12} /></button>
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              {!lineItems.length && !r.phone && !r.bank_name && !r.iban && !r.notes && (
+                                <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>No extra details on this invoice.</p>
+                              )}
+                              {r.notes && <p className={styles.notes}><Icon name="chat" size={12} /> {r.notes}</p>}
+                              <small className="muted">Submitted {fmtWhen(r.created_at)}</small>
+                            </div>
+                          )}
+                        </Fragment>
                       )
                     })}
                   </div>

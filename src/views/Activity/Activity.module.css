@@ -567,3 +567,9 @@
 .shareRowMeta small {
     font-size: 11.5px
 }
+/* mobile: share-link rows wrap; the event feed keeps its layout */
+@media (max-width: 640px) {
+    .shareRow { flex-wrap: wrap; row-gap: 6px }
+    .shareRowMeta { align-items: flex-start; text-align: start }
+    .shareRow :global(.share-actions) { margin-inline-start: auto }
+}

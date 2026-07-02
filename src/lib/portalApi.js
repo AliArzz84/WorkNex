@@ -5,6 +5,19 @@ import { supabase } from './supabaseClient.js'
 
 const BUCKET = 'invoices'
 
+/* the only currencies an invoice can be issued in */
+export const INVOICE_CURRENCIES = [
+  { code: 'USD', symbol: '$', label: '$ USD' },
+  { code: 'GBP', symbol: '£', label: '£ GBP' },
+  { code: 'AMD', symbol: '֏', label: '֏ AMD' },
+]
+export const invMoney = (n, code) => {
+  const amt = Number(n || 0)
+  const dp = Math.round(amt * 100) % 100 === 0 ? 0 : 2
+  const num = amt.toLocaleString('en-GB', { minimumFractionDigits: dp, maximumFractionDigits: dp })
+  return code === 'GBP' ? '£' + num : code === 'AMD' ? num + ' AMD' : '$' + num
+}
+
 /* ---------- access requests (public → manager approves) ---------- */
 export async function submitAccessRequest({ name, email, note }) {
   const { error } = await supabase.from('access_requests')

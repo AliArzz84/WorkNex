@@ -173,6 +173,18 @@ drop policy if exists inv_obj_delete on storage.objects;
 create policy inv_obj_delete on storage.objects for delete to authenticated
   using ( bucket_id = 'invoices' and ( (storage.foldername(name))[1] = (select auth.uid())::text or private.is_manager() ) );
 
+-- ── 8) Invoice v2 fields: invoice number, due date, line items, contact + payment
+--     details. Idempotent — safe to run on an existing install.
+alter table public.invoices
+  add column if not exists invoice_no     text,
+  add column if not exists due_date       date,
+  add column if not exists items          jsonb,   -- [{ desc, qty, rate }]
+  add column if not exists phone          text,
+  add column if not exists bank_name      text,
+  add column if not exists account_holder text,
+  add column if not exists iban           text,
+  add column if not exists notes          text;
+
 -- ============================================================
 -- DONE. Notes:
 --  • Existing managers/boss keep full access (role manager/boss → is_manager() = true).

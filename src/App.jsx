@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from './lib/store.jsx'
-import { fadeSlide, Icon, Logo, Clocks, RatesMenu, Presence, Reminders, ConfirmDialog, Toast } from './components/ui/ui.jsx'
+import { fadeSlide, Icon, Logo, RatesMenu, Presence, Reminders, ConfirmDialog, Toast } from './components/ui/ui.jsx'
 import Backups from './components/Backups/Backups.jsx'
 import Dashboard from './views/Dashboard/Dashboard.jsx'
 import Tasks from './views/Tasks/Tasks.jsx'
@@ -238,7 +238,6 @@ export default function App() {
           {!isGuest && <Reminders />}
           <Presence />
           <RatesMenu />
-          <Clocks />
         </div>
 
         <AnimatePresence mode="wait">

@@ -171,12 +171,6 @@
       font-size: 20px
    }
 
-   /* declutter the topbar on small screens */
-   .clocks,
-   .rates {
-      display: none
-   }
-
    /* data tables reflow into readable cards (one card per row) */
    table,
    tbody,
