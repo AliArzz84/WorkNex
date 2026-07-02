@@ -10,7 +10,6 @@ import Diagram from './views/Diagram/Diagram.jsx'
 import Employees from './views/Employees/Employees.jsx'
 import Businesses from './views/Businesses/Businesses.jsx'
 import Projects from './views/Projects/Projects.jsx'
-import Meetings from './views/Meetings/Meetings.jsx'
 import Payroll from './views/Payroll/Payroll.jsx'
 import Teams from './views/Teams/Teams.jsx'
 import Activity from './views/Activity/Activity.jsx'
@@ -27,7 +26,6 @@ import { daysBetween, nextPayday, periodKey } from './lib/data.js'
 const NAV = [
   { key: "dashboard", icon: "dashboard" },
   { key: "tasks", icon: "tasks" },
-  { key: "meetings", icon: "meetings" },
   { key: "projects", icon: "projects" },
   { key: "businesses", icon: "business" },
   { key: "employees", icon: "employees" },
@@ -40,10 +38,11 @@ const NAV = [
   { key: "invoices", icon: "invoice" },
   { key: "activity", icon: "history" },
 ]
-const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, requests: Requests, invoices: Invoices, finance: Finance, sheets: Sheets, diagram: Diagram, employees: Employees, projects: Projects, meetings: Meetings, payroll: Payroll, teams: Teams, activity: Activity }
-const ADDABLE = { employees: "employee", projects: "project", meetings: "meeting", teams: "team", tasks: "task", finance: "transaction", businesses: "business" }
-// only the views that use the *topbar* search box (Projects has its own in-section search)
-const SEARCHABLE = new Set(["tasks", "employees", "meetings", "activity"])
+const VIEWS = { dashboard: Dashboard, businesses: Businesses, tasks: Tasks, requests: Requests, invoices: Invoices, finance: Finance, sheets: Sheets, diagram: Diagram, employees: Employees, projects: Projects, payroll: Payroll, teams: Teams, activity: Activity }
+const ADDABLE = { employees: "employee", projects: "project", teams: "team", tasks: "task", finance: "transaction", businesses: "business" }
+// only the views that use the *topbar* search box (Projects has its own in-section search;
+// Meetings now lives inside the Tasks view and shares its "tasks" search)
+const SEARCHABLE = new Set(["tasks", "employees", "activity"])
 
 export default function App() {
   const { db, t, L, theme, toggleTheme, role, setRole, readOnly, canPreview,
@@ -100,7 +99,8 @@ export default function App() {
   const projBadge = db.projects.filter(p => p.status !== "done" && p.deadline && daysBetween(p.deadline) <= 7).length
   // employees waiting for you to approve their portal access
   const accessBadge = (accessRequests || []).filter(r => (r.status || "pending") === "pending").length
-  const badges = { tasks: taskBadge, meetings: meetBadge, payroll: payBadge, requests: reqBadge, projects: projBadge, invoices: accessBadge }
+  // Meetings now lives inside Tasks, so its badge folds into the same nav item
+  const badges = { tasks: taskBadge + meetBadge, payroll: payBadge, requests: reqBadge, projects: projBadge, invoices: accessBadge }
 
   // Toggle only switches edit mode; it stays on the current page.
   const switchRole = (r) => setRole(r)

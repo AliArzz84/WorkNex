@@ -69,7 +69,7 @@ export default function Dashboard() {
       <div className="panel">
         <div className="panel-h">
           <span className="hicon"><Icon name="meetings" size={16} /></span><h2>{t("todayMeetings")}</h2>
-          <div className="right"><button className="btn ghost sm" onClick={() => setView("meetings")}><Icon name="arrow" size={15} /></button></div>
+          <div className="right"><button className="btn ghost sm" onClick={() => setView("tasks")}><Icon name="arrow" size={15} /></button></div>
         </div>
         {upMeet.length ? (
           <motion.div variants={stagger} initial="initial" animate="animate">

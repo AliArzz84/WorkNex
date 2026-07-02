@@ -63,6 +63,63 @@ function MiniTile({ date }) {
   )
 }
 
+/* ── Meetings tab — the old standalone Meetings view, folded in here ── */
+const MPRI = { high: ["red", "High"], med: ["amber", "Medium"], low: ["gray", "Low"] }
+const MPW = { high: 0, med: 1, low: 2 }
+function MeetingsPanel() {
+  const { db, t, fmtDateTime, relDay, empById, search, openEditor, removeItem, toggleMeetDone, ask, readOnly } = useStore()
+  const rows = db.meetings
+    .filter(m => JSON.stringify(m).toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => (new Date(a.datetime) - new Date(b.datetime)) || ((MPW[a.priority] ?? 1) - (MPW[b.priority] ?? 1)))
+
+  return (
+    <div className="panel">
+      <div className="panel-h">
+        <h2>{t("nav.meetings")}<span className="count">{rows.length}</span></h2>
+        {!readOnly && (
+          <div className="right">
+            <button className="btn ghost sm add-btn" onClick={() => openEditor("meeting")}><Icon name="plus" size={14} /> Meeting</button>
+          </div>
+        )}
+      </div>
+      {rows.length ? (
+        <motion.div variants={stagger} initial="initial" animate="animate">
+          <AnimatePresence>
+            {rows.map(m => {
+              const dd = daysBetween(m.datetime)
+              const past = dd < 0 || m.done
+              const proj = m.projectId && db.projects.find(p => p.id === m.projectId)
+              return (
+                <motion.div key={m.id} className={`alert ${m.done ? "green" : dd <= 2 ? "blue" : "gray"}`} style={{ opacity: past ? 0.6 : 1 }} variants={item} layout exit={{ opacity: 0 }}>
+                  <div className="dot" />
+                  <div style={{ flex: 1 }}>
+                    <b style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {m.title}
+                      {m.priority && <Tag color={MPRI[m.priority]?.[0] || "gray"}>{MPRI[m.priority]?.[1]}</Tag>}
+                      {m.done && <span style={{ color: "var(--green-ink)" }}>✓</span>}
+                    </b>
+                    <p>{m.location} {proj ? "• " + proj.name : ""}</p>
+                    <div style={{ display: "flex", marginTop: 5 }}>{(m.attendees || []).map(id => <Avatar key={id} emp={empById(id)} />)}</div>
+                  </div>
+                  <div style={{ textAlign: "end" }}>
+                    <div className="when">{fmtDateTime(m.datetime)}</div>
+                    <div className="when" style={{ color: dd <= 1 && dd >= 0 ? "var(--blue)" : "var(--muted)" }}>{relDay(dd)}</div>
+                    <div className="row-actions" style={{ justifyContent: "flex-end", marginTop: 6 }}>
+                      <button className="iconbtn" title={t("done")} onClick={() => toggleMeetDone(m.id)}><Icon name={m.done ? "undo" : "check"} size={16} /></button>
+                      <button className="iconbtn" onClick={() => openEditor("meeting", m.id)}><Icon name="edit" size={16} /></button>
+                      <button className="iconbtn del" onClick={async () => { if (await ask(t("confirmDel"))) removeItem("meeting", m.id) }}><Icon name="trash" size={16} /></button>
+                    </div>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </motion.div>
+      ) : <EmptyState icon="meetings" text={t("noData")} />}
+    </div>
+  )
+}
+
 export default function Tasks() {
   const { db, fmtDate, relDay, fmtTime, search, todayExtras } = useStore()
   const [filter, setFilter] = useState("todo")
@@ -95,7 +152,10 @@ export default function Tasks() {
   const futureDates = Object.keys(groups).sort()
   const upcomingCount = future.length + upMeet.length + upProj.length
 
-  const pills = [["todo", `To do (${todo.length})`], ["done", `Done (${doneList.length})`]]
+  // meeting count for the tab pill (all meetings, not just upcoming ones)
+  const meetCount = db.meetings.filter(m => JSON.stringify(m).toLowerCase().includes(search.toLowerCase())).length
+
+  const pills = [["todo", `To do (${todo.length})`], ["done", `Done (${doneList.length})`], ["meetings", `Meetings (${meetCount})`]]
 
   return (
     <div>
@@ -105,7 +165,9 @@ export default function Tasks() {
         ))}
       </div>
 
-      {filter === "done" ? (
+      {filter === "meetings" ? (
+        <MeetingsPanel />
+      ) : filter === "done" ? (
         <div className="panel">
           <div className="panel-h"><span className="hicon"><Icon name="check" size={16} /></span><h2>Completed</h2><span className="count">{doneList.length}</span></div>
           {doneList.length ? (

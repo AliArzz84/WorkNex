@@ -68,9 +68,18 @@ function Field({ label, children }) {
 }
 
 export default function Editor() {
-  const { editing, closeEditor, db, t, saveItem } = useStore()
+  const { editing } = useStore()
   if (!editing) return null
-  const { type, id } = editing
+  // key remounts the modal with fresh state whenever a different item is opened
+  return <EditorModal key={editing.type + ":" + (editing.id || "new")} editing={editing} />
+}
+
+function EditorModal({ editing }) {
+  const { closeEditor, db, t, saveItem } = useStore()
+  const { id } = editing
+  // local type so a NEW item can be switched between Task and Meeting from the top of the modal
+  const [type, setType] = useState(editing.type)
+  const canPickType = !id && (editing.type === "task" || editing.type === "meeting")
 
   const existing = id ? {
     employee: db.employees, project: db.projects, meeting: db.meetings, team: db.teams,
@@ -93,7 +102,17 @@ export default function Editor() {
         onMouseDown={e => { if (e.target === e.currentTarget) closeEditor() }}>
         <motion.div className="modal" initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95 }} transition={{ type: "spring", stiffness: 320, damping: 28 }}>
-          <div className="modal-h"><h2>{t(titleKey)}</h2><button className="x" onClick={closeEditor}>✕</button></div>
+          <div className="modal-h"><h2>{canPickType ? "Add new" : t(titleKey)}</h2><button className="x" onClick={closeEditor}>✕</button></div>
+          {canPickType && (
+            <div className="type-seg">
+              <button type="button" className={type === "task" ? "on" : ""} onClick={() => setType("task")}>
+                <Icon name="tasks" size={15} /> Task
+              </button>
+              <button type="button" className={type === "meeting" ? "on" : ""} onClick={() => setType("meeting")}>
+                <Icon name="meetings" size={15} /> Meeting
+              </button>
+            </div>
+          )}
           {type === "employee" && <EmployeeForm existing={existing} id={id} onSave={saveItem} close={closeEditor} />}
           {type === "project" && <ProjectForm existing={existing} id={id} onSave={saveItem} close={closeEditor} />}
           {type === "meeting" && <MeetingForm existing={existing} id={id} onSave={saveItem} close={closeEditor} />}

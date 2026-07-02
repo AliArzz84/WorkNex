@@ -24,8 +24,9 @@ const emailInitials = (e) => {
 }
 
 /* ---------- Shared view-only links (managers/boss create & revoke) ---------- */
+// "tasks" now includes meetings (they're a tab inside that view)
 const SHARE_SECTIONS = [
-  ["dashboard", "Dashboard"], ["tasks", "Tasks"], ["meetings", "Meetings"], ["projects", "Projects"],
+  ["dashboard", "Dashboard"], ["tasks", "Tasks & meetings"], ["projects", "Projects"],
   ["businesses", "Businesses"], ["employees", "Employees"], ["teams", "Teams"], ["payroll", "Payroll"],
   ["finance", "Finance"], ["sheets", "Tables"], ["diagram", "Diagram"], ["activity", "Activity"],
 ]

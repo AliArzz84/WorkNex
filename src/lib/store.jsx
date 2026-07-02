@@ -586,7 +586,7 @@ export function StoreProvider({ children }) {
     const out = []
     db.meetings.filter(m => !m.done).forEach(m => {
       const dd = daysBetween(m.datetime)
-      if (dd >= 0 && dd <= 2) out.push({ key: "m" + m.id, cat: "meeting", view: "meetings", urgent: dd === 0, color: "blue", title: L.meetReminder(m.title), sub: fmtDateTime(m.datetime), when: relDay(dd), sort: dd * 10 })
+      if (dd >= 0 && dd <= 2) out.push({ key: "m" + m.id, cat: "meeting", view: "tasks", urgent: dd === 0, color: "blue", title: L.meetReminder(m.title), sub: fmtDateTime(m.datetime), when: relDay(dd), sort: dd * 10 })
     })
     db.employees.filter(e => e.status === "active").forEach(e => {
       const pd = nextPayday(e); const dd = daysBetween(pd.toISOString()); const per = periodKey(pd)
