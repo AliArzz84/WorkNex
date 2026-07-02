@@ -142,32 +142,32 @@ export default function App() {
                 : "Access doesn’t expire"}</small>
             </div>
           ) : (<>
-          {!effectiveCollapsed && (<>
-          <button className="btn-soft tools-toggle" onClick={toggleTools} aria-expanded={toolsOpen}>
-            <Icon name="expand" size={15} />
-            <span style={{ flex: 1, textAlign: "start" }}>Data</span>
-            <motion.span animate={{ rotate: toolsOpen ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ display: "grid", placeItems: "center" }}>
-              <Icon name="chevron" size={15} />
-            </motion.span>
-          </button>
-          <AnimatePresence initial={false}>
-            {toolsOpen && (
-              <motion.div key="tools" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }} style={{ overflow: "hidden", display: "flex", flexDirection: "column", gap: 8 }}>
-                <button className="btn-soft" onClick={exportData}><Icon name="download" size={16} /> {L.exportData}</button>
-                <button className="btn-soft" onClick={() => fileRef.current.click()}><Icon name="upload" size={16} /> {L.importData}</button>
-                {cloud && (
-                  <button className="btn-soft" onClick={() => setBackupsOpen(true)}><Icon name="history" size={16} /> Backups</button>
+            {!effectiveCollapsed && (<>
+              <button className="btn-soft tools-toggle" onClick={toggleTools} aria-expanded={toolsOpen}>
+                <Icon name="expand" size={15} />
+                <span style={{ flex: 1, textAlign: "start" }}>Data</span>
+                <motion.span animate={{ rotate: toolsOpen ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ display: "grid", placeItems: "center" }}>
+                  <Icon name="chevron" size={15} />
+                </motion.span>
+              </button>
+              <AnimatePresence initial={false}>
+                {toolsOpen && (
+                  <motion.div key="tools" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }} style={{ overflow: "hidden", display: "flex", flexDirection: "column", gap: 8 }}>
+                    <button className="btn-soft" onClick={exportData}><Icon name="download" size={16} /> {L.exportData}</button>
+                    <button className="btn-soft" onClick={() => fileRef.current.click()}><Icon name="upload" size={16} /> {L.importData}</button>
+                    {cloud && (
+                      <button className="btn-soft" onClick={() => setBackupsOpen(true)}><Icon name="history" size={16} /> Backups</button>
+                    )}
+                    {!readOnly && (
+                      <button className="btn-soft danger" onClick={clearAll}><Icon name="trash" size={16} /> {L.clearAll}</button>
+                    )}
+                  </motion.div>
                 )}
-                {!readOnly && (
-                  <button className="btn-soft danger" onClick={clearAll}><Icon name="trash" size={16} /> {L.clearAll}</button>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-          </>)}
-          <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
-            onChange={e => e.target.files[0] && importData(e.target.files[0])} />
+              </AnimatePresence>
+            </>)}
+            <input ref={fileRef} type="file" accept="application/json" style={{ display: "none" }}
+              onChange={e => e.target.files[0] && importData(e.target.files[0])} />
           </>)}
           {cloud && session && (
             <div className="account-box">

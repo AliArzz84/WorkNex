@@ -6,13 +6,13 @@ import { Logo } from '../ui/ui.jsx'
 
 // each contact channel asks for the right kind of handle, with a real example
 const CHANNELS = {
-  WhatsApp:  { label: "Your WhatsApp number",   ph: "e.g. +98 912 345 6789",     type: "tel" },
-  Telegram:  { label: "Your Telegram username", ph: "e.g. @sara_ahmadi",          type: "text" },
-  Discord:   { label: "Your Discord username",  ph: "e.g. sara_92",               type: "text" },
-  Instagram: { label: "Your Instagram handle",  ph: "e.g. @sara.ahmadi",          type: "text" },
-  Email:     { label: "Your email address",     ph: "e.g. sara@email.com",        type: "email" },
-  Phone:     { label: "Your phone number",      ph: "e.g. +98 912 345 6789",      type: "tel" },
-  Other:     { label: "How can we reach you?",  ph: "a username, link, or number", type: "text" },
+  WhatsApp: { label: "Your WhatsApp number", ph: "e.g. +98 912 345 6789", type: "tel" },
+  Telegram: { label: "Your Telegram username", ph: "e.g. @sara_ahmadi", type: "text" },
+  Discord: { label: "Your Discord username", ph: "e.g. sara_92", type: "text" },
+  Instagram: { label: "Your Instagram handle", ph: "e.g. @sara.ahmadi", type: "text" },
+  Email: { label: "Your email address", ph: "e.g. sara@email.com", type: "email" },
+  Phone: { label: "Your phone number", ph: "e.g. +98 912 345 6789", type: "tel" },
+  Other: { label: "How can we reach you?", ph: "a username, link, or number", type: "text" },
 }
 const CHANNEL_KEYS = Object.keys(CHANNELS)
 const EMPTY = { name: "", category: "meeting", channel: "WhatsApp", contact: "", message: "" }

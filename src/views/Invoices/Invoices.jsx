@@ -102,7 +102,7 @@ export default function Invoices() {
   const setProject = async (r, project) => { try { await updateInvoice(r.id, { project: project || null }); load() } catch (e) { notify?.('Couldn’t update', 'error') } }
   const remove = async (r) => { if (await ask({ title: 'Delete invoice', message: 'Delete this invoice and its file?' })) { try { await deleteInvoice(r.id, r.attachment); load() } catch (e) { notify?.('Couldn’t delete', 'error') } } }
   const openFile = async (path) => { try { const u = await attachmentUrl(path); if (u) window.open(u, '_blank') } catch (e) { notify?.('Couldn’t open the file', 'error') } }
-  const copy = async (text, label = 'Copied') => { try { await navigator.clipboard.writeText(text); notify?.(label, 'success') } catch (e) {} }
+  const copy = async (text, label = 'Copied') => { try { await navigator.clipboard.writeText(text); notify?.(label, 'success') } catch (e) { } }
 
   const shown = useMemo(() => (rows || []).filter(r => filter === 'all' || (r.status || 'pending') === filter), [rows, filter])
   // group by employee (user_id), newest activity first

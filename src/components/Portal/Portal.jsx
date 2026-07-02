@@ -42,9 +42,10 @@ function PortalAuth() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)           // { type, text }
   const [sent, setSent] = useState(false)
+  const [confirmEmail, setConfirmEmail] = useState(null)   // set after sign-up → "check your inbox" screen
 
   const authErr = (error) => {
-    let m = ''; try { m = String((error && (error.message || error.error_description)) ?? '').trim() } catch (e) {}
+    let m = ''; try { m = String((error && (error.message || error.error_description)) ?? '').trim() } catch (e) { }
     const gate = !m || m === '{}' || m.startsWith('{') || /database error|unexpected_failure|saving new user|not authoris/i.test(m)
     if (tab === 'signup' && gate) return 'This email isn’t approved yet. Ask your manager to approve your access request first.'
     if (tab === 'signin' && /invalid login/i.test(m)) return 'Wrong email or password. If you haven’t made an account yet, use Sign up.'
@@ -57,19 +58,36 @@ function PortalAuth() {
     try {
       if (tab === 'request') {
         if (!name.trim() || !email.trim()) { setMsg({ type: 'err', text: 'Add your name and email.' }); setBusy(false); return }
-        await submitAccessRequest({ name, email, note })
-        setSent(true)
+        const status = await submitAccessRequest({ name, email, note })
+        if (status === 'ok') setSent(true)
+        else if (status === 'already_member') setMsg({ type: 'ok', text: 'You already have access — just Sign in (or Sign up to set a password if you haven’t yet).' })
+        else if (status === 'already_requested') setMsg({ type: 'ok', text: 'You’ve already requested access — please wait for your manager to approve it.' })
+        else setMsg({ type: 'err', text: 'Please enter a valid email address.' })
       } else if (tab === 'signin') {
         const { error } = await signIn(email.trim(), password)
         if (error) setMsg({ type: 'err', text: authErr(error) })
       } else {
-        const { error } = await signUp(email.trim(), password)
+        const { data, error } = await signUp(email.trim(), password)
         if (error) setMsg({ type: 'err', text: authErr(error) })
-        else setMsg({ type: 'ok', text: 'Account created — you can sign in now.' })
+        else if (data?.session) setMsg({ type: 'ok', text: 'Account created — signing you in…' })  // confirmation off → already logged in
+        else setConfirmEmail(email.trim())                                                          // confirmation on → go confirm via email
       }
     } catch (err) { setMsg({ type: 'err', text: authErr(err) }) }
     setBusy(false)
   }
+
+  if (confirmEmail) return (
+    <div className={styles.centered}>
+      <div className={styles.iconBadge}><Icon name="mail" size={26} /></div>
+      <h2 style={{ margin: '10px 0 4px' }}>Check your inbox 📬</h2>
+      <p className="muted" style={{ textAlign: 'center' }}>
+        We sent a confirmation link to <b style={{ color: 'var(--txt)' }}>{confirmEmail}</b>.
+        Open it and tap <b>Confirm my email</b> to activate your account — then come back here and sign in.
+      </p>
+      <button className="btn ghost" onClick={() => { setConfirmEmail(null); setTab('signin'); setPassword('') }}>Back to sign in</button>
+      <small className="muted" style={{ fontSize: 11.5 }}>Didn’t get it? Check your spam folder.</small>
+    </div>
+  )
 
   if (sent) return (
     <div className={styles.centered}>

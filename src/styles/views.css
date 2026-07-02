@@ -53,23 +53,50 @@
    transform-origin: center;
    animation: logoBreathe 1.6s ease-in-out infinite;
 }
+
 .loading-logo path {
    stroke-dasharray: 150;
    animation: logoDraw 1.6s ease-in-out infinite;
 }
 
 @keyframes logoBreathe {
-   0%, 100% { opacity: .8; transform: scale(.93) }
-   50% { opacity: 1; transform: scale(1) }
+
+   0%,
+   100% {
+      opacity: .8;
+      transform: scale(.93)
+   }
+
+   50% {
+      opacity: 1;
+      transform: scale(1)
+   }
 }
+
 @keyframes logoDraw {
-   0% { stroke-dashoffset: 150 }
-   55% { stroke-dashoffset: 0 }
-   78% { stroke-dashoffset: 0 }
-   100% { stroke-dashoffset: 150 }
+   0% {
+      stroke-dashoffset: 150
+   }
+
+   55% {
+      stroke-dashoffset: 0
+   }
+
+   78% {
+      stroke-dashoffset: 0
+   }
+
+   100% {
+      stroke-dashoffset: 150
+   }
 }
+
 @media (prefers-reduced-motion: reduce) {
-   .loading-logo, .loading-logo path { animation: none }
+
+   .loading-logo,
+   .loading-logo path {
+      animation: none
+   }
 }
 
 /* (auth screen styles moved to components/Login.module.css) */

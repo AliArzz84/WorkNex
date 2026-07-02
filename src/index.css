@@ -3,7 +3,8 @@
 @import "./styles/layout.css";
 @import "./styles/components.css";
 @import "./styles/views.css";
-@import "./styles/mobile.css";   /* keep last — mobile overrides must win the cascade */
+@import "./styles/mobile.css";
+/* keep last — mobile overrides must win the cascade */
 
 /* ---------- Guest (shared view-only link) ---------- */
 .guest-banner {
@@ -106,6 +107,7 @@
   gap: 8px;
   padding: 14px 18px 0;
 }
+
 .type-seg button {
   flex: 1;
   display: inline-flex;
@@ -122,15 +124,18 @@
   cursor: pointer;
   transition: background .15s ease, border-color .15s ease, color .15s ease, transform .12s ease;
 }
+
 .type-seg button:hover {
   border-color: var(--accent);
   color: var(--txt);
 }
+
 .type-seg button.on {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
+
 .type-seg button:active {
   transform: scale(.97);
 }

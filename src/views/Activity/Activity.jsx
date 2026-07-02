@@ -50,7 +50,7 @@ function ShareLinksPanel() {
   const [dur, setDur] = useState("7d")
   const [busy, setBusy] = useState(false)
 
-  const refresh = () => listViewLinks().then(setLinks).catch(() => {})
+  const refresh = () => listViewLinks().then(setLinks).catch(() => { })
   useEffect(() => { refresh() }, [])
 
   const toggleSec = (k) => setSecs(s => s.includes(k) ? s.filter(x => x !== k) : [...s, k])
@@ -59,13 +59,13 @@ function ShareLinksPanel() {
     setBusy(true)
     try {
       const token = await createViewLink({ label: label.trim(), sections: secs, expiresAt: expiresFromChoice(dur) })
-      try { await navigator.clipboard.writeText(linkUrlFor(token)) } catch (e) {}
+      try { await navigator.clipboard.writeText(linkUrlFor(token)) } catch (e) { }
       notify("Link created & copied to clipboard", "success")
       setLabel(""); setSecs(["dashboard"]); setDur("7d"); setOpen(false); refresh()
     } catch (e) { notify("Couldn't create the link", "error") }
     setBusy(false)
   }
-  const copy = async (token) => { try { await navigator.clipboard.writeText(linkUrlFor(token)); notify("Link copied", "success") } catch (e) {} }
+  const copy = async (token) => { try { await navigator.clipboard.writeText(linkUrlFor(token)); notify("Link copied", "success") } catch (e) { } }
   const remove = async (lk) => {
     if (await ask({ title: "Delete share link", message: `Stop “${lk.label}” from viewing? The link stops working immediately.`, confirmText: "Delete" })) {
       try { await revokeViewLink(lk.token); refresh(); notify("Link deleted", "info") } catch (e) { notify("Couldn't delete", "error") }

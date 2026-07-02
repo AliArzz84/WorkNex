@@ -12,11 +12,13 @@
     gap: 10px;
     margin-bottom: 14px;
 }
+
 .title {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
 }
+
 .titleInput {
     font-size: 16px;
     font-weight: 600;
@@ -29,11 +31,21 @@
     flex: 0 1 auto;
     min-width: 140px;
     max-width: 760px;
-    field-sizing: content;   /* grow the field to fit the name (long titles fit) */
+    field-sizing: content;
+    /* grow the field to fit the name (long titles fit) */
     transition: background .15s ease, border-color .15s ease;
 }
-.titleInput:hover { background: var(--hover); }
-.titleInput:focus { outline: none; border-bottom-color: var(--accent); background: transparent; }
+
+.titleInput:hover {
+    background: var(--hover);
+}
+
+.titleInput:focus {
+    outline: none;
+    border-bottom-color: var(--accent);
+    background: transparent;
+}
+
 .headActions {
     margin-inline-start: auto;
     display: flex;
@@ -47,17 +59,23 @@
     border: 1px solid var(--line);
     border-radius: 12px;
 }
+
 .grid {
     min-width: 100%;
     display: flex;
     flex-direction: column;
 }
+
 .row {
     display: flex;
     min-width: 100%;
     border-bottom: 1px solid var(--line);
 }
-.row:last-child { border-bottom: 0; }
+
+.row:last-child {
+    border-bottom: 0;
+}
+
 .header {
     background: var(--panel-2);
     border-radius: 12px 12px 0 0;
@@ -70,7 +88,11 @@
     align-items: stretch;
     border-inline-end: 1px solid var(--line);
 }
-.cell:last-child { border-inline-end: 0; }
+
+.cell:last-child {
+    border-inline-end: 0;
+}
+
 .cell input {
     width: 100%;
     border: 0;
@@ -81,11 +103,13 @@
     border-radius: 4px;
     transition: box-shadow .12s ease, background .12s ease;
 }
+
 .cell input:focus {
     outline: none;
     background: var(--input-bg);
     box-shadow: inset 0 0 0 2px var(--accent);
 }
+
 /* dropdown cell (imported Excel data-validation list) */
 .cellSelect {
     width: 100%;
@@ -97,12 +121,20 @@
     cursor: pointer;
     border-radius: 4px;
 }
+
 .cellSelect:focus {
     outline: none;
     box-shadow: inset 0 0 0 2px var(--accent);
 }
-.lightSurface .cellSelect { color: #1f2328; }
-.lightSurface .cellSelect option { color: #1f2328; }
+
+.lightSurface .cellSelect {
+    color: #1f2328;
+}
+
+.lightSurface .cellSelect option {
+    color: #1f2328;
+}
+
 /* keep focused cells on a light background so typed text stays readable (even in dark mode) */
 .lightSurface .cell input:focus,
 .lightSurface .cellSelect:focus {
@@ -110,14 +142,20 @@
     color: #1f2328;
     box-shadow: inset 0 0 0 2px var(--accent);
 }
-.val, .colName {
+
+.val,
+.colName {
     display: block;
     width: 100%;
     padding: 10px 12px;
     font-size: 13px;
     min-height: 19px;
 }
-.colName { font-weight: 600; color: var(--muted); }
+
+.colName {
+    font-weight: 600;
+    color: var(--muted);
+}
 
 /* column header cell: editable name + a delete that shows on hover */
 .colHead {
@@ -125,10 +163,12 @@
     align-items: center;
     width: 100%;
 }
+
 .colHead input {
     font-weight: 600;
     color: var(--muted);
 }
+
 .colDel {
     flex: 0 0 auto;
     background: transparent;
@@ -141,25 +181,59 @@
     opacity: 0;
     transition: opacity .15s ease, color .15s ease;
 }
-.cell:hover .colDel { opacity: .75; }
-.colDel:hover { color: var(--red-ink); opacity: 1; }
+
+.cell:hover .colDel {
+    opacity: .75;
+}
+
+.colDel:hover {
+    color: var(--red-ink);
+    opacity: 1;
+}
 
 /* zebra striping — every other data row gets the alternate shade */
-.alt { background: var(--panel-2); }
+.alt {
+    background: var(--panel-2);
+}
 
 /* imported tables sit on a fixed light "spreadsheet" surface so Excel's colours
    stay accurate and readable even when the app is in dark mode */
-.lightSurface { background: #ffffff; }
-.lightSurface .header { background: #eef2f6; }
+.lightSurface {
+    background: #ffffff;
+}
+
+.lightSurface .header {
+    background: #eef2f6;
+}
+
 .lightSurface .idxHead,
-.lightSurface .idx { background: #f3f5f8; color: #57606a; border-color: #d8dee4; }
-.lightSurface .row { border-color: #d8dee4; }
-.lightSurface .cell { border-color: #e6e9ee; }
-.lightSurface .alt { background: #f6f8fa; }
+.lightSurface .idx {
+    background: #f3f5f8;
+    color: #57606a;
+    border-color: #d8dee4;
+}
+
+.lightSurface .row {
+    border-color: #d8dee4;
+}
+
+.lightSurface .cell {
+    border-color: #e6e9ee;
+}
+
+.lightSurface .alt {
+    background: #f6f8fa;
+}
+
 .lightSurface .cell input,
 .lightSurface .val,
-.lightSurface .colName { color: #1f2328; }
-.lightSurface .cell input::placeholder { color: #8c959f; }
+.lightSurface .colName {
+    color: #1f2328;
+}
+
+.lightSurface .cell input::placeholder {
+    color: #8c959f;
+}
 
 /* row-number column (Excel-style) + a delete that slides over it on hover */
 .idxHead,
@@ -175,10 +249,21 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
-.idx { position: relative; font-weight: 500; }
-.idxNum { transition: opacity .12s ease; }
+
+.idx {
+    position: relative;
+    font-weight: 500;
+}
+
+.idxNum {
+    transition: opacity .12s ease;
+}
+
 /* on an editable row, hovering hides the number and reveals the controls */
-.idxEdit:hover .idxNum { opacity: 0; }
+.idxEdit:hover .idxNum {
+    opacity: 0;
+}
+
 .rowDel {
     position: absolute;
     top: 50%;
@@ -195,8 +280,14 @@
     opacity: 0;
     transition: opacity .12s ease, color .12s ease;
 }
-.row:hover .rowDel { opacity: 1; }
-.rowDel:hover { color: var(--red-ink); }
+
+.row:hover .rowDel {
+    opacity: 1;
+}
+
+.rowDel:hover {
+    color: var(--red-ink);
+}
 
 /* "+" insert handle on the bottom border of each row → inserts a row below */
 .rowIns {
@@ -218,9 +309,18 @@
     z-index: 4;
     transition: opacity .12s ease, transform .1s ease;
 }
-.row:hover .rowIns { opacity: 1; }
-.rowIns:hover { transform: translateX(-50%) scale(1.12); }
-.lightSurface .rowIns { box-shadow: 0 0 0 2px #fff; }
+
+.row:hover .rowIns {
+    opacity: 1;
+}
+
+.rowIns:hover {
+    transform: translateX(-50%) scale(1.12);
+}
+
+.lightSurface .rowIns {
+    box-shadow: 0 0 0 2px #fff;
+}
 
 .emptyRow {
     padding: 16px;
@@ -244,6 +344,7 @@
     cursor: pointer;
     transition: color .15s ease, border-color .15s ease, background .15s ease;
 }
+
 .addRow:hover {
     color: var(--accent);
     border-color: var(--accent);
@@ -266,15 +367,28 @@
     border-radius: 12px;
     background: #ffffff;
 }
+
 /* a clear, draggable horizontal scrollbar at the bottom (like Google Sheets) */
-.richScroll::-webkit-scrollbar { height: 15px; width: 13px; }
-.richScroll::-webkit-scrollbar-track { background: #eef1f4; border-radius: 10px; }
+.richScroll::-webkit-scrollbar {
+    height: 15px;
+    width: 13px;
+}
+
+.richScroll::-webkit-scrollbar-track {
+    background: #eef1f4;
+    border-radius: 10px;
+}
+
 .richScroll::-webkit-scrollbar-thumb {
     background: #b4bdc6;
     border-radius: 10px;
     border: 3px solid #eef1f4;
 }
-.richScroll::-webkit-scrollbar-thumb:hover { background: #97a2ad; }
+
+.richScroll::-webkit-scrollbar-thumb:hover {
+    background: #97a2ad;
+}
+
 .richTable {
     width: auto;
     border-collapse: collapse;
@@ -283,15 +397,24 @@
     color: #1f2328;
     font-size: 12.5px;
 }
+
 .richTable td {
     border: 1px solid #d6dbe1;
     padding: 0;
     vertical-align: middle;
 }
-.richTable td::before { content: none; }   /* cancel the global mobile data-label pseudo */
+
+.richTable td::before {
+    content: none;
+}
+
+/* cancel the global mobile data-label pseudo */
 /* the global `tr:hover td { background: var(--hover) }` is dark — override it so the
    light spreadsheet surface doesn't turn black on hover (coloured cells keep their colour) */
-.richScroll tr:hover td { background: #f0f4f8; }
+.richScroll tr:hover td {
+    background: #f0f4f8;
+}
+
 /* keep it a real table even on mobile (global rules otherwise reflow tables into cards) */
 .richScroll table,
 .richScroll thead,
@@ -299,7 +422,9 @@
 .richScroll tr,
 .richScroll td,
 .richScroll col,
-.richScroll colgroup { display: revert; }
+.richScroll colgroup {
+    display: revert;
+}
 
 .richCellBox {
     padding: 3px 8px;
@@ -309,11 +434,13 @@
     min-height: 15px;
     outline: none;
 }
+
 .richCellBox:focus {
     background: #fff;
     box-shadow: inset 0 0 0 2px var(--accent);
     border-radius: 2px;
 }
+
 .richSelect {
     width: 100%;
     border: 0;
@@ -323,8 +450,15 @@
     padding: 3px 6px;
     cursor: pointer;
 }
-.richSelect:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
-.richSelect option { color: #1f2328; }
+
+.richSelect:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.richSelect option {
+    color: #1f2328;
+}
 
 /* sticky row-number gutter (like Google Sheets) */
 .richIdx {
@@ -340,6 +474,7 @@
     font-variant-numeric: tabular-nums;
     overflow: visible;
 }
+
 /* gutter hover controls: insert + delete side-by-side, covering the number (no overlap) */
 .rowTools {
     position: absolute;
@@ -352,7 +487,11 @@
     opacity: 0;
     transition: opacity .12s ease;
 }
-.richRow:hover .rowTools { opacity: 1; }
+
+.richRow:hover .rowTools {
+    opacity: 1;
+}
+
 .rowTools button {
     background: transparent;
     border: 0;
@@ -362,21 +501,48 @@
     place-items: center;
     border-radius: 5px;
 }
-.rtIns { color: var(--accent); }
-.rtDel { color: #c0392b; }
-.rowTools button:hover { background: rgba(0, 0, 0, .08); }
+
+.rtIns {
+    color: var(--accent);
+}
+
+.rtDel {
+    color: #c0392b;
+}
+
+.rowTools button:hover {
+    background: rgba(0, 0, 0, .08);
+}
 
 /* mobile: header controls wrap under the table name; grid stays scrollable */
 @media (max-width: 640px) {
-    .topbar { flex-wrap: wrap }
-    .head { flex-wrap: wrap }
-    .titleInput { flex: 1 1 160px; min-width: 0; max-width: 100% }
+    .topbar {
+        flex-wrap: wrap
+    }
+
+    .head {
+        flex-wrap: wrap
+    }
+
+    .titleInput {
+        flex: 1 1 160px;
+        min-width: 0;
+        max-width: 100%
+    }
+
     .headActions {
         margin-inline-start: 0;
         width: 100%;
         flex-wrap: wrap;
         justify-content: flex-start;
     }
-    .richScroll { max-height: 68dvh }
-    .cell { flex: 1 0 140px; min-width: 140px }
+
+    .richScroll {
+        max-height: 68dvh
+    }
+
+    .cell {
+        flex: 1 0 140px;
+        min-width: 140px
+    }
 }

@@ -47,8 +47,10 @@ export default function Backups({ open, onClose }) {
               </p>
 
               {rows && rows.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 12.5, color: "var(--muted)",
-                  margin: "0 0 14px", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 10, background: "var(--panel-2)" }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 9, fontSize: 12.5, color: "var(--muted)",
+                  margin: "0 0 14px", padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 10, background: "var(--panel-2)"
+                }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", flex: "0 0 auto" }} />
                   <span>Latest snapshot <b style={{ color: "var(--txt)" }}>{timeAgo(new Date(rows[0].saved_at).getTime())}</b> · an offsite copy is sent to Google Drive daily</span>
                 </div>

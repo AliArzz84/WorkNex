@@ -206,12 +206,14 @@ export default function Sheets() {
     const s = sheets.find(x => x.id === sid); if (!s || !s.grid) return
     const cur = s.grid[ri]?.[ci]; if (!cur || (cur.v ?? "") === v) return
     const n = numFromEdit(v)
-    patch(sid, s => ({ ...s, grid: s.grid.map((row, r) => r !== ri ? row : row.map((cell, c) => {
-      if (c !== ci || !cell) return cell
-      const nc = { ...cell, v }
-      if (n != null) nc.n = n; else delete nc.n   // keep the numeric value in sync so SUM/totals update
-      return nc
-    })) }))
+    patch(sid, s => ({
+      ...s, grid: s.grid.map((row, r) => r !== ri ? row : row.map((cell, c) => {
+        if (c !== ci || !cell) return cell
+        const nc = { ...cell, v }
+        if (n != null) nc.n = n; else delete nc.n   // keep the numeric value in sync so SUM/totals update
+        return nc
+      }))
+    }))
   }
   const emptyRichRow = (s) => (s.widths || []).map(() => ({ v: "" }))
   const addRichRow = (sid) => patch(sid, s => ({ ...s, grid: [...s.grid, emptyRichRow(s)] }))
@@ -293,7 +295,7 @@ export default function Sheets() {
             // keep the formula so the app can recompute it live (like Excel); o.v holds Excel's
             // cached result as the fallback for anything the engine can't evaluate
             let fml = null
-            try { fml = cell.formula || ((cell.value && typeof cell.value === "object") ? cell.value.formula : null) || null } catch (e) {}
+            try { fml = cell.formula || ((cell.value && typeof cell.value === "object") ? cell.value.formula : null) || null } catch (e) { }
             if (fml) o.f = String(fml)
             // underlying numeric value — so SUM/maths work even when the cell shows "3,000 GBP"
             // via a currency number format (the real value is the number 3000)
@@ -301,7 +303,7 @@ export default function Sheets() {
               const rv = cell.value
               const num = (typeof rv === "number") ? rv : (rv && typeof rv === "object" && typeof rv.result === "number") ? rv.result : null
               if (num != null && isFinite(num)) o.n = num
-            } catch (e) {}
+            } catch (e) { }
             const cf = cfMap.get(r + "_" + c)
             if (cf) { if (cf.bg) o.bg = cf.bg; if (cf.fg) o.fg = cf.fg }
             if (o.fg && !o.bg) o.bg = lighten(o.fg)
@@ -427,54 +429,54 @@ export default function Sheets() {
         const tableW = 46 + (s.widths || []).reduce((a, b) => a + (b || 0), 0)
         const sheet = makeSheet(s.grid, s.wsName)   // live formula engine for this table (recomputed each render)
         return (
-        <div className="panel" key={s.id}>
-          {headOf(s)}
-          <div className={styles.richScroll}>
-            <table className={styles.richTable} style={{ width: tableW, minWidth: tableW }}>
-              <colgroup><col style={{ width: 46 }} />{(s.widths || []).map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
-              <tbody>
-                {(s.grid || []).map((row, ri) => (
-                  <tr key={ri} className={styles.richRow}>
-                    <td className={styles.richIdx}>
-                      <span className={styles.idxNum}>{ri + 1}</span>
-                      {!readOnly && (
-                        <div className={styles.rowTools}>
-                          <button className={styles.rtIns} onClick={() => insertRichRow(s.id, ri + 1)} title="Insert row below"><Icon name="plus" size={12} /></button>
-                          <button className={styles.rtDel} onClick={() => delRichRow(s.id, ri)} title="Delete row"><Icon name="trash" size={12} /></button>
-                        </div>
-                      )}
-                    </td>
-                    {row.map((cell, ci) => {
-                      if (cell === null) return null
-                      const isDrop = cell.opts && cell.opts.length
-                      const hasFormula = !isDrop && !!cell.f
-                      const fx = hasFormula ? sheet.tryEval(cell.f) : null   // recompute the formula live (like Excel)
-                      const cm = (isDrop && s.colColors?.[ci]) ? s.colColors[ci][(cell.v || "").trim()] : null
-                      const bg = cm?.bg || cell.bg
-                      const fg = cm?.fg || cell.fg
-                      const ink = { color: fg || (bg ? "#1f2328" : undefined), fontWeight: cell.b ? 700 : undefined, textAlign: cell.al || undefined }
-                      const cs = Math.min(cell.cs || 1, (s.widths || []).length - ci)
-                      const conv = (isDrop || hasFormula) ? null : convOf(cell.v, curMap[s.id] || "")
-                      const ekey = s.id + ":" + ri + ":" + ci
-                      const shown = (conv && editKey !== ekey) ? conv : cell.v
-                      let display
-                      if (fx && fx.ok) { const f = formatLike(fx.v, cell.v); display = convOf(f, curMap[s.id] || "") || f }  // a totals cell follows the currency toggle too
-                      else display = conv || cell.v
-                      return (
-                        <td key={ci} colSpan={cs} rowSpan={cell.rs || 1} style={bg ? { background: bg } : undefined}>
-                          {readOnly
-                            ? <div className={styles.richCellBox} style={ink}>{display}</div>
-                            : hasFormula
-                              ? <div className={styles.richCellBox} style={ink} title={(fx && fx.ok) ? "Calculated automatically — updates when values change" : "Imported formula result"}>{display}</div>
-                              : isDrop
-                                ? (
-                                  <select className={styles.richSelect} value={cell.v || ""} style={ink} onChange={e => setRichCell(s.id, ri, ci, e.target.value)}>
-                                    <option value=""></option>
-                                    {cell.v && !cell.opts.includes(cell.v) && <option value={cell.v}>{cell.v}</option>}
-                                    {cell.opts.map(op => <option key={op} value={op}>{op}</option>)}
-                                  </select>
-                                )
-                                : <div className={styles.richCellBox} style={ink} contentEditable suppressContentEditableWarning
+          <div className="panel" key={s.id}>
+            {headOf(s)}
+            <div className={styles.richScroll}>
+              <table className={styles.richTable} style={{ width: tableW, minWidth: tableW }}>
+                <colgroup><col style={{ width: 46 }} />{(s.widths || []).map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
+                <tbody>
+                  {(s.grid || []).map((row, ri) => (
+                    <tr key={ri} className={styles.richRow}>
+                      <td className={styles.richIdx}>
+                        <span className={styles.idxNum}>{ri + 1}</span>
+                        {!readOnly && (
+                          <div className={styles.rowTools}>
+                            <button className={styles.rtIns} onClick={() => insertRichRow(s.id, ri + 1)} title="Insert row below"><Icon name="plus" size={12} /></button>
+                            <button className={styles.rtDel} onClick={() => delRichRow(s.id, ri)} title="Delete row"><Icon name="trash" size={12} /></button>
+                          </div>
+                        )}
+                      </td>
+                      {row.map((cell, ci) => {
+                        if (cell === null) return null
+                        const isDrop = cell.opts && cell.opts.length
+                        const hasFormula = !isDrop && !!cell.f
+                        const fx = hasFormula ? sheet.tryEval(cell.f) : null   // recompute the formula live (like Excel)
+                        const cm = (isDrop && s.colColors?.[ci]) ? s.colColors[ci][(cell.v || "").trim()] : null
+                        const bg = cm?.bg || cell.bg
+                        const fg = cm?.fg || cell.fg
+                        const ink = { color: fg || (bg ? "#1f2328" : undefined), fontWeight: cell.b ? 700 : undefined, textAlign: cell.al || undefined }
+                        const cs = Math.min(cell.cs || 1, (s.widths || []).length - ci)
+                        const conv = (isDrop || hasFormula) ? null : convOf(cell.v, curMap[s.id] || "")
+                        const ekey = s.id + ":" + ri + ":" + ci
+                        const shown = (conv && editKey !== ekey) ? conv : cell.v
+                        let display
+                        if (fx && fx.ok) { const f = formatLike(fx.v, cell.v); display = convOf(f, curMap[s.id] || "") || f }  // a totals cell follows the currency toggle too
+                        else display = conv || cell.v
+                        return (
+                          <td key={ci} colSpan={cs} rowSpan={cell.rs || 1} style={bg ? { background: bg } : undefined}>
+                            {readOnly
+                              ? <div className={styles.richCellBox} style={ink}>{display}</div>
+                              : hasFormula
+                                ? <div className={styles.richCellBox} style={ink} title={(fx && fx.ok) ? "Calculated automatically — updates when values change" : "Imported formula result"}>{display}</div>
+                                : isDrop
+                                  ? (
+                                    <select className={styles.richSelect} value={cell.v || ""} style={ink} onChange={e => setRichCell(s.id, ri, ci, e.target.value)}>
+                                      <option value=""></option>
+                                      {cell.v && !cell.opts.includes(cell.v) && <option value={cell.v}>{cell.v}</option>}
+                                      {cell.opts.map(op => <option key={op} value={op}>{op}</option>)}
+                                    </select>
+                                  )
+                                  : <div className={styles.richCellBox} style={ink} contentEditable suppressContentEditableWarning
                                     onFocus={() => { if (conv) setEditKey(ekey) }}
                                     onBlur={e => {
                                       setEditKey(k => k === ekey ? null : k)
@@ -482,16 +484,16 @@ export default function Sheets() {
                                       if (conv && v === conv) return   // not edited (still the converted display) → keep the native value, never overwrite with the converted text
                                       setRichCell(s.id, ri, ci, v)
                                     }}>{shown}</div>}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!readOnly && <button className={styles.addRow} onClick={() => addRichRow(s.id)}><Icon name="plus" size={14} /> Add row</button>}
           </div>
-          {!readOnly && <button className={styles.addRow} onClick={() => addRichRow(s.id)}><Icon name="plus" size={14} /> Add row</button>}
-        </div>
         )
       })() : (
         /* ── hand-made simple table ── */
@@ -533,9 +535,9 @@ export default function Sheets() {
                         {readOnly
                           ? <span className={styles.val}>{conv || txt}</span>
                           : <input value={(conv && editKey !== ekey) ? conv : txt}
-                              onFocus={() => { if (conv) setEditKey(ekey) }}
-                              onBlur={() => setEditKey(k => k === ekey ? null : k)}
-                              onChange={e => setCell(s.id, r.id, c.id, e.target.value)} />}
+                            onFocus={() => { if (conv) setEditKey(ekey) }}
+                            onBlur={() => setEditKey(k => k === ekey ? null : k)}
+                            onChange={e => setCell(s.id, r.id, c.id, e.target.value)} />}
                       </div>
                     )
                   })}

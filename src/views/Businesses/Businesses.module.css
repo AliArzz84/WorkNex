@@ -16,9 +16,19 @@
   background: var(--bg, rgba(127, 127, 127, 0.06));
 }
 
-.stat svg { color: var(--muted); }
-.stat b { font-size: 18px; line-height: 1.1; }
-.stat small { color: var(--muted); font-size: 11px; }
+.stat svg {
+  color: var(--muted);
+}
+
+.stat b {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.stat small {
+  color: var(--muted);
+  font-size: 11px;
+}
 
 .netLine {
   display: flex;

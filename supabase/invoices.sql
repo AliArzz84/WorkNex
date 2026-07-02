@@ -185,6 +185,48 @@ alter table public.invoices
   add column if not exists iban           text,
   add column if not exists notes          text;
 
+-- ── 9) Submit an access request THROUGH a guarded function, so the public form can't
+--     create duplicates or requests from people who are already in. The anon form can't
+--     read allowed_emails / access_requests (correctly), so this SECURITY DEFINER function
+--     does the checks and returns only a short status string — no data leaks.
+--     Returns: 'ok' | 'already_member' | 'already_requested' | 'invalid'
+create or replace function public.request_access(p_name text, p_email text, p_note text default null)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_email text := lower(trim(coalesce(p_email, '')));
+  v_role  text;
+  v_id    uuid;
+begin
+  if v_email = '' or position('@' in v_email) = 0 then
+    return 'invalid';
+  end if;
+
+  -- already approved / already staff → no new request; they should just sign in
+  select role into v_role from public.allowed_emails where lower(email) = v_email limit 1;
+  if v_role is not null then
+    return 'already_member';
+  end if;
+
+  -- an outstanding (pending) or already-approved request → don't duplicate it
+  select id into v_id from public.access_requests
+    where lower(email) = v_email and status in ('pending', 'approved')
+    order by created_at desc limit 1;
+  if v_id is not null then
+    -- freshen the name/note on the pending row (handy for the manager), but add no new row
+    update public.access_requests
+      set name = coalesce(nullif(trim(p_name), ''), name),
+          note = coalesce(nullif(trim(p_note), ''), note)
+      where id = v_id and status = 'pending';
+    return 'already_requested';
+  end if;
+
+  insert into public.access_requests (name, email, note)
+    values (nullif(trim(p_name), ''), v_email, nullif(trim(p_note), ''));
+  return 'ok';
+end; $$;
+revoke all on function public.request_access(text, text, text) from public;
+grant execute on function public.request_access(text, text, text) to anon, authenticated;
+
 -- ============================================================
 -- DONE. Notes:
 --  • Existing managers/boss keep full access (role manager/boss → is_manager() = true).

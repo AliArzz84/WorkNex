@@ -128,11 +128,22 @@
         row-gap: 8px;
         padding: 12px 4px;
     }
+
     .tMain {
         flex: 1 1 0;
-        min-width: calc(100% - 40px);   /* forces meta + actions onto their own row */
+        min-width: calc(100% - 40px);
+        /* forces meta + actions onto their own row */
     }
-    .tMain small { white-space: normal }
-    .tMeta { margin-inline-start: 34px }
-    .taskRow :global(.row-actions) { margin-inline-start: auto }
+
+    .tMain small {
+        white-space: normal
+    }
+
+    .tMeta {
+        margin-inline-start: 34px
+    }
+
+    .taskRow :global(.row-actions) {
+        margin-inline-start: auto
+    }
 }

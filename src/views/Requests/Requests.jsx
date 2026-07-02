@@ -13,7 +13,7 @@ export default function Requests() {
   const loading = !requestsReady
 
   const link = `${window.location.origin}${window.location.pathname}?request=1`
-  const copyLink = async () => { try { await navigator.clipboard.writeText(link); notify("Form link copied — send it to your team", "success") } catch (e) {} }
+  const copyLink = async () => { try { await navigator.clipboard.writeText(link); notify("Form link copied — send it to your team", "success") } catch (e) { } }
 
   const statusOf = (r) => r.status || "new"
   const newCount = reqs.filter(r => statusOf(r) === "new").length

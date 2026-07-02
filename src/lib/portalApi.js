@@ -19,10 +19,16 @@ export const invMoney = (n, code) => {
 }
 
 /* ---------- access requests (public → manager approves) ---------- */
+// goes through a guarded DB function so it can't create duplicates or requests from
+// people who are already approved. Returns: 'ok' | 'already_member' | 'already_requested' | 'invalid'
 export async function submitAccessRequest({ name, email, note }) {
-  const { error } = await supabase.from('access_requests')
-    .insert({ name: name.trim(), email: email.trim().toLowerCase(), note: (note || '').trim() || null })
+  const { data, error } = await supabase.rpc('request_access', {
+    p_name: (name || '').trim(),
+    p_email: (email || '').trim().toLowerCase(),
+    p_note: (note || '').trim() || null,
+  })
   if (error) throw error
+  return data
 }
 export async function listAccessRequests() {
   const { data, error } = await supabase.from('access_requests').select('*').order('created_at', { ascending: false })
@@ -72,7 +78,7 @@ export async function updateInvoice(id, patch) {
   if (error) throw error
 }
 export async function deleteInvoice(id, attachment) {
-  if (attachment) { try { await supabase.storage.from(BUCKET).remove([attachment]) } catch (e) {} }
+  if (attachment) { try { await supabase.storage.from(BUCKET).remove([attachment]) } catch (e) { } }
   const { error } = await supabase.from('invoices').delete().eq('id', id)
   if (error) throw error
 }

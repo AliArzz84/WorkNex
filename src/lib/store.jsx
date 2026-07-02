@@ -23,7 +23,7 @@ export const useStore = () => useContext(StoreContext)
 function loadLocalDB() {
   const raw = localStorage.getItem(KEY)
   // norm() guarantees every collection exists, so older/partial blobs can't crash the views
-  if (raw) { try { return norm(JSON.parse(raw)) } catch (e) {} }
+  if (raw) { try { return norm(JSON.parse(raw)) } catch (e) { } }
   return norm(null)   // fresh start = empty workspace (no sample data)
 }
 
@@ -40,7 +40,7 @@ export function StoreProvider({ children }) {
   const [guestStatus, setGuestStatus] = useState(isGuest ? "loading" : "ok")    // 'loading' | 'ok' | 'invalid'
   const [db, setDb] = useState(() => cloud ? EMPTY : loadLocalDB())
   const lang = "en"
-  const setLang = () => {}
+  const setLang = () => { }
   const [theme, setTheme] = useState(localStorage.getItem("bm_theme") || "light")
   // base currency is USD; this just toggles how base amounts are *displayed* (USD or GBP)
   const [displayCurrency, setDisplayCurrencyState] = useState(localStorage.getItem("bm_disp") || "USD")
@@ -105,7 +105,7 @@ export function StoreProvider({ children }) {
     try { return JSON.parse(localStorage.getItem("bm_rate2")).value } catch (e) { return 180000 }
   })
   useEffect(() => {
-    let cached; try { cached = JSON.parse(localStorage.getItem("bm_rate2")) } catch (e) {}
+    let cached; try { cached = JSON.parse(localStorage.getItem("bm_rate2")) } catch (e) { }
     if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return
     let cancelled = false
     const key = import.meta.env.VITE_EXCHANGERATE_KEY
@@ -114,20 +114,20 @@ export function StoreProvider({ children }) {
       setTomanPerGbp(toman)
       localStorage.setItem("bm_rate2", JSON.stringify({ value: toman, ts: Date.now() }))
     }
-    ;(async () => {
-      // primary: ExchangeRate.host
-      if (key) {
+      ; (async () => {
+        // primary: ExchangeRate.host
+        if (key) {
+          try {
+            const d = await (await fetch(`https://api.exchangerate.host/live?access_key=${key}&source=GBP&currencies=IRR`)).json()
+            if (d && d.success && d.quotes && d.quotes.GBPIRR) { apply(Math.round(d.quotes.GBPIRR / 10)); return }
+          } catch (e) { }
+        }
+        // fallback: open.er-api (no key, CORS-friendly)
         try {
-          const d = await (await fetch(`https://api.exchangerate.host/live?access_key=${key}&source=GBP&currencies=IRR`)).json()
-          if (d && d.success && d.quotes && d.quotes.GBPIRR) { apply(Math.round(d.quotes.GBPIRR / 10)); return }
-        } catch (e) {}
-      }
-      // fallback: open.er-api (no key, CORS-friendly)
-      try {
-        const d = await (await fetch("https://open.er-api.com/v6/latest/GBP")).json()
-        if (d && d.rates && d.rates.IRR) apply(Math.round(d.rates.IRR / 10))
-      } catch (e) {}
-    })()
+          const d = await (await fetch("https://open.er-api.com/v6/latest/GBP")).json()
+          if (d && d.rates && d.rates.IRR) apply(Math.round(d.rates.IRR / 10))
+        } catch (e) { }
+      })()
     return () => { cancelled = true }
   }, [])
 
@@ -136,24 +136,24 @@ export function StoreProvider({ children }) {
     try { return JSON.parse(localStorage.getItem("bm_nerkh")).value } catch (e) { return {} }
   })
   useEffect(() => {
-    let cached; try { cached = JSON.parse(localStorage.getItem("bm_nerkh")) } catch (e) {}
+    let cached; try { cached = JSON.parse(localStorage.getItem("bm_nerkh")) } catch (e) { }
     if (cached && Date.now() - cached.ts < 30 * 60 * 1000) return
     const key = import.meta.env.VITE_NERKH_KEY
     if (!key) return
     let cancelled = false
-    ;(async () => {
-      try {
-        const d = await (await fetch("https://api.nerkh.io/v1/prices/json/currency", {
-          headers: { Authorization: "Bearer " + key },
-        })).json()
-        const p = d?.data?.prices
-        if (!p || cancelled) return
-        const out = {}
-        for (const c of ["USD", "EUR", "GBP", "AED", "TRY"]) if (p[c]?.current) out[c] = Number(p[c].current)
-        setCurrencyRates(out)
-        localStorage.setItem("bm_nerkh", JSON.stringify({ value: out, ts: Date.now() }))
-      } catch (e) {}
-    })()
+      ; (async () => {
+        try {
+          const d = await (await fetch("https://api.nerkh.io/v1/prices/json/currency", {
+            headers: { Authorization: "Bearer " + key },
+          })).json()
+          const p = d?.data?.prices
+          if (!p || cancelled) return
+          const out = {}
+          for (const c of ["USD", "EUR", "GBP", "AED", "TRY"]) if (p[c]?.current) out[c] = Number(p[c].current)
+          setCurrencyRates(out)
+          localStorage.setItem("bm_nerkh", JSON.stringify({ value: out, ts: Date.now() }))
+        } catch (e) { }
+      })()
     return () => { cancelled = true }
   }, [])
 
@@ -165,7 +165,7 @@ export function StoreProvider({ children }) {
     try { return JSON.parse(localStorage.getItem("bm_usdgbp")).value } catch (e) { return 0 }
   })
   useEffect(() => {
-    let cached; try { cached = JSON.parse(localStorage.getItem("bm_usdgbp")) } catch (e) {}
+    let cached; try { cached = JSON.parse(localStorage.getItem("bm_usdgbp")) } catch (e) { }
     if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return
     let cancelled = false
     const apply = (r) => {
@@ -173,18 +173,18 @@ export function StoreProvider({ children }) {
       setFxUsdGbp(r)
       localStorage.setItem("bm_usdgbp", JSON.stringify({ value: r, ts: Date.now() }))
     }
-    ;(async () => {
-      // primary: Frankfurter (ECB rates, no key needed)
-      try {
-        const d = await (await fetch("https://api.frankfurter.app/latest?from=USD&to=GBP")).json()
-        if (d && d.rates && d.rates.GBP) { apply(Number(d.rates.GBP)); return }
-      } catch (e) {}
-      // fallback: open.er-api (no key, CORS-friendly)
-      try {
-        const d = await (await fetch("https://open.er-api.com/v6/latest/USD")).json()
-        if (d && d.rates && d.rates.GBP) apply(Number(d.rates.GBP))
-      } catch (e) {}
-    })()
+      ; (async () => {
+        // primary: Frankfurter (ECB rates, no key needed)
+        try {
+          const d = await (await fetch("https://api.frankfurter.app/latest?from=USD&to=GBP")).json()
+          if (d && d.rates && d.rates.GBP) { apply(Number(d.rates.GBP)); return }
+        } catch (e) { }
+        // fallback: open.er-api (no key, CORS-friendly)
+        try {
+          const d = await (await fetch("https://open.er-api.com/v6/latest/USD")).json()
+          if (d && d.rates && d.rates.GBP) apply(Number(d.rates.GBP))
+        } catch (e) { }
+      })()
     return () => { cancelled = true }
   }, [])
 
@@ -194,18 +194,18 @@ export function StoreProvider({ children }) {
     try { return JSON.parse(localStorage.getItem("bm_usdamd")).value } catch (e) { return 0 }
   })
   useEffect(() => {
-    let cached; try { cached = JSON.parse(localStorage.getItem("bm_usdamd")) } catch (e) {}
+    let cached; try { cached = JSON.parse(localStorage.getItem("bm_usdamd")) } catch (e) { }
     if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return
     let cancelled = false
-    ;(async () => {
-      try {
-        const d = await (await fetch("https://open.er-api.com/v6/latest/USD")).json()
-        if (d && d.rates && d.rates.AMD && !cancelled) {
-          setFxUsdAmd(Number(d.rates.AMD))
-          localStorage.setItem("bm_usdamd", JSON.stringify({ value: Number(d.rates.AMD), ts: Date.now() }))
-        }
-      } catch (e) {}
-    })()
+      ; (async () => {
+        try {
+          const d = await (await fetch("https://open.er-api.com/v6/latest/USD")).json()
+          if (d && d.rates && d.rates.AMD && !cancelled) {
+            setFxUsdAmd(Number(d.rates.AMD))
+            localStorage.setItem("bm_usdamd", JSON.stringify({ value: Number(d.rates.AMD), ts: Date.now() }))
+          }
+        } catch (e) { }
+      })()
     return () => { cancelled = true }
   }, [])
 
@@ -225,52 +225,52 @@ export function StoreProvider({ children }) {
     if (!cloud || isGuest || isRequest) return
     if (!session) { setAccount(null); setDataReady(false); setDb(EMPTY); return }
     let channel, cancelled = false
-    ;(async () => {
-      const { data: prof } = await supabase.from("profiles").select("role").eq("id", session.user.id).single()
-      const acct = prof?.role || "boss"
-      if (cancelled) return
-      setAccount(acct)
-      // Each account opens in its own view by default (boss → Boss view).
-      // They can still flip it from the top toggle during the session.
-      setRole(acct)
-      // employees live in the invoice portal — they never load the company workspace
-      if (acct === "employee") { setDataReady(true); dirty.current = false; return }
+      ; (async () => {
+        const { data: prof } = await supabase.from("profiles").select("role").eq("id", session.user.id).single()
+        const acct = prof?.role || "boss"
+        if (cancelled) return
+        setAccount(acct)
+        // Each account opens in its own view by default (boss → Boss view).
+        // They can still flip it from the top toggle during the session.
+        setRole(acct)
+        // employees live in the invoice portal — they never load the company workspace
+        if (acct === "employee") { setDataReady(true); dirty.current = false; return }
 
-      const { data: ws } = await supabase.from("workspaces").select("data").eq("id", "default").single()
-      let raw = ws?.data
-      // First time only: start with an EMPTY workspace and mark it seeded so we never re-init.
-      const alreadySetup = raw && (raw.seeded === true || (Array.isArray(raw.employees) && raw.employees.length > 0))
-      let data
-      if (!alreadySetup) {
-        data = norm(null)
-        data.seeded = true
-        await supabase.from("workspaces").update({ data, updated_at: new Date().toISOString() }).eq("id", "default")
-      } else {
-        data = norm(raw)
-      }
-      if (cancelled) return
-      lastSynced.current = JSON.stringify(data)
-      setDb(data)
-      setDataReady(true)
-      dirty.current = false   // fresh load — nothing pending
+        const { data: ws } = await supabase.from("workspaces").select("data").eq("id", "default").single()
+        let raw = ws?.data
+        // First time only: start with an EMPTY workspace and mark it seeded so we never re-init.
+        const alreadySetup = raw && (raw.seeded === true || (Array.isArray(raw.employees) && raw.employees.length > 0))
+        let data
+        if (!alreadySetup) {
+          data = norm(null)
+          data.seeded = true
+          await supabase.from("workspaces").update({ data, updated_at: new Date().toISOString() }).eq("id", "default")
+        } else {
+          data = norm(raw)
+        }
+        if (cancelled) return
+        lastSynced.current = JSON.stringify(data)
+        setDb(data)
+        setDataReady(true)
+        dirty.current = false   // fresh load — nothing pending
 
-      // record that this account just came in (drives "last seen" in the Activity view)
-      setDb(prev => ({
-        ...prev,
-        seen: { ...(prev.seen || {}), [session.user.id]: { email: session.user.email, role: acct, lastSeen: Date.now() } },
-      }))
+        // record that this account just came in (drives "last seen" in the Activity view)
+        setDb(prev => ({
+          ...prev,
+          seen: { ...(prev.seen || {}), [session.user.id]: { email: session.user.email, role: acct, lastSeen: Date.now() } },
+        }))
 
-      channel = supabase.channel("ws-default")
-        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "workspaces", filter: "id=eq.default" }, (payload) => {
-          const nd = norm(payload.new?.data)
-          const str = JSON.stringify(nd)
-          if (str === lastSynced.current) return   // ignore our own echo
-          if (dirty.current) return                // we have an unsaved edit in flight — our save will win; don't clobber it
-          lastSynced.current = str
-          setDb(nd)
-        })
-        .subscribe()
-    })().catch(e => console.error("Workspace load failed:", e))
+        channel = supabase.channel("ws-default")
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "workspaces", filter: "id=eq.default" }, (payload) => {
+            const nd = norm(payload.new?.data)
+            const str = JSON.stringify(nd)
+            if (str === lastSynced.current) return   // ignore our own echo
+            if (dirty.current) return                // we have an unsaved edit in flight — our save will win; don't clobber it
+            lastSynced.current = str
+            setDb(nd)
+          })
+          .subscribe()
+      })().catch(e => console.error("Workspace load failed:", e))
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
   }, [cloud, session?.user?.id])
 
@@ -368,7 +368,7 @@ export function StoreProvider({ children }) {
     // include category if provided; if the column doesn't exist yet, fall back so the form never breaks
     let { error } = await supabase.from("requests").insert(category ? { ...base, category } : base)
     if (error && category && /category|column/i.test(error.message || "")) {
-      ;({ error } = await supabase.from("requests").insert(base))
+      ; ({ error } = await supabase.from("requests").insert(base))
     }
     if (error) throw error
   }, [])
@@ -404,7 +404,7 @@ export function StoreProvider({ children }) {
   /* === employee-portal access requests — managers see + approve (realtime + nav badge) === */
   const reloadAccessRequests = useCallback(async () => {
     if (!cloud) return
-    try { setAccessRequests(await listAccessRequests()) } catch (e) {}
+    try { setAccessRequests(await listAccessRequests()) } catch (e) { }
   }, [cloud])
   useEffect(() => {
     if (!cloud || isGuest || isPortal || !session || !account || account === "employee") { setAccessRequests([]); return }
@@ -420,7 +420,7 @@ export function StoreProvider({ children }) {
     const { data, error } = await supabase.functions.invoke("assistant", { body: { messages: history } })
     if (error) {
       let msg = error.message
-      try { const body = await error.context?.json?.(); if (body?.error) msg = body.error } catch (e) {}
+      try { const body = await error.context?.json?.(); if (body?.error) msg = body.error } catch (e) { }
       throw new Error(msg || "Assistant unavailable")
     }
     if (data?.error) throw new Error(data.error)
@@ -690,7 +690,7 @@ export function StoreProvider({ children }) {
     try {
       const n = new Notification(urgent.length + (urgent.length > 1 ? " items need" : " item needs") + " your attention", { body, tag: "bm-reminders" })
       n.onclick = () => { window.focus(); n.close() }
-    } catch (e) {}
+    } catch (e) { }
   }, [reminders, cloud, isGuest, isRequest, session?.user?.id, dataReady])
 
   const value = {

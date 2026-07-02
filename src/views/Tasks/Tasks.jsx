@@ -136,12 +136,16 @@ export default function Tasks() {
   const inSearch = (o) => JSON.stringify(o).toLowerCase().includes((search || "").toLowerCase())
   const upMeet = db.meetings
     .filter(m => !m.done && m.datetime && daysBetween(m.datetime) > 0 && inSearch(m))
-    .map(m => ({ key: "m" + m.id, type: "meeting", id: m.id, color: "blue", icon: "meetings",
-      title: m.title, sub: "Meeting" + (m.location ? " • " + m.location : ""), when: fmtTime(m.datetime), date: m.datetime.slice(0, 10) }))
+    .map(m => ({
+      key: "m" + m.id, type: "meeting", id: m.id, color: "blue", icon: "meetings",
+      title: m.title, sub: "Meeting" + (m.location ? " • " + m.location : ""), when: fmtTime(m.datetime), date: m.datetime.slice(0, 10)
+    }))
   const upProj = db.projects
     .filter(p => p.status !== "done" && p.deadline && daysBetween(p.deadline) > 0 && inSearch(p))
-    .map(p => ({ key: "d" + p.id, type: "project", id: p.id, color: "red", icon: "projects",
-      title: p.name, sub: "Project deadline" + (p.client ? " • " + p.client : ""), when: "Deadline", date: p.deadline }))
+    .map(p => ({
+      key: "d" + p.id, type: "project", id: p.id, color: "red", icon: "projects",
+      title: p.name, sub: "Project deadline" + (p.client ? " • " + p.client : ""), when: "Deadline", date: p.deadline
+    }))
 
   // group everything upcoming by date → { tasks, extras }
   const groups = {}

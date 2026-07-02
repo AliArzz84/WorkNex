@@ -11,7 +11,7 @@ import {
 } from '../../lib/finance.js'
 import styles from './Finance.module.css'
 
-const CAT_COLORS =["#6c8cff", "#9b6cff", "#34d399", "#fbbf24", "#f472b6", "#60a5fa", "#22d3ee", "#fb923c", "#a78bfa", "#f87171", "#2dd4bf", "#facc15"]
+const CAT_COLORS = ["#6c8cff", "#9b6cff", "#34d399", "#fbbf24", "#f472b6", "#60a5fa", "#22d3ee", "#fb923c", "#a78bfa", "#f87171", "#2dd4bf", "#facc15"]
 
 const PREV_LABEL = { month: "last month", quarter: "last quarter", year: "last year", custom: "prior period" }
 
@@ -433,7 +433,7 @@ export default function Finance() {
         const emps = db.employees.filter(e => (e.business || "") === b.id)
         const monthly = emps.filter(e => e.status === "active").reduce((s, e) => s + toUsd(e.salary, e.currency), 0)
         return [b.name, emps.length, db.projects.filter(p => (p.business || "") === b.id).length,
-          db.teams.filter(t => (t.business || "") === b.id).length, monthly]
+        db.teams.filter(t => (t.business || "") === b.id).length, monthly]
       }))
 
       // ---- Employees (full directory + salary)
@@ -617,233 +617,233 @@ export default function Finance() {
       </div>
 
       {tab === "overview" && (<>
-      {prev && (
-        <div className={styles.cmpNote}>
-          <Icon name="finance" size={13} /> Compared with <b>{prevLabel}</b>
-        </div>
-      )}
-      <motion.div className={`kpis ${styles.finKpis}`} variants={stagger} initial="initial" animate="animate">
-        <motion.div className="kpi k2" variants={item} whileHover={{ y: -3 }}>
-          <div className="ic"><Icon name="arrowUp" size={20} /></div>
-          <h3><Money value={periodIncome} /></h3>
-          <p>Total income {prev && <Delta cur={periodIncome} prev={prev.income} goodWhen="up" label={prevLabel} />}</p>
+        {prev && (
+          <div className={styles.cmpNote}>
+            <Icon name="finance" size={13} /> Compared with <b>{prevLabel}</b>
+          </div>
+        )}
+        <motion.div className={`kpis ${styles.finKpis}`} variants={stagger} initial="initial" animate="animate">
+          <motion.div className="kpi k2" variants={item} whileHover={{ y: -3 }}>
+            <div className="ic"><Icon name="arrowUp" size={20} /></div>
+            <h3><Money value={periodIncome} /></h3>
+            <p>Total income {prev && <Delta cur={periodIncome} prev={prev.income} goodWhen="up" label={prevLabel} />}</p>
+          </motion.div>
+          <motion.div className="kpi k4" variants={item} whileHover={{ y: -3 }}>
+            <div className="ic"><Icon name="arrowDown" size={20} /></div>
+            <h3><Money value={periodOutgoing} /></h3>
+            <p>Total outgoing {prev && <Delta cur={periodOutgoing} prev={prev.outgoing} goodWhen="down" label={prevLabel} />}</p>
+          </motion.div>
+          <motion.div className="kpi k1" variants={item} whileHover={{ y: -3 }}>
+            <div className="ic"><Icon name="finance" size={20} /></div>
+            <h3 style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet} /></h3>
+            <p>Net profit {prev && <Delta cur={periodNet} prev={prev.net} goodWhen="up" label={prevLabel} />}</p>
+            {margin != null && (
+              <small style={{ color: "var(--muted)", fontSize: 11 }}>
+                {(margin * 100).toFixed(margin >= 0.1 || margin <= -0.1 ? 0 : 1)}% profit margin
+              </small>
+            )}
+          </motion.div>
+          <motion.div className="kpi k3" variants={item} whileHover={{ y: -3 }}>
+            <div className="ic"><Icon name="wallet" size={20} /></div>
+            <h3><Money value={periodSalary} /></h3><p>Salaries (period total)</p>
+            <small style={{ color: "var(--muted)", fontSize: 11 }}>≈ {fmtBase(Math.round(runRate))}/mo · {months} mo</small>
+          </motion.div>
         </motion.div>
-        <motion.div className="kpi k4" variants={item} whileHover={{ y: -3 }}>
-          <div className="ic"><Icon name="arrowDown" size={20} /></div>
-          <h3><Money value={periodOutgoing} /></h3>
-          <p>Total outgoing {prev && <Delta cur={periodOutgoing} prev={prev.outgoing} goodWhen="down" label={prevLabel} />}</p>
-        </motion.div>
-        <motion.div className="kpi k1" variants={item} whileHover={{ y: -3 }}>
-          <div className="ic"><Icon name="finance" size={20} /></div>
-          <h3 style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet} /></h3>
-          <p>Net profit {prev && <Delta cur={periodNet} prev={prev.net} goodWhen="up" label={prevLabel} />}</p>
-          {margin != null && (
-            <small style={{ color: "var(--muted)", fontSize: 11 }}>
-              {(margin * 100).toFixed(margin >= 0.1 || margin <= -0.1 ? 0 : 1)}% profit margin
-            </small>
-          )}
-        </motion.div>
-        <motion.div className="kpi k3" variants={item} whileHover={{ y: -3 }}>
-          <div className="ic"><Icon name="wallet" size={20} /></div>
-          <h3><Money value={periodSalary} /></h3><p>Salaries (period total)</p>
-          <small style={{ color: "var(--muted)", fontSize: 11 }}>≈ {fmtBase(Math.round(runRate))}/mo · {months} mo</small>
-        </motion.div>
-      </motion.div>
 
-      {/* at-a-glance highlights — the facts a boss scans first */}
-      {(catChartColored.length > 0 || projRows.length > 0) && (
-        <div className={styles.insights}>
-          {catChartColored.length > 0 && (() => {
-            const top = catChartColored[0]
-            return (
-              <div className={styles.insight}>
-                <span className={styles.insIc} style={{ background: "rgba(255,59,48,.14)", color: "var(--red-ink)" }}><Icon name="arrowDown" size={16} /></span>
-                <div className={styles.insBody}>
-                  <small>Biggest cost</small>
-                  <b>{top.label}</b>
-                  <span className={styles.insVal}><Money value={top.value} /> · {periodOutgoing ? Math.round(top.value / periodOutgoing * 100) : 0}% of outgoing</span>
+        {/* at-a-glance highlights — the facts a boss scans first */}
+        {(catChartColored.length > 0 || projRows.length > 0) && (
+          <div className={styles.insights}>
+            {catChartColored.length > 0 && (() => {
+              const top = catChartColored[0]
+              return (
+                <div className={styles.insight}>
+                  <span className={styles.insIc} style={{ background: "rgba(255,59,48,.14)", color: "var(--red-ink)" }}><Icon name="arrowDown" size={16} /></span>
+                  <div className={styles.insBody}>
+                    <small>Biggest cost</small>
+                    <b>{top.label}</b>
+                    <span className={styles.insVal}><Money value={top.value} /> · {periodOutgoing ? Math.round(top.value / periodOutgoing * 100) : 0}% of outgoing</span>
+                  </div>
                 </div>
-              </div>
-            )
-          })()}
-          {(() => {
-            const best = projRows.filter(p => p.key && p.net > 0)[0]
-            return best ? (
-              <div className={styles.insight}>
-                <span className={styles.insIc} style={{ background: "rgba(52,199,89,.14)", color: "var(--green-ink)" }}><Icon name="projects" size={16} /></span>
-                <div className={styles.insBody}>
-                  <small>Most profitable project</small>
-                  <b>{best.label}</b>
-                  <span className={styles.insVal} style={{ color: "var(--green-ink)" }}>+<Money value={best.net} /> net</span>
+              )
+            })()}
+            {(() => {
+              const best = projRows.filter(p => p.key && p.net > 0)[0]
+              return best ? (
+                <div className={styles.insight}>
+                  <span className={styles.insIc} style={{ background: "rgba(52,199,89,.14)", color: "var(--green-ink)" }}><Icon name="projects" size={16} /></span>
+                  <div className={styles.insBody}>
+                    <small>Most profitable project</small>
+                    <b>{best.label}</b>
+                    <span className={styles.insVal} style={{ color: "var(--green-ink)" }}>+<Money value={best.net} /> net</span>
+                  </div>
                 </div>
+              ) : null
+            })()}
+            <div className={styles.insight}>
+              <span className={styles.insIc} style={{ background: "rgba(0,113,227,.12)", color: "var(--blue-ink)" }}><Icon name="finance" size={16} /></span>
+              <div className={styles.insBody}>
+                <small>Average per month</small>
+                <b style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet / months} /></b>
+                <span className={styles.insVal}>net over {months} month{months > 1 ? "s" : ""}</span>
               </div>
-            ) : null
-          })()}
-          <div className={styles.insight}>
-            <span className={styles.insIc} style={{ background: "rgba(0,113,227,.12)", color: "var(--blue-ink)" }}><Icon name="finance" size={16} /></span>
-            <div className={styles.insBody}>
-              <small>Average per month</small>
-              <b style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={periodNet / months} /></b>
-              <span className={styles.insVal}>net over {months} month{months > 1 ? "s" : ""}</span>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* F2: monthly trend */}
-      <div className="panel">
-        <div className="panel-h"><span className="hicon"><Icon name="finance" size={16} /></span><h2>Monthly trend</h2></div>
-        {trendHasData ? <ColumnsV data={trend} fmt={fmtBase} /> : <p className="muted">No activity in this period yet</p>}
-      </div>
+        {/* F2: monthly trend */}
+        <div className="panel">
+          <div className="panel-h"><span className="hicon"><Icon name="finance" size={16} /></span><h2>Monthly trend</h2></div>
+          {trendHasData ? <ColumnsV data={trend} fmt={fmtBase} /> : <p className="muted">No activity in this period yet</p>}
+        </div>
       </>)}
 
       {tab === "analysis" && (
-      <div className="grid2">
-        {/* F3: spending by category */}
-        <div className="panel">
-          <div className="panel-h"><span className="hicon"><Icon name="arrowDown" size={16} /></span><h2>Spending by category</h2></div>
-          {catChartColored.length ? <BarsH data={catChartColored} fmt={fmtBase} /> : <p className="muted">No outgoing yet</p>}
+        <div className="grid2">
+          {/* F3: spending by category */}
+          <div className="panel">
+            <div className="panel-h"><span className="hicon"><Icon name="arrowDown" size={16} /></span><h2>Spending by category</h2></div>
+            {catChartColored.length ? <BarsH data={catChartColored} fmt={fmtBase} /> : <p className="muted">No outgoing yet</p>}
+          </div>
+          {/* F10: profit by project */}
+          <div className="panel">
+            <div className="panel-h"><span className="hicon"><Icon name="projects" size={16} /></span><h2>Profit by project</h2></div>
+            {(realProjRows.length || unalloc || periodSalary > 0 || periodExtra > 0 || periodSalFee > 0) ? (
+              <table className={styles.plTable}>
+                <thead><tr><th>Project</th><th className="right">Income</th><th className="right">Outgoing</th><th className="right">Net</th></tr></thead>
+                <tbody>
+                  {realProjRows.map(r => (
+                    <tr key={r.key}>
+                      <td>{r.label}</td>
+                      <td className="right" style={{ color: "var(--green-ink)" }}><Money value={r.income} align="flex-end" /></td>
+                      <td className="right" style={{ color: "var(--red-ink)" }}><Money value={r.expense} align="flex-end" /></td>
+                      <td className="right" style={{ color: r.net < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={r.net} align="flex-end" /></td>
+                    </tr>
+                  ))}
+                  {unalloc && (unalloc.income > 0 || unalloc.expense > 0) && (
+                    <tr>
+                      <td className="muted">Other (not tied to a project)</td>
+                      <td className="right" style={{ color: "var(--green-ink)" }}>{unalloc.income > 0 ? <Money value={unalloc.income} align="flex-end" /> : "—"}</td>
+                      <td className="right" style={{ color: "var(--red-ink)" }}>{unalloc.expense > 0 ? <Money value={unalloc.expense} align="flex-end" /> : "—"}</td>
+                      <td className="right" style={{ color: unalloc.net < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={unalloc.net} align="flex-end" /></td>
+                    </tr>
+                  )}
+                  {periodSalary > 0 && (
+                    <tr>
+                      <td className="muted">Salaries (not allocated to projects)</td>
+                      <td className="right">—</td>
+                      <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodSalary} align="flex-end" /></td>
+                      <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodSalary} align="flex-end" /></td>
+                    </tr>
+                  )}
+                  {periodExtra > 0 && (
+                    <tr>
+                      <td className="muted">Extra staff costs</td>
+                      <td className="right">—</td>
+                      <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodExtra} align="flex-end" /></td>
+                      <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodExtra} align="flex-end" /></td>
+                    </tr>
+                  )}
+                  {periodSalFee > 0 && (
+                    <tr>
+                      <td className="muted">Salary fees</td>
+                      <td className="right">—</td>
+                      <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodSalFee} align="flex-end" /></td>
+                      <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodSalFee} align="flex-end" /></td>
+                    </tr>
+                  )}
+                  <tr className={styles.plTotal}>
+                    <td><b>Net profit</b></td><td className="right" /><td className="right" />
+                    <td className="right" style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><b><Money value={periodNet} align="flex-end" /></b></td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : <p className="muted">No transactions yet</p>}
+          </div>
         </div>
-        {/* F10: profit by project */}
-        <div className="panel">
-          <div className="panel-h"><span className="hicon"><Icon name="projects" size={16} /></span><h2>Profit by project</h2></div>
-          {(realProjRows.length || unalloc || periodSalary > 0 || periodExtra > 0 || periodSalFee > 0) ? (
-            <table className={styles.plTable}>
-              <thead><tr><th>Project</th><th className="right">Income</th><th className="right">Outgoing</th><th className="right">Net</th></tr></thead>
-              <tbody>
-                {realProjRows.map(r => (
-                  <tr key={r.key}>
-                    <td>{r.label}</td>
-                    <td className="right" style={{ color: "var(--green-ink)" }}><Money value={r.income} align="flex-end" /></td>
-                    <td className="right" style={{ color: "var(--red-ink)" }}><Money value={r.expense} align="flex-end" /></td>
-                    <td className="right" style={{ color: r.net < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={r.net} align="flex-end" /></td>
-                  </tr>
-                ))}
-                {unalloc && (unalloc.income > 0 || unalloc.expense > 0) && (
-                  <tr>
-                    <td className="muted">Other (not tied to a project)</td>
-                    <td className="right" style={{ color: "var(--green-ink)" }}>{unalloc.income > 0 ? <Money value={unalloc.income} align="flex-end" /> : "—"}</td>
-                    <td className="right" style={{ color: "var(--red-ink)" }}>{unalloc.expense > 0 ? <Money value={unalloc.expense} align="flex-end" /> : "—"}</td>
-                    <td className="right" style={{ color: unalloc.net < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><Money value={unalloc.net} align="flex-end" /></td>
-                  </tr>
-                )}
-                {periodSalary > 0 && (
-                  <tr>
-                    <td className="muted">Salaries (not allocated to projects)</td>
-                    <td className="right">—</td>
-                    <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodSalary} align="flex-end" /></td>
-                    <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodSalary} align="flex-end" /></td>
-                  </tr>
-                )}
-                {periodExtra > 0 && (
-                  <tr>
-                    <td className="muted">Extra staff costs</td>
-                    <td className="right">—</td>
-                    <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodExtra} align="flex-end" /></td>
-                    <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodExtra} align="flex-end" /></td>
-                  </tr>
-                )}
-                {periodSalFee > 0 && (
-                  <tr>
-                    <td className="muted">Salary fees</td>
-                    <td className="right">—</td>
-                    <td className="right" style={{ color: "var(--red-ink)" }}><Money value={periodSalFee} align="flex-end" /></td>
-                    <td className="right" style={{ color: "var(--red-ink)" }}>−<Money value={periodSalFee} align="flex-end" /></td>
-                  </tr>
-                )}
-                <tr className={styles.plTotal}>
-                  <td><b>Net profit</b></td><td className="right" /><td className="right" />
-                  <td className="right" style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><b><Money value={periodNet} align="flex-end" /></b></td>
-                </tr>
-              </tbody>
-            </table>
-          ) : <p className="muted">No transactions yet</p>}
-        </div>
-      </div>
       )}
 
       {tab === "statements" && (<>
-      {/* F8: P&L statement (print-friendly) */}
-      <div className="panel">
-        <div className="panel-h"><span className="hicon"><Icon name="print" size={16} /></span><h2>Profit &amp; Loss</h2>
-          <span className="count">{periodLabel}</span>
-        </div>
-        <div className={styles.pl}>
-          <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-            {allView ? "All businesses" : bizName(biz)} · {fmtDate(win.startDate)} – {fmtDate(dispEnd)} · salaries at current rates
+        {/* F8: P&L statement (print-friendly) */}
+        <div className="panel">
+          <div className="panel-h"><span className="hicon"><Icon name="print" size={16} /></span><h2>Profit &amp; Loss</h2>
+            <span className="count">{periodLabel}</span>
           </div>
-          <div className={styles.plRow}><span><b>Revenue</b></span><span style={{ color: "var(--green-ink)" }}><Money value={periodIncome} align="flex-end" /></span></div>
-          <div className={styles.plSection}>Expenses</div>
-          {expenseCats.map((c, i) => (
-            <div className={styles.plRow} key={i}><span className="muted">{c.label}</span><span><Money value={c.value} align="flex-end" /></span></div>
-          ))}
-          <div className={styles.plRow}><span className="muted">Salaries (active staff)</span><span><Money value={periodSalary} align="flex-end" /></span></div>
-          {periodExtra > 0 && <div className={styles.plRow}><span className="muted">Extra staff costs</span><span><Money value={periodExtra} align="flex-end" /></span></div>}
-          {periodSalFee > 0 && <div className={styles.plRow}><span className="muted">Salary fees</span><span><Money value={periodSalFee} align="flex-end" /></span></div>}
-          {periodFees > 0 && <div className={styles.plRow}><span className="muted">Fees &amp; charges</span><span><Money value={periodFees} align="flex-end" /></span></div>}
-          <div className={`${styles.plRow} ${styles.plSub}`}><span>Total expenses</span><span style={{ color: "var(--red-ink)" }}><Money value={periodOutgoing} align="flex-end" /></span></div>
-          <div className={`${styles.plRow} ${styles.plTotal}`}><span><b>Net profit</b></span><span style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><b><Money value={periodNet} align="flex-end" /></b></span></div>
+          <div className={styles.pl}>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+              {allView ? "All businesses" : bizName(biz)} · {fmtDate(win.startDate)} – {fmtDate(dispEnd)} · salaries at current rates
+            </div>
+            <div className={styles.plRow}><span><b>Revenue</b></span><span style={{ color: "var(--green-ink)" }}><Money value={periodIncome} align="flex-end" /></span></div>
+            <div className={styles.plSection}>Expenses</div>
+            {expenseCats.map((c, i) => (
+              <div className={styles.plRow} key={i}><span className="muted">{c.label}</span><span><Money value={c.value} align="flex-end" /></span></div>
+            ))}
+            <div className={styles.plRow}><span className="muted">Salaries (active staff)</span><span><Money value={periodSalary} align="flex-end" /></span></div>
+            {periodExtra > 0 && <div className={styles.plRow}><span className="muted">Extra staff costs</span><span><Money value={periodExtra} align="flex-end" /></span></div>}
+            {periodSalFee > 0 && <div className={styles.plRow}><span className="muted">Salary fees</span><span><Money value={periodSalFee} align="flex-end" /></span></div>}
+            {periodFees > 0 && <div className={styles.plRow}><span className="muted">Fees &amp; charges</span><span><Money value={periodFees} align="flex-end" /></span></div>}
+            <div className={`${styles.plRow} ${styles.plSub}`}><span>Total expenses</span><span style={{ color: "var(--red-ink)" }}><Money value={periodOutgoing} align="flex-end" /></span></div>
+            <div className={`${styles.plRow} ${styles.plTotal}`}><span><b>Net profit</b></span><span style={{ color: periodNet < 0 ? "var(--red-ink)" : "var(--green-ink)" }}><b><Money value={periodNet} align="flex-end" /></b></span></div>
+          </div>
         </div>
-      </div>
 
-      {/* transactions */}
-      <div className="panel">
-        <div className="panel-h"><span className="hicon"><Icon name="finance" size={16} /></span><h2>Transactions</h2><span className="count">{tableRows.length}</span></div>
-        <table>
-          <thead><tr><th>Date</th><th>Business</th><th>Category</th><th>Type</th><th className="right">Amount</th><th></th></tr></thead>
-          <tbody>
-            <AnimatePresence>
-              {tableRows.map(({ tx, occ: tocc }) => {
-                const rec = tx.recurring === "monthly"
-                const last = tocc[tocc.length - 1]
-                const open = preview === tx.id
-                return (
-                  <motion.tr key={tx.id} variants={item} initial="initial" animate="animate" exit={{ opacity: 0 }} layout>
-                    <td>
-                      {fmtDate(last.date)}
-                      {rec && <button className={styles.recBadge} onClick={() => setPreview(open ? null : tx.id)} title="Show every occurrence in this period">↻ monthly ×{tocc.length}</button>}
-                      {open && (
-                        <div className={styles.recList}>
-                          {tocc.map(o => <div key={o._key}><span className="muted">{fmtDate(o.date)}</span><Money value={o.amount} align="flex-end" /></div>)}
+        {/* transactions */}
+        <div className="panel">
+          <div className="panel-h"><span className="hicon"><Icon name="finance" size={16} /></span><h2>Transactions</h2><span className="count">{tableRows.length}</span></div>
+          <table>
+            <thead><tr><th>Date</th><th>Business</th><th>Category</th><th>Type</th><th className="right">Amount</th><th></th></tr></thead>
+            <tbody>
+              <AnimatePresence>
+                {tableRows.map(({ tx, occ: tocc }) => {
+                  const rec = tx.recurring === "monthly"
+                  const last = tocc[tocc.length - 1]
+                  const open = preview === tx.id
+                  return (
+                    <motion.tr key={tx.id} variants={item} initial="initial" animate="animate" exit={{ opacity: 0 }} layout>
+                      <td>
+                        {fmtDate(last.date)}
+                        {rec && <button className={styles.recBadge} onClick={() => setPreview(open ? null : tx.id)} title="Show every occurrence in this period">↻ monthly ×{tocc.length}</button>}
+                        {open && (
+                          <div className={styles.recList}>
+                            {tocc.map(o => <div key={o._key}><span className="muted">{fmtDate(o.date)}</span><Money value={o.amount} align="flex-end" /></div>)}
+                          </div>
+                        )}
+                      </td>
+                      <td data-label="Business">{bizName(tx.business)}</td>
+                      <td data-label="Category">{tx.category}{tx.project ? <small className="muted"> • {projName(tx.project)}</small> : ""}{tx.note ? <small className="muted"> • {tx.note}</small> : ""}</td>
+                      <td data-label="Type">{tx.type === "income" ? <Tag color="green"><Icon name="arrowUp" size={11} /> Income</Tag> : <Tag color="red"><Icon name="arrowDown" size={11} /> Outgoing</Tag>}</td>
+                      <td data-label="Amount" className="right" style={{ color: tx.type === "income" ? "var(--green-ink)" : "var(--red-ink)" }}>
+                        {(() => {
+                          const fee = Number(tx.fee || 0)
+                          // fee is a cost: it's subtracted from income received, added to what an outgoing costs
+                          const total = tx.type === "income" ? tx.amount - fee : tx.amount + fee
+                          const pct = tx.amount > 0 ? (fee / tx.amount) * 100 : 0
+                          const pctLabel = (Math.round(pct * 10) / 10).toLocaleString("en-GB") + "%"
+                          return (<>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+                              <span>{tx.type === "income" ? "+" : "−"}</span><Money value={total} align="flex-end" />
+                            </span>
+                            {fee > 0 && (
+                              <small className="muted" style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end", fontSize: 11 }}>
+                                <Icon name="arrowDown" size={9} /> fee {pctLabel} (<Money value={fee} align="flex-end" />)
+                              </small>
+                            )}
+                          </>)
+                        })()}
+                      </td>
+                      <td className="right">
+                        <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                          <button className="iconbtn" onClick={() => openEditor("transaction", tx.id)}><Icon name="edit" size={16} /></button>
+                          <button className="iconbtn del" onClick={async () => { if (await ask({ title: "Delete transaction", message: rec ? "Delete this recurring transaction and all its occurrences?" : "Delete this transaction?" })) removeItem("transaction", tx.id) }}><Icon name="trash" size={16} /></button>
                         </div>
-                      )}
-                    </td>
-                    <td data-label="Business">{bizName(tx.business)}</td>
-                    <td data-label="Category">{tx.category}{tx.project ? <small className="muted"> • {projName(tx.project)}</small> : ""}{tx.note ? <small className="muted"> • {tx.note}</small> : ""}</td>
-                    <td data-label="Type">{tx.type === "income" ? <Tag color="green"><Icon name="arrowUp" size={11} /> Income</Tag> : <Tag color="red"><Icon name="arrowDown" size={11} /> Outgoing</Tag>}</td>
-                    <td data-label="Amount" className="right" style={{ color: tx.type === "income" ? "var(--green-ink)" : "var(--red-ink)" }}>
-                      {(() => {
-                        const fee = Number(tx.fee || 0)
-                        // fee is a cost: it's subtracted from income received, added to what an outgoing costs
-                        const total = tx.type === "income" ? tx.amount - fee : tx.amount + fee
-                        const pct = tx.amount > 0 ? (fee / tx.amount) * 100 : 0
-                        const pctLabel = (Math.round(pct * 10) / 10).toLocaleString("en-GB") + "%"
-                        return (<>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
-                            <span>{tx.type === "income" ? "+" : "−"}</span><Money value={total} align="flex-end" />
-                          </span>
-                          {fee > 0 && (
-                            <small className="muted" style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end", fontSize: 11 }}>
-                              <Icon name="arrowDown" size={9} /> fee {pctLabel} (<Money value={fee} align="flex-end" />)
-                            </small>
-                          )}
-                        </>)
-                      })()}
-                    </td>
-                    <td className="right">
-                      <div className="row-actions" style={{ justifyContent: "flex-end" }}>
-                        <button className="iconbtn" onClick={() => openEditor("transaction", tx.id)}><Icon name="edit" size={16} /></button>
-                        <button className="iconbtn del" onClick={async () => { if (await ask({ title: "Delete transaction", message: rec ? "Delete this recurring transaction and all its occurrences?" : "Delete this transaction?" })) removeItem("transaction", tx.id) }}><Icon name="trash" size={16} /></button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                )
-              })}
-            </AnimatePresence>
-          </tbody>
-        </table>
-        {!tableRows.length && <EmptyState icon="finance" text="No transactions in this period" />}
-      </div>
+                      </td>
+                    </motion.tr>
+                  )
+                })}
+              </AnimatePresence>
+            </tbody>
+          </table>
+          {!tableRows.length && <EmptyState icon="finance" text="No transactions in this period" />}
+        </div>
       </>)}
     </div>
   )

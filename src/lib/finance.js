@@ -77,9 +77,9 @@ export const windowMonths = (win) => monthsInclusive(win.startIdx, win.endIdx)
    Returns null when there's no sensible comparison (All time, or a custom range
    missing one of its endpoints). */
 export function previousWindow(period, custom, now, scopeTx) {
-  if (period === "month")   return periodWindow("month",   null, new Date(now.getFullYear(), now.getMonth() - 1, 15), scopeTx)
+  if (period === "month") return periodWindow("month", null, new Date(now.getFullYear(), now.getMonth() - 1, 15), scopeTx)
   if (period === "quarter") return periodWindow("quarter", null, new Date(now.getFullYear(), now.getMonth() - 3, 15), scopeTx)
-  if (period === "year")    return periodWindow("year",    null, new Date(now.getFullYear() - 1, 6, 1), scopeTx)
+  if (period === "year") return periodWindow("year", null, new Date(now.getFullYear() - 1, 6, 1), scopeTx)
   if (period === "custom") {
     const a = parseLocalDate(custom && custom.from), b = parseLocalDate(custom && custom.to)
     if (!a || !b) return null

@@ -32,9 +32,10 @@ export default function Login() {
         const { error } = await signIn(email.trim(), password)
         if (error) setMsg({ type: "err", text: errText(error, false) })
       } else {
-        const { error } = await signUp(email.trim(), password)
+        const { data, error } = await signUp(email.trim(), password)
         if (error) setMsg({ type: "err", text: errText(error, true) })
-        else setMsg({ type: "ok", text: "Account created. If email confirmation is on, check your inbox — otherwise just sign in." })
+        else if (data?.session) setMsg({ type: "ok", text: "Account created — you’re all set." })
+        else setMsg({ type: "ok", text: "Account created — check your inbox and click the confirmation link, then sign in." })
       }
     } catch (err) {
       setMsg({ type: "err", text: errText(err, mode === "signup") })

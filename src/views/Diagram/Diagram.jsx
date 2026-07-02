@@ -184,10 +184,12 @@ function DiagramCanvas() {
     const label = await askText({ title: "Rename node", value: n?.data?.label || "", confirmText: "Rename" })
     if (label != null) setNodes(ns => ns.map(x => x.id === id ? { ...x, data: { ...x.data, label } } : x))
   }
-  const duplicateNode = (id) => { dragging.current = false; setNodes(ns => {
-    const n = ns.find(x => x.id === id); if (!n) return ns
-    return [...ns.map(x => ({ ...x, selected: false })), { ...n, id: newId(), position: { x: n.position.x + 28, y: n.position.y + 28 }, selected: true }]
-  }) }
+  const duplicateNode = (id) => {
+    dragging.current = false; setNodes(ns => {
+      const n = ns.find(x => x.id === id); if (!n) return ns
+      return [...ns.map(x => ({ ...x, selected: false })), { ...n, id: newId(), position: { x: n.position.x + 28, y: n.position.y + 28 }, selected: true }]
+    })
+  }
   const setNodeKind = (id, kind) => setNodes(ns => ns.map(n => n.id === id ? { ...n, data: { ...n.data, kind }, style: dfdStyle(kind) } : n))
   const deleteNode = (id) => { dragging.current = false; setNodes(ns => ns.filter(n => n.id !== id)); setEdges(es => es.filter(e => e.source !== id && e.target !== id)) }
 

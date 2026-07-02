@@ -6,7 +6,7 @@ import { daysBetween, nextPayday, periodKey } from '../../lib/data.js'
 
 export default function Payroll() {
   const { db, t, toUsd, fmtDate, relDay, isPaid, setPaid, ask, notify } = useStore()
-  const copyCard = async (card) => { try { await navigator.clipboard.writeText(card); notify("Card number copied", "success") } catch (e) {} }
+  const copyCard = async (card) => { try { await navigator.clipboard.writeText(card); notify("Card number copied", "success") } catch (e) { } }
   const [bizFilter, setBizFilter] = useState("all")
   const bizName = (id) => db.businesses.find(b => b.id === id)?.name
   const inBiz = (e) => bizFilter === "all" || (e.business || "") === bizFilter

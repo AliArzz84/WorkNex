@@ -9,28 +9,34 @@
 .app[data-collapsed="true"] {
     grid-template-columns: 64px 1fr
 }
+
 .app[data-collapsed="true"] .sidebar {
     padding: 18px 8px 14px
 }
+
 .app[data-collapsed="true"] .brand {
     justify-content: center;
     padding: 2px 0 16px
 }
+
 .app[data-collapsed="true"] .account-box .who,
 .app[data-collapsed="true"] .guest-box {
     display: none
 }
-.app[data-collapsed="true"] .brand > div,
+
+.app[data-collapsed="true"] .brand>div,
 .app[data-collapsed="true"] .nav-item .lbl {
     max-width: 0;
     opacity: 0
 }
+
 .app[data-collapsed="true"] .nav-item {
     justify-content: center;
     gap: 0;
     padding: 10px 0;
     font-size: 0
 }
+
 .app[data-collapsed="true"] .nav-item .badge {
     position: absolute;
     top: 5px;
@@ -43,6 +49,7 @@
     font-size: 0;
     border-radius: 50%
 }
+
 .app[data-collapsed="true"] .btn-soft {
     justify-content: center;
     gap: 0;
@@ -72,7 +79,7 @@
     transition: padding .26s ease
 }
 
-.brand > div {
+.brand>div {
     overflow: hidden;
     white-space: nowrap;
     max-width: 160px;
